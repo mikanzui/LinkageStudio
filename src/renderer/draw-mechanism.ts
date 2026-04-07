@@ -1,5 +1,5 @@
 import type { Joint, Link, Body, Outline, SliderConstraint, ColliderConstraint, Tracer, Vec2, MechanismSpring } from '../types';
-import { springEndpointsWorld } from '../core/springs/spring-solver';
+import { springEndpointsWorld, torsionSpringDrawArc } from '../core/springs/spring-solver';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import {
   JOINT_RADIUS, JOINT_RADIUS_FIXED, LINK_WIDTH,
@@ -333,20 +333,40 @@ export function drawSprings(
   hoveredId: string | null,
 ) {
   for (const sp of Object.values(springs)) {
-    if (sp.kind !== 'linear') continue;
-    const ends = springEndpointsWorld(sp, joints, links);
-    if (!ends) continue;
     const selected = selectedIds.has(sp.id);
     const hover = hoveredId === sp.id;
-    ctx.beginPath();
-    ctx.moveTo(ends.a.x, ends.a.y);
-    ctx.lineTo(ends.b.x, ends.b.y);
-    ctx.strokeStyle = selected ? SELECTION_COLOR : hover ? HOVER_COLOR : 'rgba(46, 125, 50, 0.88)';
-    ctx.lineWidth = (selected || hover ? 3.2 : 2.2) / zoom;
-    ctx.setLineDash([5 / zoom, 4 / zoom]);
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    ctx.setLineDash([]);
+    const lw = (selected || hover ? 3.2 : 2.2) / zoom;
+
+    if (sp.kind === 'linear' || sp.kind === 'damper') {
+      const ends = springEndpointsWorld(sp, joints, links);
+      if (!ends) continue;
+      ctx.beginPath();
+      ctx.moveTo(ends.a.x, ends.a.y);
+      ctx.lineTo(ends.b.x, ends.b.y);
+      ctx.strokeStyle =
+        selected ? SELECTION_COLOR : hover ? HOVER_COLOR : sp.kind === 'damper'
+          ? 'rgba(183, 28, 28, 0.9)'
+          : 'rgba(46, 125, 50, 0.88)';
+      ctx.lineWidth = lw;
+      ctx.setLineDash(sp.kind === 'damper' ? [10 / zoom, 5 / zoom, 2 / zoom, 5 / zoom] : [5 / zoom, 4 / zoom]);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.setLineDash([]);
+      continue;
+    }
+
+    if (sp.kind === 'torsional') {
+      const arc = torsionSpringDrawArc(sp, joints, links);
+      if (!arc) continue;
+      ctx.beginPath();
+      ctx.arc(arc.cx, arc.cy, arc.r, arc.a0, arc.a1, arc.a1 < arc.a0);
+      ctx.strokeStyle = selected ? SELECTION_COLOR : hover ? HOVER_COLOR : 'rgba(123, 31, 162, 0.92)';
+      ctx.lineWidth = lw;
+      ctx.setLineDash([4 / zoom, 3 / zoom]);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 }
 

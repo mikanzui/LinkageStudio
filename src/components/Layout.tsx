@@ -93,6 +93,29 @@ const IconSpringSmall = () => (
   </svg>
 );
 
+const IconDamperSmall = () => (
+  <svg width="18" height="18" viewBox="0 0 16 16">
+    <line x1="2" y1="8" x2="4.5" y2="8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <rect x="4.5" y="5.5" width="7" height="5" rx="0.8" fill="none" stroke="currentColor" strokeWidth="1.1" />
+    <line x1="11.5" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+  </svg>
+);
+
+const IconTorsionSpringSmall = () => (
+  <svg width="18" height="18" viewBox="0 0 16 16">
+    <line x1="8" y1="2.5" x2="8" y2="6.5" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
+    <line x1="8" y1="6.5" x2="12" y2="10.5" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
+    <line x1="8" y1="6.5" x2="4" y2="10.5" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
+    <path
+      d="M 9.5 5 A 2 2 0 0 1 6.5 5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 const IconTracerSmall = () => (
   <svg width="18" height="18" viewBox="0 0 16 16">
     <circle cx="8" cy="8" r="3.5" fill="none" stroke="currentColor" strokeWidth="1" />
@@ -366,6 +389,20 @@ export function Layout() {
                   title="Linear spring — joint or link endpoints"
                 >
                   <IconSpringSmall />
+                </button>
+                <button
+                  className={`collapsed-tool-btn ${createTool === 'damper' ? 'active' : ''}`}
+                  onClick={() => setCreateTool('damper')}
+                  title="Linear damper (dashpot)"
+                >
+                  <IconDamperSmall />
+                </button>
+                <button
+                  className={`collapsed-tool-btn ${createTool === 'torsionSpring' ? 'active' : ''}`}
+                  onClick={() => setCreateTool('torsionSpring')}
+                  title="Torsion spring — pivot, then two links"
+                >
+                  <IconTorsionSpringSmall />
                 </button>
 
                 <div className="collapsed-divider" />

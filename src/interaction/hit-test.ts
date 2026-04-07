@@ -1,5 +1,5 @@
 import type { Vec2, Joint, Link, Outline, Body, MechanismSpring } from '../types';
-import { springEndpointsWorld } from '../core/springs/spring-solver';
+import { springEndpointsWorld, torsionSpringDrawArc } from '../core/springs/spring-solver';
 import { distance } from '../core/math/vec2';
 import { distToSegment } from '../core/math/vec2';
 import { HIT_RADIUS, LINK_HIT_THRESHOLD } from '../utils/constants';
@@ -54,7 +54,7 @@ export function hitTestJoint(
   return hits[0].joint;
 }
 
-/** Nearest linear spring segment within hit distance (create-mode selection). */
+/** Nearest spring/damper segment or torsion arc within hit distance (create-mode selection). */
 export function hitTestSpring(
   worldPos: Vec2,
   springs: Record<string, MechanismSpring>,
@@ -66,13 +66,36 @@ export function hitTestSpring(
   let closest: MechanismSpring | null = null;
   let closestDist = Infinity;
   for (const sp of Object.values(springs)) {
-    if (sp.kind !== 'linear') continue;
-    const ends = springEndpointsWorld(sp, joints, links);
-    if (!ends) continue;
-    const d = distToSegment(worldPos, ends.a, ends.b);
-    if (d < threshold && d < closestDist) {
-      closestDist = d;
-      closest = sp;
+    if (sp.kind === 'linear' || sp.kind === 'damper') {
+      const ends = springEndpointsWorld(sp, joints, links);
+      if (!ends) continue;
+      const d = distToSegment(worldPos, ends.a, ends.b);
+      if (d < threshold && d < closestDist) {
+        closestDist = d;
+        closest = sp;
+      }
+      continue;
+    }
+    if (sp.kind === 'torsional') {
+      const arc = torsionSpringDrawArc(sp, joints, links);
+      if (!arc) continue;
+      const p0 = {
+        x: arc.cx + arc.r * Math.cos(arc.a0),
+        y: arc.cy + arc.r * Math.sin(arc.a0),
+      };
+      const p1 = {
+        x: arc.cx + arc.r * Math.cos(arc.a1),
+        y: arc.cy + arc.r * Math.sin(arc.a1),
+      };
+      const dx = worldPos.x - arc.cx;
+      const dy = worldPos.y - arc.cy;
+      const dRing = Math.abs(Math.hypot(dx, dy) - arc.r);
+      const dChord = distToSegment(worldPos, p0, p1);
+      const d = Math.min(dChord, dRing);
+      if (d < threshold && d < closestDist) {
+        closestDist = d;
+        closest = sp;
+      }
     }
   }
   return closest;

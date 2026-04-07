@@ -145,8 +145,12 @@ export function MechanismCanvas() {
         mirrorPreview: editor.mirrorPreview,
         selectionGesture: editor.selectionGesture,
         springPickPendingAnchor:
-          editor.mode === 'create' && editor.createTool === 'spring'
+          editor.mode === 'create' && (editor.createTool === 'spring' || editor.createTool === 'damper')
             ? editor.springPickPendingAnchor
+            : null,
+        torsionSpringPick:
+          editor.mode === 'create' && editor.createTool === 'torsionSpring'
+            ? editor.torsionSpringPick
             : null,
       });
     } catch (e) {
@@ -336,7 +340,12 @@ export function MechanismCanvas() {
           || hitTestOutlineFilled(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, mechanism.baseBodyId);
 
         // Also check images and their handles
-        if (!componentHit && editor.createTool === 'spring') {
+        if (
+          !componentHit &&
+          (editor.createTool === 'spring' ||
+            editor.createTool === 'damper' ||
+            editor.createTool === 'torsionSpring')
+        ) {
           componentHit = !!(
             hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom)
             || hitTestLink(worldPos, mechanism.links, mechanism.joints, editor.camera.zoom)
@@ -370,7 +379,10 @@ export function MechanismCanvas() {
           handleMouseDown(e.nativeEvent as PointerEvent, canvas);
         } else if (
           editor.mode === 'create' &&
-          (editor.createTool === 'joints' || editor.createTool === 'spring') &&
+          (editor.createTool === 'joints' ||
+            editor.createTool === 'spring' ||
+            editor.createTool === 'damper' ||
+            editor.createTool === 'torsionSpring') &&
           editor.activeTool === 'select' &&
           editor.selectMode !== 'single'
         ) {

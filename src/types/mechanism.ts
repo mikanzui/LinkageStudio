@@ -108,13 +108,15 @@ export type SpringAnchor =
   | { type: 'link'; linkId: string; t: number };
 
 /**
- * Massless spring (forces applied in Simulate only).
- * - `linear`: k [N/m], c [N·s/m], restLength + prestressDelta = equilibrium length.
- * - `torsional`: reserved; solver skips until implemented.
+ * Massless spring / damper (forces applied in Simulate only).
+ * - `linear`: k [N/m], c [N·s/m], restLength + prestressDelta = equilibrium length [m].
+ * - `damper`: same attachments as linear; k fixed at 0 (dashpot along the bar); c [N·s/m].
+ * - `torsional`: two link ends at a shared pivot; k [N·m/rad], c [N·m·s/rad];
+ *   restLength + prestressDelta = equilibrium angle [rad].
  */
 export interface MechanismSpring {
   readonly id: string;
-  kind: 'linear' | 'torsional';
+  kind: 'linear' | 'damper' | 'torsional';
   anchorA: SpringAnchor;
   anchorB: SpringAnchor;
   stiffness: number;

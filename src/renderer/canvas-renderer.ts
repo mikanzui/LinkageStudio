@@ -55,8 +55,10 @@ export interface RenderState {
   arcSelector?: { jointId: string | null; colliderId: string | null; tracerId: string | null; position: Vec2; showTime: number; collapseTime: number | null; createdBodyId: string | null } | null;
   mirrorPreview?: { axis: 'vertical' | 'horizontal'; value: number } | null;
   selectionGesture?: SelectionGesture | null;
-  /** Spring tool: highlight first picked anchor while waiting for second click. */
+  /** Spring / damper tool: highlight first picked anchor while waiting for second click. */
   springPickPendingAnchor?: SpringAnchor | null;
+  /** Torsion spring tool: pivot + optional first link highlight. */
+  torsionSpringPick?: { pivotJointId: string; linkAId?: string } | null;
 }
 
 export function render(
@@ -122,12 +124,29 @@ export function render(
     drawColliderGhost(ctx, state.colliderPointA, state.cursorWorld, state.camera.zoom);
   }
 
-  if (state.mode === 'create' && state.createTool === 'spring' && state.springPickPendingAnchor) {
+  if (
+    state.mode === 'create' &&
+    (state.createTool === 'spring' || state.createTool === 'damper') &&
+    state.springPickPendingAnchor
+  ) {
     const pa = state.springPickPendingAnchor;
     if (pa.type === 'joint') {
       drawSpringJointPickHighlight(ctx, state.joints[pa.jointId], state.camera.zoom);
     } else {
       drawSpringLinkPickHighlight(ctx, state.links[pa.linkId], pa.t, state.joints, state.camera.zoom);
+    }
+  }
+
+  if (state.mode === 'create' && state.createTool === 'torsionSpring' && state.torsionSpringPick) {
+    const tp = state.torsionSpringPick;
+    const j = state.joints[tp.pivotJointId];
+    if (j) drawSpringJointPickHighlight(ctx, j, state.camera.zoom);
+    if (tp.linkAId) {
+      const lk = state.links[tp.linkAId];
+      if (lk) {
+        const t = lk.jointIds[0] === tp.pivotJointId ? 0 : 1;
+        drawSpringLinkPickHighlight(ctx, lk, t, state.joints, state.camera.zoom);
+      }
     }
   }
 

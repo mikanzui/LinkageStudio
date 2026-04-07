@@ -26,6 +26,8 @@ function SpringEndEditor(props: {
     id: string,
     updates: Partial<Pick<MechanismSpring, 'anchorA' | 'anchorB'>>,
   ) => void;
+  /** Torsion: link endpoints at pivot only (t = 0 or 1). */
+  linkEndpointsOnly?: boolean;
 }) {
   const {
     title,
@@ -38,12 +40,13 @@ function SpringEndEditor(props: {
     allLinks,
     springLinkResolution,
     updateSpring,
+    linkEndpointsOnly,
   } = props;
 
   const patch = (next: SpringAnchor) =>
     updateSpring(springId, patchKey === 'anchorA' ? { anchorA: next } : { anchorB: next });
 
-  const tStep = 1 / Math.max(2, Math.floor(springLinkResolution));
+  const tStep = linkEndpointsOnly ? 1 : 1 / Math.max(2, Math.floor(springLinkResolution));
 
   const onTypeChange = (type: 'joint' | 'link') => {
     if (type === 'joint') {
@@ -73,6 +76,70 @@ function SpringEndEditor(props: {
   })();
 
   const typeRadioName = `spring-${springId}-${patchKey}-attach`;
+
+  if (linkEndpointsOnly) {
+    if (anchor.type !== 'link') {
+      return (
+        <div className="panel-spring-attachment-segment">
+          <div className="panel-info">Torsion end must attach along a link at the pivot.</div>
+        </div>
+      );
+    }
+    const linkSelectList = (() => {
+      const byId = new Map(visibleLinks.map((l) => [l.id, l]));
+      if (!byId.has(anchor.linkId) && allLinks[anchor.linkId]) {
+        byId.set(anchor.linkId, allLinks[anchor.linkId]);
+      }
+      return [...byId.values()].sort((a, b) =>
+        linkRowLabel(a, joints).localeCompare(linkRowLabel(b, joints)),
+      );
+    })();
+    const tSnap = (raw: number) => (raw < 0.5 ? 0 : 1);
+    return (
+      <div className="panel-spring-attachment-segment">
+        <div className="panel-spring-attach-head">
+          <span className="panel-spring-end-title">{title}</span>
+        </div>
+        <div className="panel-spring-end-row panel-spring-end-select-row">
+          <select
+            className="panel-spring-select"
+            aria-label={`${title} link`}
+            value={anchor.linkId}
+            onChange={(e) => {
+              const lk = e.target.value;
+              patch({ type: 'link', linkId: lk, t: anchor.type === 'link' && anchor.linkId === lk ? anchor.t : 0 });
+            }}
+          >
+            {linkSelectList.map((lk) => (
+              <option key={lk.id} value={lk.id}>
+                {linkRowLabel(lk, joints)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="panel-spring-along-bar">
+          <span className="panel-spring-along-label">At pivot end (0 or 1)</span>
+          <div className="panel-spring-along-slider-row">
+            <span className="panel-num-axis panel-spring-along-axis-gap" aria-hidden="true" />
+            <div className="panel-param-slider-body">
+              <div className="panel-param-range-cell">
+                <input
+                  className="panel-param-range-input"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={1}
+                  value={tSnap(anchor.t)}
+                  aria-label={`${title} end at pivot`}
+                  onChange={(e) => patch({ type: 'link', linkId: anchor.linkId, t: tSnap(+e.target.value) })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="panel-spring-attachment-segment">
@@ -337,15 +404,18 @@ export function PropertyPanel() {
 
   const spring = springs[id];
   if (spring) {
+    const title =
+      spring.kind === 'damper' ? 'Linear damper' : spring.kind === 'torsional' ? 'Torsion spring' : 'Linear spring';
+    const torsion = spring.kind === 'torsional';
     return (
       <div className="panel-content">
         <div className="panel-section-header">
-          <div className="panel-title">Linear spring</div>
+          <div className="panel-title">{title}</div>
         </div>
         <div className="panel-surface panel-section">
           <div className="panel-spring-combined">
             <SpringEndEditor
-              title="From"
+              title={torsion ? 'Link A (at pivot)' : 'From'}
               anchor={spring.anchorA}
               springId={spring.id}
               patchKey="anchorA"
@@ -355,9 +425,10 @@ export function PropertyPanel() {
               allLinks={links}
               springLinkResolution={springLinkResolution}
               updateSpring={updateSpring}
+              linkEndpointsOnly={torsion}
             />
             <SpringEndEditor
-              title="To"
+              title={torsion ? 'Link B (at pivot)' : 'To'}
               anchor={spring.anchorB}
               springId={spring.id}
               patchKey="anchorB"
@@ -367,65 +438,74 @@ export function PropertyPanel() {
               allLinks={links}
               springLinkResolution={springLinkResolution}
               updateSpring={updateSpring}
+              linkEndpointsOnly={torsion}
             />
             <div className="panel-spring-params">
-              <ParamSliderRow
-                key={`${spring.id}-stiffness`}
-                axisLabel="k"
-                suffix="N/m"
-                value={spring.stiffness}
-                onChange={(v) => updateSpring(spring.id, { stiffness: v })}
-                defaultMin={0}
-                defaultMax={500}
-                step={1}
-                clamp={(v) => Math.max(0, v)}
-              />
+              {spring.kind !== 'damper' && (
+                <ParamSliderRow
+                  key={`${spring.id}-stiffness`}
+                  axisLabel="k"
+                  suffix={torsion ? 'N·m/rad' : 'N/m'}
+                  value={spring.stiffness}
+                  onChange={(v) => updateSpring(spring.id, { stiffness: v })}
+                  defaultMin={0}
+                  defaultMax={torsion ? 200 : 500}
+                  step={torsion ? 0.5 : 1}
+                  clamp={(v) => Math.max(0, v)}
+                />
+              )}
               <ParamSliderRow
                 key={`${spring.id}-damping`}
                 axisLabel="c"
-                suffix="N·s/m"
+                suffix={torsion ? 'N·m·s/rad' : 'N·s/m'}
                 value={spring.damping}
                 onChange={(v) => updateSpring(spring.id, { damping: v })}
                 defaultMin={0}
-                defaultMax={80}
+                defaultMax={torsion ? 80 : 80}
                 step={0.5}
                 clamp={(v) => Math.max(0, v)}
               />
-              <ParamSliderRow
-                key={`${spring.id}-rest`}
-                axisLabel="L₀"
-                suffix="m"
-                value={spring.restLength}
-                onChange={(v) => updateSpring(spring.id, { restLength: v })}
-                defaultMin={0}
-                defaultMax={400}
-                step={0.01}
-                displayDecimals={3}
-                clamp={(v) => Math.max(1e-9, v)}
-              />
-              <ParamSliderRow
-                key={`${spring.id}-prestress`}
-                axisLabel="Δ"
-                suffix={'prestress\u00a0m'}
-                value={spring.prestressDelta}
-                onChange={(v) => updateSpring(spring.id, { prestressDelta: v })}
-                defaultMin={-100}
-                defaultMax={100}
-                step={0.01}
-                clamp={(v) => v}
-              />
-              <ParamSliderRow
-                key="spring-link-snap-resolution"
-                axisLabel="#"
-                suffix={'snap\u00a0steps'}
-                value={springLinkResolution}
-                onChange={(v) => setSpringLinkResolution(v)}
-                defaultMin={2}
-                defaultMax={48}
-                step={1}
-                integer
-                clamp={(v) => Math.max(2, Math.round(v))}
-              />
+              {spring.kind !== 'damper' && (
+                <ParamSliderRow
+                  key={`${spring.id}-rest`}
+                  axisLabel={torsion ? 'φ₀' : 'L₀'}
+                  suffix={torsion ? 'rad' : 'm'}
+                  value={spring.restLength}
+                  onChange={(v) => updateSpring(spring.id, { restLength: v })}
+                  defaultMin={torsion ? -6.29 : 0}
+                  defaultMax={torsion ? 6.29 : 400}
+                  step={torsion ? 0.01 : 0.01}
+                  displayDecimals={torsion ? 3 : 3}
+                  clamp={(v) => (torsion ? v : Math.max(1e-9, v))}
+                />
+              )}
+              {spring.kind !== 'damper' && (
+                <ParamSliderRow
+                  key={`${spring.id}-prestress`}
+                  axisLabel="Δ"
+                  suffix={torsion ? 'prestress\u00a0rad' : 'prestress\u00a0m'}
+                  value={spring.prestressDelta}
+                  onChange={(v) => updateSpring(spring.id, { prestressDelta: v })}
+                  defaultMin={torsion ? -6.29 : -100}
+                  defaultMax={torsion ? 6.29 : 100}
+                  step={0.01}
+                  clamp={(v) => v}
+                />
+              )}
+              {!torsion && (
+                <ParamSliderRow
+                  key="spring-link-snap-resolution"
+                  axisLabel="#"
+                  suffix={'snap\u00a0steps'}
+                  value={springLinkResolution}
+                  onChange={(v) => setSpringLinkResolution(v)}
+                  defaultMin={2}
+                  defaultMax={48}
+                  step={1}
+                  integer
+                  clamp={(v) => Math.max(2, Math.round(v))}
+                />
+              )}
             </div>
           </div>
         </div>

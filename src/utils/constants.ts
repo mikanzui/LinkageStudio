@@ -31,6 +31,11 @@ export const DEFAULT_MOTOR_SPEED = 1.0;
 /** Default linear spring (SI): stiffness N/m, damping N·s/m — world unit = 1 m. */
 export const DEFAULT_SPRING_STIFFNESS_NM = 150;
 export const DEFAULT_SPRING_DAMPING_NS_PER_M = 12;
+/** Default linear damper: k = 0; same c scale as linear spring. */
+export const DEFAULT_DAMPER_DAMPING_NS_PER_M = 12;
+/** Default torsion spring at pivot (SI): N·m/rad and N·m·s/rad. */
+export const DEFAULT_TORSION_STIFFNESS_NM_PER_RAD = 20;
+export const DEFAULT_TORSION_DAMPING_NMS_PER_RAD = 4;
 /** Default steps along a link for quantizing spring attachment t (≥2). */
 export const DEFAULT_SPRING_LINK_RESOLUTION = 20;
 

@@ -1,5 +1,5 @@
 import type { Joint, Link, SliderConstraint, ColliderConstraint, AngleConstraint, Vec2, SolverResult, ForceVector, MechanismSpring } from '../../types';
-import { accumulateLinearSpringAccelerations } from '../springs/spring-solver';
+import { accumulateLinearSpringAccelerations, accumulateTorsionalSpringAccelerations } from '../springs/spring-solver';
 import { distanceConstraint, angleDriverConstraint } from './constraints';
 import { createMatrix, solveLU } from '../math/linalg';
 import { SOLVER_MAX_ITERATIONS, SOLVER_TOLERANCE, SOLVER_DAMPING } from '../../utils/constants';
@@ -145,6 +145,8 @@ export interface ForceInfo {
   target: Vec2;
   /** Spring on this joint only (slider midpoint B when rail endpoints are fixed). */
   directJointId?: string | null;
+  /** Simulate drag: joint the user grabbed; used if linkId does not resolve to a link. */
+  simGrabJointId?: string;
 }
 export interface GravityInfo { enabled: boolean; strength: number; }
 
@@ -275,11 +277,22 @@ export function solveWithForce(
     }
   }
 
+  let directPullJointId: string | null = pullForce?.directJointId ?? null;
+  if (
+    pullForce &&
+    !directPullJointId &&
+    pullForce.linkId &&
+    !dragLink &&
+    pullForce.simGrabJointId
+  ) {
+    directPullJointId = pullForce.simGrabJointId;
+  }
+
   /** Slider whose midpoint B is pulled with directJointId — use rail tangent only (no normal spring vs constraint fight). */
   let directPullSlider: SliderConstraint | null = null;
-  if (pullForce?.directJointId && sliders) {
+  if (directPullJointId && sliders) {
     for (const s of Object.values(sliders)) {
-      if (s.jointIdB === pullForce.directJointId) {
+      if (s.jointIdB === directPullJointId) {
         directPullSlider = s;
         break;
       }
@@ -311,6 +324,7 @@ export function solveWithForce(
     const springAy = new Float64Array(freeJoints.length);
     if (springs && Object.keys(springs).length > 0) {
       accumulateLinearSpringAccelerations(springs, joints, links, q, v, jointIndex, springAx, springAy);
+      accumulateTorsionalSpringAccelerations(springs, joints, links, q, v, jointIndex, springAx, springAy);
     }
 
     // 1. Compute per-substep acceleration: constant gravity + position-dependent drag + springs
@@ -320,8 +334,8 @@ export function solveWithForce(
 
       // Critically damped spring drag: F = k * displacement - c * velocity
       // c = 2 * sqrt(k) * dampingRatio gives critical damping at ratio=1
-      if (pullForce?.directJointId) {
-        const djIdx = jointIndex.get(pullForce.directJointId);
+      if (directPullJointId) {
+        const djIdx = jointIndex.get(directPullJointId);
         if (djIdx !== undefined && djIdx === i * 2) {
           const grabX = q[djIdx];
           const grabY = q[djIdx + 1];
@@ -748,8 +762,8 @@ export function solveWithForce(
     }
   }
 
-  if (pullForce?.directJointId) {
-    const j = joints[pullForce.directJointId];
+  if (directPullJointId) {
+    const j = joints[directPullJointId];
     if (j) {
       const djIdx = jointIndex.get(j.id);
       const grabX = djIdx !== undefined ? q[djIdx] : j.position.x;

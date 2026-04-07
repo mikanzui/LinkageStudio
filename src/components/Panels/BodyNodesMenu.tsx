@@ -159,7 +159,7 @@ export function BodyNodesInlineList({
     <div className="body-nodes-inline">
       <div className="body-nodes-inline-title">Features</div>
       {showEmpty ? (
-        <div className="body-nodes-empty">No joints or linear springs on this body</div>
+        <div className="body-nodes-empty">No joints or springs on this body</div>
       ) : null}
       {visibleJoints.map((joint) => {
           const memberBodies = bodiesContainingJoint(joint.id, bodies, baseBodyId);
@@ -233,13 +233,18 @@ export function BodyNodesInlineList({
           <SpringListIcon />
           <div className="body-nodes-label-col">
             <span className="body-nodes-name-text">
-              Linear spring {springListNumber(sp.id, springs)}
+              {sp.kind === 'damper'
+                ? 'Damper'
+                : sp.kind === 'torsional'
+                  ? 'Torsion spring'
+                  : 'Linear spring'}{' '}
+              {springListNumber(sp.id, springs)}
             </span>
           </div>
           <button
             type="button"
             className="body-nodes-delete tool-btn"
-            title="Delete linear spring"
+            title="Delete spring"
             onClick={(e) => {
               e.stopPropagation();
               removeSpring(sp.id);
@@ -267,7 +272,7 @@ export function BodyNodesTrigger({ isOpen, onToggle }: TriggerProps) {
         e.stopPropagation();
         onToggle();
       }}
-      title="Features on this body (joints & linear springs)"
+      title="Features on this body (joints & springs)"
       aria-expanded={isOpen}
       aria-haspopup="true"
     >

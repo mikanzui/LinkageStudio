@@ -66,4 +66,25 @@ describe('serializeMechanism / deserializeMechanism springs', () => {
     expect(sp.anchorA).toEqual({ type: 'joint', jointId: 'j1' });
     expect(sp.anchorB).toEqual({ type: 'link', linkId: 'l1', t: 0.25 });
   });
+
+  it('round-trips damper kind and forces zero stiffness', () => {
+    const { joints, links, bodies } = minimalMechanism();
+    const springs: Record<string, MechanismSpring> = {
+      d1: {
+        id: 'd1',
+        kind: 'damper',
+        anchorA: { type: 'joint', jointId: 'j1' },
+        anchorB: { type: 'joint', jointId: 'j2' },
+        stiffness: 99,
+        damping: 10,
+        restLength: 1,
+        prestressDelta: 0,
+      },
+    };
+    const json = serializeMechanism(joints, links, bodies, baseBodyId, {}, undefined, undefined, undefined, undefined, springs);
+    const out = deserializeMechanism(json);
+    expect(out!.springs!.d1.kind).toBe('damper');
+    expect(out!.springs!.d1.stiffness).toBe(0);
+    expect(out!.springs!.d1.damping).toBe(10);
+  });
 });

@@ -67,6 +67,8 @@ interface EditorStore {
   springToolSubmode: SpringToolSubmode;
   /** First anchor picked (joint or link); waiting for second click. */
   springPickPendingAnchor: SpringAnchor | null;
+  /** Torsion spring tool: pivot joint, then first link, then second link. */
+  torsionSpringPick: { pivotJointId: string; linkAId?: string } | null;
 
   setMode(mode: AppMode): void;
   setTool(tool: ToolType): void;
@@ -113,6 +115,7 @@ interface EditorStore {
   setSpringLinkResolution(steps: number): void;
   setSpringToolSubmode(submode: SpringToolSubmode): void;
   clearSpringPickPending(): void;
+  clearTorsionSpringPick(): void;
   editingOutlineId: string | null;
   editingVertexIndex: number | null;
 
@@ -191,6 +194,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   springLinkResolution: DEFAULT_SPRING_LINK_RESOLUTION,
   springToolSubmode: 'jointJoint' as SpringToolSubmode,
   springPickPendingAnchor: null as SpringAnchor | null,
+  torsionSpringPick: null as { pivotJointId: string; linkAId?: string } | null,
   editingOutlineId: null,
   editingVertexIndex: null,
   arcSelector: null,
@@ -227,6 +231,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       editingVertexIndex: null,
       springPickPendingAnchor: null,
       springToolSubmode: 'jointJoint' as SpringToolSubmode,
+      torsionSpringPick: null,
       transientHint: null,
       arcSelector: null,
       worldContextMenu: null,
@@ -388,8 +393,9 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       worldContextMenu: null,
       mirrorPreview: null,
       selectionGesture: null,
-      springPickPendingAnchor: tool === 'spring' ? s.springPickPendingAnchor : null,
-      springToolSubmode: tool === 'spring' ? s.springToolSubmode : 'jointJoint',
+      springPickPendingAnchor: tool === 'spring' || tool === 'damper' ? s.springPickPendingAnchor : null,
+      springToolSubmode: tool === 'spring' || tool === 'damper' ? s.springToolSubmode : 'jointJoint',
+      torsionSpringPick: tool === 'torsionSpring' ? s.torsionSpringPick : null,
     }));
   },
 
@@ -488,6 +494,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   clearSpringPickPending() {
     set({ springPickPendingAnchor: null });
+  },
+
+  clearTorsionSpringPick() {
+    set({ torsionSpringPick: null });
   },
 
   setEditingOutline(outlineId) {

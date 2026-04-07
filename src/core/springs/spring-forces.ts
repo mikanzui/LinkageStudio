@@ -9,6 +9,15 @@ import type { Vec2 } from '../../types';
 export const WORLD_UNITS_PER_METRE = 1;
 export const SPRING_STIFFNESS_SI_TO_SIM = 0.006;
 export const SPRING_DAMPING_SI_TO_SIM = 0.006;
+/**
+ * Torsion mapping: τ_sim = k_SI * TORSION_STIFFNESS_SI_TO_SIM.
+ * Applied as tangential acceleration a = τ/2 (unit-mass particles, no ÷L).
+ * Linear springs use displacement in world units (50–200), while torsion uses
+ * angle error in radians (0–π), so the scale factor is much higher to produce
+ * comparable accelerations at default stiffness values.
+ */
+export const TORSION_STIFFNESS_SI_TO_SIM = 10;
+export const TORSION_DAMPING_SI_TO_SIM = 5;
 
 /** Effective equilibrium length: natural rest at placement + user prestress offset. */
 export function equilibriumRestLength(restLength: number, prestressDelta: number): number {
@@ -49,4 +58,12 @@ export function siStiffnessToSim(kNPerM: number): number {
 
 export function siDampingToSim(cNsPerM: number): number {
   return cNsPerM * SPRING_DAMPING_SI_TO_SIM;
+}
+
+export function siTorsionStiffnessToSim(kNmPerRad: number): number {
+  return kNmPerRad * TORSION_STIFFNESS_SI_TO_SIM;
+}
+
+export function siTorsionDampingToSim(cNmSPerRad: number): number {
+  return cNmSPerRad * TORSION_DAMPING_SI_TO_SIM;
 }

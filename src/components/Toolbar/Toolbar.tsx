@@ -47,6 +47,29 @@ const IconSpring = () => (
   </svg>
 );
 
+const IconDamper = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <line x1="1.5" y1="8" x2="4.5" y2="8" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+    <rect x="4.5" y="5" width="7" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.25" />
+    <line x1="11.5" y1="8" x2="14.5" y2="8" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+  </svg>
+);
+
+const IconTorsionSpring = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <line x1="8" y1="2.5" x2="8" y2="7" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <line x1="8" y1="7" x2="12.5" y2="11" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <line x1="8" y1="7" x2="3.5" y2="11" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <path
+      d="M 9.8 5.2 A 2.2 2.2 0 0 1 6.2 5.2"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.1"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 const IconTracer = () => (
   <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
     <circle cx="8" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.2" />
@@ -81,6 +104,7 @@ export function Toolbar() {
   const springToolSubmode = useEditorStore((s) => s.springToolSubmode);
   const setSpringToolSubmode = useEditorStore((s) => s.setSpringToolSubmode);
   const springPickPendingAnchor = useEditorStore((s) => s.springPickPendingAnchor);
+  const torsionSpringPick = useEditorStore((s) => s.torsionSpringPick);
   const marqueeExcludedBodyIds = useEditorStore((s) => s.marqueeExcludedBodyIds);
   const toggleMarqueeBodyExcluded = useEditorStore((s) => s.toggleMarqueeBodyExcluded);
   const selectMode = useEditorStore((s) => s.selectMode);
@@ -148,7 +172,8 @@ export function Toolbar() {
   const isPivotTool = createTool === 'joints';
   const isSliderTool = createTool === 'slider';
   const isColliderTool = createTool === 'collider';
-  const isSpringTool = createTool === 'spring';
+  const isLinearAxialTool = createTool === 'spring' || createTool === 'damper';
+  const isTorsionSpringTool = createTool === 'torsionSpring';
   const isTracerTool = createTool === 'tracer';
   const isMirrorTool = createTool === 'mirror';
 
@@ -191,7 +216,7 @@ export function Toolbar() {
         </>
       );
     }
-    if (isSpringTool) {
+    if (isLinearAxialTool) {
       if (springPickPendingAnchor) {
         if (springToolSubmode === 'jointJoint') {
           return (
@@ -199,7 +224,7 @@ export function Toolbar() {
               <div className="sim-hint">First joint selected — click a second joint</div>
               <div className="sim-hint">Orange ring marks the first anchor</div>
               <div className="sim-hint">Click empty space or Escape to cancel</div>
-              <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+              <div className="sim-hint">Click a spring to select; Shift toggles</div>
             </>
           );
         }
@@ -213,7 +238,7 @@ export function Toolbar() {
               </div>
               <div className="sim-hint">Orange ring marks the first anchor</div>
               <div className="sim-hint">Escape — cancel pick or back to Pivot</div>
-              <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+              <div className="sim-hint">Click a spring to select; Shift toggles</div>
             </>
           );
         }
@@ -222,7 +247,7 @@ export function Toolbar() {
             <div className="sim-hint">First link point selected — click a second link or point</div>
             <div className="sim-hint">Orange ring marks the first anchor</div>
             <div className="sim-hint">Escape — cancel pick or back to Pivot</div>
-            <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+            <div className="sim-hint">Click a spring to select; Shift toggles</div>
           </>
         );
       }
@@ -230,7 +255,7 @@ export function Toolbar() {
         return (
           <>
             <div className="sim-hint">Joint ↔ joint: two joints (same or different bodies)</div>
-            <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+            <div className="sim-hint">Click a spring to select; Shift toggles</div>
             <div className="sim-hint">Escape — back to Pivot</div>
           </>
         );
@@ -239,7 +264,7 @@ export function Toolbar() {
         return (
           <>
             <div className="sim-hint">Joint ↔ link: joint first, then click a link</div>
-            <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+            <div className="sim-hint">Click a spring to select; Shift toggles</div>
             <div className="sim-hint">Escape — back to Pivot</div>
           </>
         );
@@ -247,7 +272,32 @@ export function Toolbar() {
       return (
         <>
           <div className="sim-hint">Link ↔ link: two points on links (snapped along the bar)</div>
-          <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+          <div className="sim-hint">Click a spring to select; Shift toggles</div>
+          <div className="sim-hint">Escape — back to Pivot</div>
+        </>
+      );
+    }
+    if (isTorsionSpringTool) {
+      if (torsionSpringPick?.linkAId) {
+        return (
+          <>
+            <div className="sim-hint">First link selected — click a second link through the pivot</div>
+            <div className="sim-hint">Escape — cancel step or back to Pivot</div>
+          </>
+        );
+      }
+      if (torsionSpringPick) {
+        return (
+          <>
+            <div className="sim-hint">Pivot selected — click a link through that joint</div>
+            <div className="sim-hint">Escape — cancel step or back to Pivot</div>
+          </>
+        );
+      }
+      return (
+        <>
+          <div className="sim-hint">Torsion spring: pivot joint → link A → link B (shared pivot)</div>
+          <div className="sim-hint">Click a spring to select; Shift toggles</div>
           <div className="sim-hint">Escape — back to Pivot</div>
         </>
       );
@@ -335,11 +385,27 @@ export function Toolbar() {
             <div className="toolbar-group-label">Springs</div>
 
             <button
-              className={`tool-btn ${isSpringTool ? 'active' : ''}`}
+              className={`tool-btn ${createTool === 'spring' ? 'active' : ''}`}
               onClick={() => setCreateTool('spring')}
             >
               <IconSpring />
               <span className="tool-name">Linear spring</span>
+            </button>
+
+            <button
+              className={`tool-btn ${createTool === 'damper' ? 'active' : ''}`}
+              onClick={() => setCreateTool('damper')}
+            >
+              <IconDamper />
+              <span className="tool-name">Linear damper</span>
+            </button>
+
+            <button
+              className={`tool-btn ${createTool === 'torsionSpring' ? 'active' : ''}`}
+              onClick={() => setCreateTool('torsionSpring')}
+            >
+              <IconTorsionSpring />
+              <span className="tool-name">Torsion spring</span>
             </button>
 
             {/* Shapes group */}
@@ -419,10 +485,10 @@ export function Toolbar() {
             </>
           )}
 
-          {isSpringTool && (
+          {isLinearAxialTool && (
             <fieldset
               className="toolbar-section panel-content interact-fieldset mirror-options-fieldset toolbar-spring-submodes"
-              aria-label="Linear spring: how endpoints attach"
+              aria-label="Linear spring or damper: how endpoints attach"
             >
               <div className="mirror-options mirror-options-stack">
                 <label className="panel-toggle-row">

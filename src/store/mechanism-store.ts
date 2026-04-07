@@ -5,8 +5,21 @@ import { createId } from '../utils/id';
 import { showTransientHint, useEditorStore } from './editor-store';
 import { generateBodyLinks } from '../core/body-links';
 import { computeBodyTransform, localToWorld, worldToLocal } from '../core/body-transform';
-import { BASE_BODY_COLOR, BODY_COLORS, DEFAULT_SPRING_DAMPING_NS_PER_M, DEFAULT_SPRING_STIFFNESS_NM } from '../utils/constants';
-import { quantizeSpringLinkT, springEndpointsWorld } from '../core/springs/spring-solver';
+import {
+  BASE_BODY_COLOR,
+  BODY_COLORS,
+  DEFAULT_DAMPER_DAMPING_NS_PER_M,
+  DEFAULT_SPRING_DAMPING_NS_PER_M,
+  DEFAULT_SPRING_STIFFNESS_NM,
+  DEFAULT_TORSION_DAMPING_NMS_PER_RAD,
+  DEFAULT_TORSION_STIFFNESS_NM_PER_RAD,
+} from '../utils/constants';
+import {
+  quantizeSpringLinkT,
+  quantizeTorsionSpringLinkT,
+  springEndpointsWorld,
+  torsionRestAngleFromAnchors,
+} from '../core/springs/spring-solver';
 import { assignMissingJointLabels, nextJointDisplayNumber } from '../utils/joint-labels';
 
 interface HistorySnapshot {
@@ -89,6 +102,21 @@ function withQuantizedLinkT(anchor: SpringAnchor, resolutionSteps: number): Spri
   return { ...anchor, t: quantizeSpringLinkT(anchor.t, resolutionSteps) };
 }
 
+function withTorsionQuantizedLinkT(anchor: SpringAnchor): SpringAnchor {
+  if (anchor.type !== 'link') return anchor;
+  return { ...anchor, t: quantizeTorsionSpringLinkT(anchor.t) };
+}
+
+function torsionAnchorsValid(a: SpringAnchor, b: SpringAnchor, links: Record<string, Link>): boolean {
+  if (a.type !== 'link' || b.type !== 'link') return false;
+  const la = links[a.linkId];
+  const lb = links[b.linkId];
+  if (!la || !lb || la.id === lb.id) return false;
+  const pa = quantizeTorsionSpringLinkT(a.t) === 0 ? la.jointIds[0] : la.jointIds[1];
+  const pb = quantizeTorsionSpringLinkT(b.t) === 0 ? lb.jointIds[0] : lb.jointIds[1];
+  return pa === pb;
+}
+
 /** True if both anchors attach to the same geometric point. */
 function springAnchorsCoincide(a: SpringAnchor, b: SpringAnchor, resolutionSteps: number): boolean {
   if (a.type === 'joint' && b.type === 'joint') return a.jointId === b.jointId;
@@ -166,6 +194,11 @@ interface MechanismStore {
   addSpringLinkToLink(linkIdA: string, tA: number, linkIdB: string, tB: number): string | null;
   /** Joint–joint linear spring (any bodies); rest length = current distance. */
   addSpringJointToJoint(jointIdA: string, jointIdB: string): string | null;
+  addDamperJointToLink(jointId: string, linkId: string, tAlongLinkRaw: number): string | null;
+  addDamperLinkToLink(linkIdA: string, tA: number, linkIdB: string, tB: number): string | null;
+  addDamperJointToJoint(jointIdA: string, jointIdB: string): string | null;
+  /** Two distinct links meeting at `pivotJointId`; rest angle = current angle at pivot. */
+  addTorsionSpring(pivotJointId: string, linkIdA: string, linkIdB: string): string | null;
   removeSpring(id: string): void;
   updateSpring(
     id: string,
@@ -477,6 +510,131 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     return id;
   },
 
+  addDamperJointToLink(jointId, linkId, tAlongLinkRaw) {
+    const joint = get().joints[jointId];
+    const link = get().links[linkId];
+    if (!joint || !link || joint.hidden) return null;
+    const jA = get().joints[link.jointIds[0]];
+    const jB = get().joints[link.jointIds[1]];
+    if (!jA || !jB || jA.hidden || jB.hidden) return null;
+    const steps = useEditorStore.getState().springLinkResolution;
+    const t = quantizeSpringLinkT(tAlongLinkRaw, steps);
+    const anchorA: SpringAnchor = { type: 'joint', jointId };
+    const anchorB: SpringAnchor = { type: 'link', linkId, t };
+    const rest = distanceBetweenSpringAnchors(anchorA, anchorB, get().joints, get().links);
+    if (rest === null) return null;
+    get().pushHistory();
+    const id = createId();
+    const spring: MechanismSpring = {
+      id,
+      kind: 'damper',
+      anchorA,
+      anchorB,
+      stiffness: 0,
+      damping: DEFAULT_DAMPER_DAMPING_NS_PER_M,
+      restLength: rest,
+      prestressDelta: 0,
+    };
+    set((s) => ({ springs: { ...s.springs, [id]: spring } }));
+    return id;
+  },
+
+  addDamperLinkToLink(linkIdA, tARaw, linkIdB, tBRaw) {
+    const linkA = get().links[linkIdA];
+    const linkB = get().links[linkIdB];
+    if (!linkA || !linkB) return null;
+    const steps = useEditorStore.getState().springLinkResolution;
+    const tA = quantizeSpringLinkT(tARaw, steps);
+    const tB = quantizeSpringLinkT(tBRaw, steps);
+    const s = Math.max(2, Math.floor(steps));
+    const minSep = 0.5 / s;
+    if (linkIdA === linkIdB && Math.abs(tA - tB) < minSep) {
+      showTransientHint('Pick two different points (or two different links).');
+      return null;
+    }
+    const anchorA: SpringAnchor = { type: 'link', linkId: linkIdA, t: tA };
+    const anchorB: SpringAnchor = { type: 'link', linkId: linkIdB, t: tB };
+    const rest = distanceBetweenSpringAnchors(anchorA, anchorB, get().joints, get().links);
+    if (rest === null) return null;
+    get().pushHistory();
+    const id = createId();
+    const spring: MechanismSpring = {
+      id,
+      kind: 'damper',
+      anchorA,
+      anchorB,
+      stiffness: 0,
+      damping: DEFAULT_DAMPER_DAMPING_NS_PER_M,
+      restLength: rest,
+      prestressDelta: 0,
+    };
+    set((s) => ({ springs: { ...s.springs, [id]: spring } }));
+    return id;
+  },
+
+  addDamperJointToJoint(jointIdA, jointIdB) {
+    if (jointIdA === jointIdB) return null;
+    const { joints, links } = get();
+    const ja = joints[jointIdA];
+    const jb = joints[jointIdB];
+    if (!ja || !jb) return null;
+    const direct = directLinkBetween(jointIdA, jointIdB, links);
+    if (direct) {
+      showTransientHint('These joints are already linked; a spring may fight that distance constraint.');
+    }
+    get().pushHistory();
+    const id = createId();
+    const dx = jb.position.x - ja.position.x;
+    const dy = jb.position.y - ja.position.y;
+    const rest = Math.sqrt(dx * dx + dy * dy);
+    const spring: MechanismSpring = {
+      id,
+      kind: 'damper',
+      anchorA: { type: 'joint', jointId: jointIdA },
+      anchorB: { type: 'joint', jointId: jointIdB },
+      stiffness: 0,
+      damping: DEFAULT_DAMPER_DAMPING_NS_PER_M,
+      restLength: rest,
+      prestressDelta: 0,
+    };
+    set((s) => ({ springs: { ...s.springs, [id]: spring } }));
+    return id;
+  },
+
+  addTorsionSpring(pivotJointId, linkIdA, linkIdB) {
+    if (linkIdA === linkIdB) {
+      showTransientHint('Pick two different links that share the pivot.');
+      return null;
+    }
+    const linkA = get().links[linkIdA];
+    const linkB = get().links[linkIdB];
+    if (!linkA || !linkB) return null;
+    if (!linkA.jointIds.includes(pivotJointId) || !linkB.jointIds.includes(pivotJointId)) {
+      showTransientHint('Both links must include the pivot joint.');
+      return null;
+    }
+    const tA = linkA.jointIds[0] === pivotJointId ? 0 : 1;
+    const tB = linkB.jointIds[0] === pivotJointId ? 0 : 1;
+    const anchorA: SpringAnchor = { type: 'link', linkId: linkIdA, t: tA };
+    const anchorB: SpringAnchor = { type: 'link', linkId: linkIdB, t: tB };
+    const restAngle = torsionRestAngleFromAnchors(anchorA, anchorB, get().joints, get().links);
+    if (restAngle === null) return null;
+    get().pushHistory();
+    const id = createId();
+    const spring: MechanismSpring = {
+      id,
+      kind: 'torsional',
+      anchorA,
+      anchorB,
+      stiffness: DEFAULT_TORSION_STIFFNESS_NM_PER_RAD,
+      damping: DEFAULT_TORSION_DAMPING_NMS_PER_RAD,
+      restLength: restAngle,
+      prestressDelta: 0,
+    };
+    set((s) => ({ springs: { ...s.springs, [id]: spring } }));
+    return id;
+  },
+
   removeSpring(id) {
     get().pushHistory();
     set((s) => {
@@ -500,8 +658,14 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     if (hasAnchorB && updates.anchorB !== undefined) nextB = updates.anchorB;
 
     const steps = useEditorStore.getState().springLinkResolution;
-    nextA = withQuantizedLinkT(nextA, steps);
-    nextB = withQuantizedLinkT(nextB, steps);
+    const mergedKind = updates.kind !== undefined ? updates.kind : cur.kind;
+    if (mergedKind === 'torsional') {
+      nextA = withTorsionQuantizedLinkT(nextA);
+      nextB = withTorsionQuantizedLinkT(nextB);
+    } else {
+      nextA = withQuantizedLinkT(nextA, steps);
+      nextB = withQuantizedLinkT(nextB, steps);
+    }
 
     if (hasAnchorA || hasAnchorB) {
       const { joints, links } = get();
@@ -509,7 +673,12 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
         showTransientHint('That attachment is not valid.');
         return;
       }
-      if (springAnchorsCoincide(nextA, nextB, steps)) {
+      if (mergedKind === 'torsional') {
+        if (!torsionAnchorsValid(nextA, nextB, links)) {
+          showTransientHint('Torsion spring: both ends must be link endpoints at the same pivot.');
+          return;
+        }
+      } else if (springAnchorsCoincide(nextA, nextB, steps)) {
         showTransientHint('Both ends cannot attach to the same point.');
         return;
       }
@@ -519,12 +688,22 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     set((s) => {
       const sp = s.springs[id];
       if (!sp) return s;
-      const patched: MechanismSpring = { ...sp, ...updates };
+      let patched: MechanismSpring = { ...sp, ...updates };
+      if (patched.kind === 'damper') {
+        patched = { ...patched, stiffness: 0 };
+      }
       if (hasAnchorA || hasAnchorB) {
         patched.anchorA = nextA;
         patched.anchorB = nextB;
-        const d = distanceBetweenSpringAnchors(patched.anchorA, patched.anchorB, s.joints, s.links);
-        if (d !== null) patched.restLength = d;
+        if (patched.kind === 'torsional') {
+          const ang = torsionRestAngleFromAnchors(patched.anchorA, patched.anchorB, s.joints, s.links);
+          if (ang !== null) patched = { ...patched, restLength: ang };
+        } else {
+          const d = distanceBetweenSpringAnchors(patched.anchorA, patched.anchorB, s.joints, s.links);
+          if (d !== null) patched = { ...patched, restLength: d };
+        }
+      } else if (patched.kind === 'damper' && updates.stiffness !== undefined) {
+        patched = { ...patched, stiffness: 0 };
       }
       return { springs: { ...s.springs, [id]: patched } };
     });

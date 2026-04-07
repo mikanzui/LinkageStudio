@@ -35,15 +35,18 @@ function App() {
       if (editor.mode === 'simulate') {
         sim.advanceTime(SIM_DT * sim.speed);
 
-        // Build pull force from sim drag (link-based, or direct on slider B when A/C are fixed)
-        const pullForce = editor.simDrag?.active && (editor.simDrag.linkId || editor.simDrag.directJointId)
-          ? {
-              linkId: editor.simDrag.linkId,
-              grabT: editor.simDrag.grabT,
-              target: editor.simDrag.cursorPoint,
-              directJointId: editor.simDrag.directJointId ?? undefined,
-            }
-          : null;
+        // Build pull force from sim drag (link-based, direct on slider B, joint-only, or stale linkId fallback via simGrabJointId)
+        const sd = editor.simDrag;
+        const pullForce =
+          sd?.active && (sd.linkId || sd.directJointId || sd.jointId)
+            ? {
+                linkId: sd.linkId,
+                grabT: sd.grabT,
+                target: sd.cursorPoint,
+                directJointId: sd.directJointId ?? undefined,
+                simGrabJointId: sd.jointId,
+              }
+            : null;
 
         // Compute gravity weights from body outline COMs
         // When useOutlineCOM is enabled, mass is proportional to outline area and

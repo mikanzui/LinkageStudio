@@ -276,14 +276,25 @@ export function deserializeMechanism(json: string): {
       for (const [id, raw] of Object.entries(data.springs)) {
         const a = parseSpringAnchor(raw.anchorA);
         const b = parseSpringAnchor(raw.anchorB);
-        const kind = raw.kind === 'torsional' ? 'torsional' : 'linear';
+        const kind =
+          raw.kind === 'torsional'
+            ? 'torsional'
+            : raw.kind === 'damper'
+              ? 'damper'
+              : 'linear';
         if (!a || !b) continue;
+        const stiffness =
+          kind === 'damper'
+            ? 0
+            : typeof raw.stiffness === 'number'
+              ? raw.stiffness
+              : 0;
         springs[id] = {
           id: raw.id || id,
           kind,
           anchorA: a,
           anchorB: b,
-          stiffness: typeof raw.stiffness === 'number' ? raw.stiffness : 0,
+          stiffness,
           damping: typeof raw.damping === 'number' ? raw.damping : 0,
           restLength: typeof raw.restLength === 'number' ? raw.restLength : 0,
           prestressDelta: typeof raw.prestressDelta === 'number' ? raw.prestressDelta : 0,

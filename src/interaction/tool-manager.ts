@@ -418,12 +418,15 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
           return;
         }
 
-        // Find a link connected to this joint
-        const linkId = joint.connectedLinkIds[0] || null;
+        // First valid link in connections (first id can be stale after regen)
+        let linkId: string | null = null;
         let grabT = 0;
-        if (linkId) {
-          const link = mechanism.links[linkId];
-          if (link) grabT = link.jointIds[0] === joint.id ? 0 : 1;
+        for (const lid of joint.connectedLinkIds) {
+          const link = mechanism.links[lid];
+          if (!link) continue;
+          linkId = lid;
+          grabT = link.jointIds[0] === joint.id ? 0 : 1;
+          break;
         }
         editor.setSimDrag({
           active: true,
@@ -432,7 +435,8 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
           jointId: joint.id,
           linkId,
           grabT,
-          directJointId: null,
+          // No distance link: pull joint toward cursor (otherwise App omits pullForce and drag does nothing)
+          directJointId: linkId ? null : joint.id,
         });
       } else {
         // Link hit: compute parametric t along the link
@@ -529,8 +533,9 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
-  // --- SPRING TOOL ---
-  if (editor.createTool === 'spring') {
+  // --- LINEAR SPRING / LINEAR DAMPER (same placement pattern) ---
+  if (editor.createTool === 'spring' || editor.createTool === 'damper') {
+    const isDamper = editor.createTool === 'damper';
     const sub = editor.springToolSubmode;
     const pending = editor.springPickPendingAnchor;
     const springSteps = useEditorStore.getState().springLinkResolution;
@@ -546,6 +551,10 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     }
 
     const clearPick = () => useEditorStore.getState().clearSpringPickPending();
+
+    const addJJ = isDamper ? mechanism.addDamperJointToJoint : mechanism.addSpringJointToJoint;
+    const addJL = isDamper ? mechanism.addDamperJointToLink : mechanism.addSpringJointToLink;
+    const addLL = isDamper ? mechanism.addDamperLinkToLink : mechanism.addSpringLinkToLink;
 
     if (sub === 'jointJoint') {
       if (jHit && !jHit.hidden) {
@@ -563,7 +572,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
           showTransientHint('Pick a different joint for the other end.');
           return;
         }
-        const sid = mechanism.addSpringJointToJoint(pending.jointId, jHit.id);
+        const sid = addJJ.call(mechanism, pending.jointId, jHit.id);
         clearPick();
         if (sid) {
           editor.select(sid);
@@ -602,7 +611,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       if (pending.type === 'joint') {
         if (linkHit) {
           const anchorB = springLinkAnchorAtClick(linkHit, worldPos, mechanism.joints, springSteps);
-          const sid = mechanism.addSpringJointToLink(pending.jointId, anchorB.linkId, anchorB.t);
+          const sid = addJL.call(mechanism, pending.jointId, anchorB.linkId, anchorB.t);
           clearPick();
           if (sid) {
             editor.select(sid);
@@ -640,7 +649,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     if (pending.type === 'link') {
       if (linkHit) {
         const b = springLinkAnchorAtClick(linkHit, worldPos, mechanism.joints, springSteps);
-        const sid = mechanism.addSpringLinkToLink(pending.linkId, pending.t, b.linkId, b.t);
+        const sid = addLL.call(mechanism, pending.linkId, pending.t, b.linkId, b.t);
         clearPick();
         if (sid) {
           editor.select(sid);
@@ -657,6 +666,81 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       return;
     }
     clearPick();
+    return;
+  }
+
+  // --- TORSION SPRING (pivot joint → link A → link B) ---
+  if (editor.createTool === 'torsionSpring') {
+    const pick = editor.torsionSpringPick;
+    const jHit = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
+    const linkHit = hitTestLink(worldPos, mechanism.links, mechanism.joints, editor.camera.zoom);
+    const spHit = hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom);
+
+    if (spHit) {
+      if (e.shiftKey) editor.toggleSelect(spHit.id);
+      else editor.select(spHit.id);
+      return;
+    }
+
+    const clearTorsion = () => useEditorStore.getState().clearTorsionSpringPick();
+
+    if (!pick) {
+      if (jHit && !jHit.hidden) {
+        useEditorStore.setState({ torsionSpringPick: { pivotJointId: jHit.id } });
+        editor.select(jHit.id);
+        showTransientHint('Pick a link through this pivot. Escape to cancel.');
+        return;
+      }
+      if (linkHit) {
+        showTransientHint('Torsion spring: click the pivot joint first.');
+        return;
+      }
+      if (editor.selectedIds.size > 0) editor.clearSelection();
+      return;
+    }
+
+    if (!pick.linkAId) {
+      if (linkHit) {
+        if (!linkHit.jointIds.includes(pick.pivotJointId)) {
+          showTransientHint('That link does not include the pivot.');
+          return;
+        }
+        useEditorStore.setState({ torsionSpringPick: { pivotJointId: pick.pivotJointId, linkAId: linkHit.id } });
+        showTransientHint('Pick a second link that shares the pivot.');
+        return;
+      }
+      if (jHit && !jHit.hidden && jHit.id !== pick.pivotJointId) {
+        showTransientHint('Click a link through the pivot (not another joint).');
+        return;
+      }
+      clearTorsion();
+      showTransientHint('Cancelled torsion pick.');
+      return;
+    }
+
+    if (linkHit) {
+      if (!linkHit.jointIds.includes(pick.pivotJointId)) {
+        showTransientHint('That link does not include the pivot.');
+        return;
+      }
+      if (linkHit.id === pick.linkAId) {
+        showTransientHint('Pick a different second link.');
+        return;
+      }
+      const sid = mechanism.addTorsionSpring(pick.pivotJointId, pick.linkAId, linkHit.id);
+      clearTorsion();
+      if (sid) {
+        editor.select(sid);
+        editor.setCreateTool('joints');
+      }
+      return;
+    }
+    if (jHit) {
+      showTransientHint('Click the second link (bar), not a joint.');
+      return;
+    }
+    clearTorsion();
+    showTransientHint('Cancelled torsion pick.');
     return;
   }
 
@@ -1067,7 +1151,10 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
 
   // --- BOX / LASSO (Pivot or Spring tool, Select viewport mode) ---
   if (
-    (editor.createTool === 'joints' || editor.createTool === 'spring') &&
+    (editor.createTool === 'joints' ||
+      editor.createTool === 'spring' ||
+      editor.createTool === 'damper' ||
+      editor.createTool === 'torsionSpring') &&
     editor.activeTool === 'select' &&
     editor.selectMode !== 'single' &&
     !hitTestJointsToolBlock(worldPos, editor.camera.zoom, mechanism)
@@ -1592,10 +1679,20 @@ export function handleKeyDown(e: KeyboardEvent) {
           e.preventDefault();
           return;
         }
-        if (editor.createTool === 'spring') {
+        if (editor.createTool === 'spring' || editor.createTool === 'damper') {
           if (editor.springPickPendingAnchor) {
             useEditorStore.getState().clearSpringPickPending();
             showTransientHint('Cancelled first pick.');
+          } else {
+            editor.setCreateTool('joints');
+          }
+          e.preventDefault();
+          return;
+        }
+        if (editor.createTool === 'torsionSpring') {
+          if (editor.torsionSpringPick) {
+            useEditorStore.getState().clearTorsionSpringPick();
+            showTransientHint('Cancelled torsion spring step.');
           } else {
             editor.setCreateTool('joints');
           }
