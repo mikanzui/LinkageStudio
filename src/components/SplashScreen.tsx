@@ -34,8 +34,7 @@ export function SplashScreen() {
         <img className="splash-screen__logo" src={logoSrc} alt="" width={72} height={72} />
         <div className="splash-screen__meta">
           <h1 className="splash-screen__title">Slinker</h1>
-          <span className="splash-screen__version">v{__APP_VERSION__}</span>
-          <span className="splash-screen__tagline">2D linkage design &amp; simulation</span>
+          <span className="splash-screen__version">V{__APP_VERSION__}</span>
         </div>
         <div className="splash-screen__bar-wrap">
           <div className="splash-screen__bar-track" aria-hidden>

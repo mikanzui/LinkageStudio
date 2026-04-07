@@ -155,6 +155,7 @@ function App() {
           mech.angleConstraints,
           mech.colliders,
           colliderSidesRef.current ?? undefined,
+          mech.springs,
           mech.bodies,
           comBodyJointSets,
         );

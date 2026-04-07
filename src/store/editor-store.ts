@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import type {
   AppMode, ToolType, JointSubType, CreateTool, JointMode, CameraState, SimDragState, GridLevel,
-  SelectMode, SelectionGesture,
+  SelectMode, SelectionGesture, SpringToolSubmode, SpringAnchor,
 } from '../types';
 import type { Vec2 } from '../types';
-import { DEFAULT_GRID_SIZE } from '../utils/constants';
+import { DEFAULT_GRID_SIZE, DEFAULT_SPRING_LINK_RESOLUTION } from '../utils/constants';
 
 const GRID_DIVISOR: Record<GridLevel, number> = {
   normal: 1,
@@ -61,6 +61,12 @@ interface EditorStore {
   selectionGesture: SelectionGesture | null;
   /** Bodies excluded from box/lasso selection (unchecked in Interact panel). */
   marqueeExcludedBodyIds: Set<string>;
+  /** Grid steps along a link for quantizing spring attachment t (min 2). */
+  springLinkResolution: number;
+  /** Spring tool placement style (toolbar / property panel). */
+  springToolSubmode: SpringToolSubmode;
+  /** First anchor picked (joint or link); waiting for second click. */
+  springPickPendingAnchor: SpringAnchor | null;
 
   setMode(mode: AppMode): void;
   setTool(tool: ToolType): void;
@@ -104,6 +110,9 @@ interface EditorStore {
   setSelectionGesture(gesture: SelectionGesture | null): void;
   toggleMarqueeBodyExcluded(bodyId: string): void;
   applyMarqueeSelection(ids: string[], additive: boolean): void;
+  setSpringLinkResolution(steps: number): void;
+  setSpringToolSubmode(submode: SpringToolSubmode): void;
+  clearSpringPickPending(): void;
   editingOutlineId: string | null;
   editingVertexIndex: number | null;
 
@@ -127,8 +136,10 @@ interface EditorStore {
   } | null;
   worldContextMenu: {
     screenPosition: Vec2;
-    targetType: 'joint' | 'collider' | 'tracer';
+    targetType: 'joint' | 'collider' | 'tracer' | 'link';
     targetId: string;
+    /** Right-click on link: raw t along segment before quantize (create spring). */
+    linkClickT?: number;
     openMode: 'hold' | 'context';
   } | null;
   /** Short-lived hint (e.g. slider body warning); auto-dismisses via showTransientHint */
@@ -141,7 +152,7 @@ interface EditorStore {
   updateFrozenOutline(outlineId: string, worldPoints: Vec2[]): void;
 }
 
-export const useEditorStore = create<EditorStore>((set) => ({
+export const useEditorStore = create<EditorStore>((set, get) => ({
   mode: 'create',
   activeTool: 'select',
   jointSubType: 'revolute',
@@ -177,6 +188,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
   selectMode: 'single' as SelectMode,
   selectionGesture: null,
   marqueeExcludedBodyIds: new Set<string>(),
+  springLinkResolution: DEFAULT_SPRING_LINK_RESOLUTION,
+  springToolSubmode: 'jointJoint' as SpringToolSubmode,
+  springPickPendingAnchor: null as SpringAnchor | null,
   editingOutlineId: null,
   editingVertexIndex: null,
   arcSelector: null,
@@ -211,6 +225,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
       colliderPointA: null,
       editingOutlineId: null,
       editingVertexIndex: null,
+      springPickPendingAnchor: null,
+      springToolSubmode: 'jointJoint' as SpringToolSubmode,
       transientHint: null,
       arcSelector: null,
       worldContextMenu: null,
@@ -247,6 +263,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   },
 
   setHovered(id) {
+    if (get().hoveredId === id) return;
     set({ hoveredId: id });
   },
 
@@ -358,7 +375,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   },
 
   setCreateTool(tool) {
-    set({
+    set((s) => ({
       createTool: tool,
       outlinePoints: [],
       jointMode: 'manual' as JointMode,
@@ -371,7 +388,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
       worldContextMenu: null,
       mirrorPreview: null,
       selectionGesture: null,
-    });
+      springPickPendingAnchor: tool === 'spring' ? s.springPickPendingAnchor : null,
+      springToolSubmode: tool === 'spring' ? s.springToolSubmode : 'jointJoint',
+    }));
   },
 
   setJointMode(mode) {
@@ -456,6 +475,19 @@ export const useEditorStore = create<EditorStore>((set) => ({
       }
       return { selectedIds: new Set(ids) };
     });
+  },
+
+  setSpringLinkResolution(steps) {
+    const s = Math.max(2, Math.floor(steps));
+    set({ springLinkResolution: s });
+  },
+
+  setSpringToolSubmode(submode) {
+    set({ springToolSubmode: submode, springPickPendingAnchor: null });
+  },
+
+  clearSpringPickPending() {
+    set({ springPickPendingAnchor: null });
   },
 
   setEditingOutline(outlineId) {

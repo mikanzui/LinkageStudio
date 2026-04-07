@@ -16,9 +16,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.svg', 'icon-512.svg'],
       manifest: {
-        name: 'Slinker v13',
+        name: `Slinker V${pkg.version}`,
         short_name: 'Slinker',
-        description: 'Design and simulate 2D mechanical linkages (v13)',
+        description: `Design and simulate 2D mechanical linkages (V${pkg.version})`,
         theme_color: '#2d2d2d',
         background_color: '#1a1a1a',
         display: 'standalone',

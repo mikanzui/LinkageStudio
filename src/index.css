@@ -5,6 +5,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --bg-base: #0d0d0d;
   --bg-elevated: #121212;
   --surface-1: rgba(255, 255, 255, 0.04);

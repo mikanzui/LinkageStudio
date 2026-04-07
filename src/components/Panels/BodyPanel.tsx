@@ -41,11 +41,14 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
 export function BodyPanel() {
   const bodies = useMechanismStore((s) => s.bodies);
   const joints = useMechanismStore((s) => s.joints);
+  const links = useMechanismStore((s) => s.links);
+  const springs = useMechanismStore((s) => s.springs);
   const outlines = useMechanismStore((s) => s.outlines);
   const images = useMechanismStore((s) => s.images);
   const baseBodyId = useMechanismStore((s) => s.baseBodyId);
   const removeBody = useMechanismStore((s) => s.removeBody);
   const removeJoint = useMechanismStore((s) => s.removeJoint);
+  const removeSpring = useMechanismStore((s) => s.removeSpring);
   const setJointLabel = useMechanismStore((s) => s.setJointLabel);
   const renameBody = useMechanismStore((s) => s.renameBody);
   const setBodyColor = useMechanismStore((s) => s.setBodyColor);
@@ -71,7 +74,7 @@ export function BodyPanel() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [collapsedBodies, setCollapsedBodies] = useState<Set<string>>(new Set());
-  const [nodesMenuBodyId, setNodesMenuBodyId] = useState<string | null>(null);
+  const [featuresMenuBodyId, setFeaturesMenuBodyId] = useState<string | null>(null);
   const [editingJointLabelId, setEditingJointLabelId] = useState<string | null>(null);
 
   const tracers = useMechanismStore((s) => s.tracers);
@@ -159,9 +162,9 @@ export function BodyPanel() {
 
               <div className="body-nodes-wrap">
                 <BodyNodesTrigger
-                  isOpen={nodesMenuBodyId === body.id}
+                  isOpen={featuresMenuBodyId === body.id}
                   onToggle={() => {
-                    setNodesMenuBodyId((prev) => (prev === body.id ? null : body.id));
+                    setFeaturesMenuBodyId((prev) => (prev === body.id ? null : body.id));
                     setEditingJointLabelId(null);
                   }}
                 />
@@ -287,20 +290,24 @@ export function BodyPanel() {
               )}
             </div>
 
-            {nodesMenuBodyId === body.id && (
+            {featuresMenuBodyId === body.id && (
               <BodyNodesInlineList
                 body={body}
                 bodyMenuId={body.id}
                 bodies={bodies}
                 baseBodyId={baseBodyId}
                 joints={joints}
+                links={links}
+                springs={springs}
                 onClose={() => {
-                  setNodesMenuBodyId(null);
+                  setFeaturesMenuBodyId(null);
                   setEditingJointLabelId(null);
                 }}
                 removeJoint={removeJoint}
+                removeSpring={removeSpring}
                 setJointLabel={setJointLabel}
                 select={select}
+                selectedIds={selectedIds}
                 editingJointLabelId={editingJointLabelId}
                 setEditingJointLabelId={setEditingJointLabelId}
               />

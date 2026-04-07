@@ -1,7 +1,19 @@
-import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2 } from '../types';
+import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2, MechanismSpring, SpringAnchor } from '../types';
 import type { GridLevel, CameraState } from '../types';
 
 declare const __APP_VERSION__: string;
+
+function parseSpringAnchor(raw: unknown): SpringAnchor | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as { type?: string; position?: Vec2; jointId?: string; linkId?: string; t?: number };
+  // Legacy "world" anchors are dropped — linear springs are joint/link only.
+  if (o.type === 'world') return null;
+  if (o.type === 'joint' && typeof o.jointId === 'string') return { type: 'joint', jointId: o.jointId };
+  if (o.type === 'link' && typeof o.linkId === 'string' && typeof o.t === 'number') {
+    return { type: 'link', linkId: o.linkId, t: o.t };
+  }
+  return null;
+}
 
 /** View preferences saved with the file */
 interface ViewPreferences {
@@ -41,6 +53,16 @@ interface SlinkerFile {
   sliders?: Record<string, { id: string; jointIdA: string; jointIdB: string; jointIdC: string; t: number }>;
   colliders?: Record<string, { id: string; jointIdA: string; jointIdC: string; bodyIds: string[] }>;
   tracers?: Record<string, { id: string; bodyId: string; localPosition: Vec2; enabled: boolean }>;
+  springs?: Record<string, {
+    id: string;
+    kind: string;
+    anchorA: SpringAnchor;
+    anchorB: SpringAnchor;
+    stiffness: number;
+    damping: number;
+    restLength: number;
+    prestressDelta: number;
+  }>;
   projectName?: string;
   viewPreferences?: ViewPreferences;
   simulationSettings?: SimulationSettings;
@@ -56,6 +78,7 @@ export function serializeMechanism(
   sliders?: Record<string, SliderConstraint>,
   colliders?: Record<string, ColliderConstraint>,
   tracers?: Record<string, Tracer>,
+  springs?: Record<string, MechanismSpring>,
   projectName?: string,
   viewPreferences?: ViewPreferences,
   simulationSettings?: SimulationSettings,
@@ -128,6 +151,22 @@ export function serializeMechanism(
     }
   }
 
+  if (springs && Object.keys(springs).length > 0) {
+    data.springs = {};
+    for (const [id, sp] of Object.entries(springs)) {
+      data.springs[id] = {
+        id: sp.id,
+        kind: sp.kind,
+        anchorA: sp.anchorA,
+        anchorB: sp.anchorB,
+        stiffness: sp.stiffness,
+        damping: sp.damping,
+        restLength: sp.restLength,
+        prestressDelta: sp.prestressDelta,
+      };
+    }
+  }
+
   if (projectName) data.projectName = projectName;
   if (viewPreferences) data.viewPreferences = viewPreferences;
   if (simulationSettings) data.simulationSettings = simulationSettings;
@@ -145,6 +184,7 @@ export function deserializeMechanism(json: string): {
   sliders?: Record<string, SliderConstraint>;
   colliders?: Record<string, ColliderConstraint>;
   tracers?: Record<string, Tracer>;
+  springs?: Record<string, MechanismSpring>;
   projectName?: string;
   viewPreferences?: ViewPreferences;
   simulationSettings?: SimulationSettings;
@@ -231,8 +271,28 @@ export function deserializeMechanism(json: string): {
       }
     }
 
+    const springs: Record<string, MechanismSpring> = {};
+    if (data.springs) {
+      for (const [id, raw] of Object.entries(data.springs)) {
+        const a = parseSpringAnchor(raw.anchorA);
+        const b = parseSpringAnchor(raw.anchorB);
+        const kind = raw.kind === 'torsional' ? 'torsional' : 'linear';
+        if (!a || !b) continue;
+        springs[id] = {
+          id: raw.id || id,
+          kind,
+          anchorA: a,
+          anchorB: b,
+          stiffness: typeof raw.stiffness === 'number' ? raw.stiffness : 0,
+          damping: typeof raw.damping === 'number' ? raw.damping : 0,
+          restLength: typeof raw.restLength === 'number' ? raw.restLength : 0,
+          prestressDelta: typeof raw.prestressDelta === 'number' ? raw.prestressDelta : 0,
+        };
+      }
+    }
+
     return {
-      joints, links, bodies, baseBodyId: data.baseBodyId, outlines, images, sliders, colliders, tracers,
+      joints, links, bodies, baseBodyId: data.baseBodyId, outlines, images, sliders, colliders, tracers, springs,
       projectName: data.projectName,
       viewPreferences: data.viewPreferences,
       simulationSettings: data.simulationSettings,

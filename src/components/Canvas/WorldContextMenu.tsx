@@ -54,6 +54,7 @@ export function WorldContextMenu() {
   const tracers = useMechanismStore((s) => s.tracers);
   const updateTracerBody = useMechanismStore((s) => s.updateTracerBody);
   const joints = useMechanismStore((s) => s.joints);
+  const links = useMechanismStore((s) => s.links);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
   const dragSnapLastBodyRef = useRef<string | null>(null);
@@ -163,6 +164,17 @@ export function WorldContextMenu() {
       const joint = joints[menu.targetId];
       if (!joint) return menu.screenPosition;
       return worldToScreen(joint.position.x, joint.position.y);
+    }
+    if (menu.targetType === 'link') {
+      const link = links[menu.targetId];
+      if (!link) return menu.screenPosition;
+      const jA = joints[link.jointIds[0]];
+      const jB = joints[link.jointIds[1]];
+      if (!jA || !jB) return menu.screenPosition;
+      const t = menu.linkClickT ?? 0.5;
+      const x = jA.position.x + t * (jB.position.x - jA.position.x);
+      const y = jA.position.y + t * (jB.position.y - jA.position.y);
+      return worldToScreen(x, y);
     }
     if (menu.targetType === 'collider') {
       const collider = colliders[menu.targetId];
@@ -396,6 +408,7 @@ export function WorldContextMenu() {
           <span><kbd>Esc</kbd> close</span>
           <span>Bodies use accent highlight when enabled</span>
           <span>Use + New Body to append and attach</span>
+          <span>Linear spring tool — joint/link endpoints only</span>
         </div>
       </>
     );
@@ -416,6 +429,20 @@ export function WorldContextMenu() {
           <span><kbd>Esc</kbd> close</span>
           <span>Highlighted bodies are blocked by this barrier</span>
           <span>Use + New Body to quickly include a new part</span>
+        </div>
+      </>
+    );
+  };
+
+  const renderLinkMenu = (): JSX.Element | null => {
+    const link = links[menu.targetId];
+    if (!link) return null;
+    return (
+      <>
+        <div className="world-context-hub-title">Link</div>
+        <div className="world-context-menu-hints radial" style={{ paddingTop: 6 }}>
+          <span><kbd>Esc</kbd> close</span>
+          <span>Linear spring tool → Link ↔ link or Joint ↔ link</span>
         </div>
       </>
     );
@@ -445,6 +472,7 @@ export function WorldContextMenu() {
   let orbitNodes: JSX.Element[] = [];
   if (menu.targetType === 'joint') content = renderJointMenu();
   else if (menu.targetType === 'collider') content = renderColliderMenu();
+  else if (menu.targetType === 'link') content = renderLinkMenu();
   else content = renderTracerMenu();
 
   if (menu.targetType === 'joint') {
@@ -465,7 +493,7 @@ export function WorldContextMenu() {
             }),
       );
     }
-  } else {
+  } else if (menu.targetType === 'tracer') {
     const tracer = tracers[menu.targetId];
     if (tracer) {
       orbitNodes = bodyList.map((body, index) =>
@@ -505,7 +533,7 @@ export function WorldContextMenu() {
       <div className="world-context-center-pulse" style={{ width: `${orbit.radius * 2 + 54}px`, height: `${orbit.radius * 2 + 54}px` }} />
       <div className="world-context-orbit">
         {orbitNodes}
-        {menu.targetType !== 'tracer' && addBodyControl}
+        {menu.targetType !== 'tracer' && menu.targetType !== 'link' && addBodyControl}
       </div>
       <div className="world-context-hub" style={{ top: `calc(50% + ${hubTopPx}px)` }}>
         {content}

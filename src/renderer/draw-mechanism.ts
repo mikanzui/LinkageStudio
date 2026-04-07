@@ -1,4 +1,5 @@
-import type { Joint, Link, Body, Outline, SliderConstraint, ColliderConstraint, Tracer, Vec2 } from '../types';
+import type { Joint, Link, Body, Outline, SliderConstraint, ColliderConstraint, Tracer, Vec2, MechanismSpring } from '../types';
+import { springEndpointsWorld } from '../core/springs/spring-solver';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import {
   JOINT_RADIUS, JOINT_RADIUS_FIXED, LINK_WIDTH,
@@ -322,6 +323,33 @@ export function drawTracerPaths(
   }
 }
 
+export function drawSprings(
+  ctx: CanvasRenderingContext2D,
+  springs: Record<string, MechanismSpring>,
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+  zoom: number,
+  selectedIds: Set<string>,
+  hoveredId: string | null,
+) {
+  for (const sp of Object.values(springs)) {
+    if (sp.kind !== 'linear') continue;
+    const ends = springEndpointsWorld(sp, joints, links);
+    if (!ends) continue;
+    const selected = selectedIds.has(sp.id);
+    const hover = hoveredId === sp.id;
+    ctx.beginPath();
+    ctx.moveTo(ends.a.x, ends.a.y);
+    ctx.lineTo(ends.b.x, ends.b.y);
+    ctx.strokeStyle = selected ? SELECTION_COLOR : hover ? HOVER_COLOR : 'rgba(46, 125, 50, 0.88)';
+    ctx.lineWidth = (selected || hover ? 3.2 : 2.2) / zoom;
+    ctx.setLineDash([5 / zoom, 4 / zoom]);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
 export function drawMechanism(
   ctx: CanvasRenderingContext2D,
   joints: Record<string, Joint>,
@@ -330,6 +358,7 @@ export function drawMechanism(
   outlines: Record<string, Outline>,
   sliders: Record<string, SliderConstraint>,
   colliders: Record<string, ColliderConstraint>,
+  springs: Record<string, MechanismSpring>,
   selectedIds: Set<string>,
   hoveredId: string | null,
   zoom: number,
@@ -389,6 +418,8 @@ export function drawMechanism(
       drawLink(ctx, link, joints, zoom, linkColors.get(link.id) || '#666666');
     }
   }
+
+  drawSprings(ctx, springs, joints, links, zoom, selectedIds, hoveredId);
 
   // Draw slider rails
   drawSliderRails(ctx, sliders, joints, zoom, selectedIds);

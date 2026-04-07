@@ -1,4 +1,5 @@
-import type { Joint, Link, SliderConstraint, ColliderConstraint, AngleConstraint, Vec2, SolverResult, ForceVector } from '../../types';
+import type { Joint, Link, SliderConstraint, ColliderConstraint, AngleConstraint, Vec2, SolverResult, ForceVector, MechanismSpring } from '../../types';
+import { accumulateLinearSpringAccelerations } from '../springs/spring-solver';
 import { distanceConstraint, angleDriverConstraint } from './constraints';
 import { createMatrix, solveLU } from '../math/linalg';
 import { SOLVER_MAX_ITERATIONS, SOLVER_TOLERANCE, SOLVER_DAMPING } from '../../utils/constants';
@@ -198,6 +199,7 @@ export function solveWithForce(
   angleConstraints?: AngleConstraint[],
   colliders?: Record<string, ColliderConstraint>,
   colliderSides?: Map<string, number>,
+  springs?: Record<string, MechanismSpring>,
   bodiesRef?: Record<string, { jointIds: string[] }>,
   comBodyJointSets?: Set<string>[],
 ): SolverResult {
@@ -305,10 +307,16 @@ export function solveWithForce(
 
   // --- Substep loop ---
   for (let sub = 0; sub < NUM_SUBSTEPS; sub++) {
-    // 1. Compute per-substep acceleration: constant gravity + position-dependent drag
+    const springAx = new Float64Array(freeJoints.length);
+    const springAy = new Float64Array(freeJoints.length);
+    if (springs && Object.keys(springs).length > 0) {
+      accumulateLinearSpringAccelerations(springs, joints, links, q, v, jointIndex, springAx, springAy);
+    }
+
+    // 1. Compute per-substep acceleration: constant gravity + position-dependent drag + springs
     for (let i = 0; i < freeJoints.length; i++) {
-      let axi = gravAccX[i];
-      let ayi = gravAccY[i];
+      let axi = gravAccX[i] + springAx[i];
+      let ayi = gravAccY[i] + springAy[i];
 
       // Critically damped spring drag: F = k * displacement - c * velocity
       // c = 2 * sqrt(k) * dampingRatio gives critical damping at ratio=1

@@ -7,11 +7,11 @@ import { screenToWorld } from '../../renderer/camera';
 import {
   handleMouseDown, handleMouseMove, handleMouseUp, handleDoubleClick, handleWheel, handleKeyDown, handleKeyUp,
 } from '../../interaction/tool-manager';
-import { hitTestAny, hitTestJoint, hitTestOutlineFilled } from '../../interaction/hit-test';
+import { hitTestAny, hitTestJoint, hitTestOutlineFilled, hitTestLink, hitTestSpring } from '../../interaction/hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../../renderer/draw-images';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import type { Vec2 } from '../../types';
-import { distance, distToSegment } from '../../core/math/vec2';
+import { distance, distToSegment, segmentClampedT } from '../../core/math/vec2';
 import { HIT_RADIUS, LINK_HIT_THRESHOLD } from '../../utils/constants';
 import { getDofHudHelpTooltipRect } from '../../renderer/draw-overlays';
 import { DOF_TOOLTIP } from '../../core/solver/dof';
@@ -91,6 +91,7 @@ export function MechanismCanvas() {
         sliders: mechanism.sliders,
         colliders: mechanism.colliders,
         tracers: mechanism.tracers,
+        springs: mechanism.springs,
         tracerPaths: sim.tracerPaths || new Map(),
         selectedIds: editor.selectedIds,
         hoveredId: editor.hoveredId,
@@ -143,6 +144,10 @@ export function MechanismCanvas() {
         arcSelector: editor.arcSelector ? { jointId: editor.arcSelector.jointId, colliderId: editor.arcSelector.colliderId, tracerId: editor.arcSelector.tracerId, position: editor.arcSelector.position, showTime: editor.arcSelector.showTime, collapseTime: editor.arcSelector.collapseTime, createdBodyId: editor.arcSelector.createdBodyId } : null,
         mirrorPreview: editor.mirrorPreview,
         selectionGesture: editor.selectionGesture,
+        springPickPendingAnchor:
+          editor.mode === 'create' && editor.createTool === 'spring'
+            ? editor.springPickPendingAnchor
+            : null,
       });
     } catch (e) {
       console.error('Render error:', e);
@@ -331,6 +336,14 @@ export function MechanismCanvas() {
           || hitTestOutlineFilled(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, mechanism.baseBodyId);
 
         // Also check images and their handles
+        if (!componentHit && editor.createTool === 'spring') {
+          componentHit = !!(
+            hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom)
+            || hitTestLink(worldPos, mechanism.links, mechanism.joints, editor.camera.zoom)
+            || hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom)
+          );
+        }
+
         if (!componentHit && editor.createTool === 'image') {
           const selectedImageId = [...editor.selectedIds].find((id) => mechanism.images[id]);
           if (selectedImageId) {
@@ -357,7 +370,7 @@ export function MechanismCanvas() {
           handleMouseDown(e.nativeEvent as PointerEvent, canvas);
         } else if (
           editor.mode === 'create' &&
-          editor.createTool === 'joints' &&
+          (editor.createTool === 'joints' || editor.createTool === 'spring') &&
           editor.activeTool === 'select' &&
           editor.selectMode !== 'single'
         ) {
@@ -546,6 +559,24 @@ export function MechanismCanvas() {
             openMode: 'context',
           });
           return;
+        }
+
+        const linkHit = hitTestLink(worldPos, mechanism.links, mechanism.joints, editor.camera.zoom);
+        if (linkHit) {
+          const jA = mechanism.joints[linkHit.jointIds[0]];
+          const jB = mechanism.joints[linkHit.jointIds[1]];
+          if (jA && jB) {
+            const t = segmentClampedT(worldPos, jA.position, jB.position);
+            editor.select(linkHit.id);
+            editor.setWorldContextMenu({
+              targetType: 'link',
+              targetId: linkHit.id,
+              linkClickT: t,
+              screenPosition: screenPos,
+              openMode: 'context',
+            });
+            return;
+          }
         }
 
         // Tracer hit

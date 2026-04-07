@@ -9,7 +9,10 @@ export type SelectionGesture =
   | { type: 'box'; screenStart: Vec2; screenEnd: Vec2 }
   | { type: 'lasso'; screenPoints: Vec2[] };
 export type JointSubType = 'revolute' | 'fixed';
-export type CreateTool = 'joints' | 'slider' | 'collider' | 'outline' | 'image' | 'tracer' | 'mirror';
+export type CreateTool = 'joints' | 'slider' | 'collider' | 'spring' | 'outline' | 'image' | 'tracer' | 'mirror';
+
+/** Spring tool: two-click placement pattern (both ends are joint or link). */
+export type SpringToolSubmode = 'jointJoint' | 'jointLink' | 'linkLink';
 export type JointMode = 'manual' | 'autochain';
 export type GridLevel = 'normal' | 'fine' | 'ultrafine' | 'off';
 

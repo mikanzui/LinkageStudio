@@ -1,12 +1,13 @@
 import type { Vec2 } from '../types';
 import type { CameraState } from '../types';
 import { screenToWorld } from '../renderer/camera';
-import { hitTestJoint, hitTestOutline, hitTestLink } from './hit-test';
+import { hitTestJoint, hitTestOutline, hitTestLink, hitTestSpring } from './hit-test';
 import { hitTestImage } from '../renderer/draw-images';
 import { distance, sub, dot, lengthSq } from '../core/math/vec2';
 import { computeBodyTransform, localToWorld, polygonCentroid } from '../core/body-transform';
 import { HIT_RADIUS } from '../utils/constants';
-import type { MechanismState } from '../types';
+import type { MechanismState, MechanismSpring } from '../types';
+import { springEndpointsWorld } from '../core/springs/spring-solver';
 
 /** True if marquee selection should not start (something would take the click in Pivot tool). */
 export function hitTestJointsToolBlock(worldPos: Vec2, zoom: number, mechanism: MechanismState): boolean {
@@ -39,6 +40,8 @@ export function hitTestJointsToolBlock(worldPos: Vec2, zoom: number, mechanism: 
   }
 
   if (hitTestOutline(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, zoom)) return true;
+
+  if (hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, zoom)) return true;
 
   if (hitTestLink(worldPos, mechanism.links, mechanism.joints, zoom)) return true;
 
@@ -86,6 +89,20 @@ function bodiesForJointSet(jointIds: (string | undefined)[], mechanism: Mechanis
     for (const b of bodiesForJoint(jid, mechanism)) ids.add(b);
   }
   return [...ids];
+}
+
+function bodiesForSpring(sp: MechanismSpring, mechanism: MechanismState): string[] {
+  const jids: string[] = [];
+  for (const a of [sp.anchorA, sp.anchorB]) {
+    if (a.type === 'joint') jids.push(a.jointId);
+    if (a.type === 'link') {
+      const link = mechanism.links[a.linkId];
+      if (link) {
+        jids.push(link.jointIds[0], link.jointIds[1]);
+      }
+    }
+  }
+  return bodiesForJointSet(jids, mechanism);
 }
 
 /** Entity counts for selection if at least one of its bodies is not excluded. */
@@ -242,6 +259,20 @@ export function collectIdsInWorldBox(
     if (pointInWorldBox(worldPt, min, max)) ids.push(tracer.id);
   }
 
+  for (const sp of Object.values(mechanism.springs)) {
+    const bs = bodiesForSpring(sp, mechanism);
+    if (!passesMarqueeBodyFilter(bs, excludedBodyIds)) continue;
+    const ends = springEndpointsWorld(sp, mechanism.joints, mechanism.links);
+    if (!ends) continue;
+    if (
+      pointInWorldBox(ends.a, min, max) ||
+      pointInWorldBox(ends.b, min, max) ||
+      segmentIntersectsRect(ends.a, ends.b, min, max)
+    ) {
+      ids.push(sp.id);
+    }
+  }
+
   return ids;
 }
 
@@ -314,6 +345,20 @@ export function collectIdsInWorldLasso(
     const transform = computeBodyTransform(body, mechanism.joints);
     const worldPt = localToWorld(tracer.localPosition, transform);
     if (pointInPolygon(worldPt, poly)) ids.push(tracer.id);
+  }
+
+  for (const sp of Object.values(mechanism.springs)) {
+    const bs = bodiesForSpring(sp, mechanism);
+    if (!passesMarqueeBodyFilter(bs, excludedBodyIds)) continue;
+    const ends = springEndpointsWorld(sp, mechanism.joints, mechanism.links);
+    if (!ends) continue;
+    if (
+      pointInPolygon(ends.a, poly) ||
+      pointInPolygon(ends.b, poly) ||
+      segmentIntersectsPolygon(ends.a, ends.b, poly)
+    ) {
+      ids.push(sp.id);
+    }
   }
 
   return ids;

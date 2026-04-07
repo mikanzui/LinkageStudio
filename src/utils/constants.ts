@@ -28,6 +28,12 @@ export const SOLVER_DAMPING = 1.0;
 export const SIM_DT = 1 / 60;
 export const DEFAULT_MOTOR_SPEED = 1.0;
 
+/** Default linear spring (SI): stiffness N/m, damping N·s/m — world unit = 1 m. */
+export const DEFAULT_SPRING_STIFFNESS_NM = 150;
+export const DEFAULT_SPRING_DAMPING_NS_PER_M = 12;
+/** Default steps along a link for quantizing spring attachment t (≥2). */
+export const DEFAULT_SPRING_LINK_RESOLUTION = 20;
+
 // Body colors — distinct palette (20 colors, blue excluded for selection highlight)
 export const BASE_BODY_COLOR = '#E53935';
 export const BODY_COLORS = [

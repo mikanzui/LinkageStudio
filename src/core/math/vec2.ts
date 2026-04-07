@@ -83,6 +83,14 @@ export function distToSegment(p: Vec2, a: Vec2, b: Vec2): number {
   return distance(p, proj);
 }
 
+/** Clamped projection parameter of p onto segment ab (t=0 at a, t=1 at b). */
+export function segmentClampedT(p: Vec2, a: Vec2, b: Vec2): number {
+  const ab = sub(b, a);
+  const lenSq = lengthSq(ab);
+  if (lenSq < 1e-12) return 0;
+  return Math.max(0, Math.min(1, dot(sub(p, a), ab) / lenSq));
+}
+
 export function snapToGrid(v: Vec2, gridSize: number): Vec2 {
   return {
     x: Math.round(v.x / gridSize) * gridSize,

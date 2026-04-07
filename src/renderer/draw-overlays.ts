@@ -1,4 +1,4 @@
-import type { Vec2, CameraState, SimDragState, ForceVector, GridLevel, SelectionGesture } from '../types';
+import type { Vec2, CameraState, SimDragState, ForceVector, GridLevel, SelectionGesture, Joint, Link } from '../types';
 import { GRID_COLOR, GRID_MAJOR_COLOR, BACKGROUND_COLOR } from '../utils/constants';
 
 export function drawGrid(
@@ -756,6 +756,49 @@ export function drawSelectionGesture(
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/** Orange ring on link attachment while waiting for second pick (spring tool). */
+export function drawSpringLinkPickHighlight(
+  ctx: CanvasRenderingContext2D,
+  link: Link | undefined,
+  t: number,
+  joints: Record<string, Joint>,
+  zoom: number,
+) {
+  if (!link) return;
+  const j0 = joints[link.jointIds[0]];
+  const j1 = joints[link.jointIds[1]];
+  if (!j0 || !j1 || j0.hidden || j1.hidden) return;
+  const tt = Math.max(0, Math.min(1, t));
+  const x = j0.position.x + tt * (j1.position.x - j0.position.x);
+  const y = j0.position.y + tt * (j1.position.y - j0.position.y);
+  const r = 16 / zoom;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#FF9800';
+  ctx.lineWidth = 3 / zoom;
+  ctx.setLineDash([5 / zoom, 4 / zoom]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** Orange ring on first joint while waiting for second joint (spring tool, joint pair mode). */
+export function drawSpringJointPickHighlight(
+  ctx: CanvasRenderingContext2D,
+  joint: Joint | undefined,
+  zoom: number,
+) {
+  if (!joint || joint.hidden) return;
+  const { x, y } = joint.position;
+  const r = 16 / zoom;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#FF9800';
+  ctx.lineWidth = 3 / zoom;
+  ctx.setLineDash([5 / zoom, 4 / zoom]);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 export function drawModeBadge(

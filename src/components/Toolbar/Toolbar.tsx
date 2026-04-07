@@ -32,6 +32,21 @@ const IconCollider = () => (
   </svg>
 );
 
+const IconSpring = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <path
+      d="M2 8c0-1 1-1.5 2-1.5s2 1 2 2 1 2 2 2 2-1 2-2 1-2 2-2 2 0.5 2 1.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.35"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="2" cy="8" r="1.1" fill="currentColor" />
+    <circle cx="14" cy="8" r="1.1" fill="currentColor" />
+  </svg>
+);
+
 const IconTracer = () => (
   <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
     <circle cx="8" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.2" />
@@ -63,6 +78,9 @@ export function Toolbar() {
   const setCreateTool = useEditorStore((s) => s.setCreateTool);
   const mirrorScope = useEditorStore((s) => s.mirrorScope);
   const setMirrorScope = useEditorStore((s) => s.setMirrorScope);
+  const springToolSubmode = useEditorStore((s) => s.springToolSubmode);
+  const setSpringToolSubmode = useEditorStore((s) => s.setSpringToolSubmode);
+  const springPickPendingAnchor = useEditorStore((s) => s.springPickPendingAnchor);
   const marqueeExcludedBodyIds = useEditorStore((s) => s.marqueeExcludedBodyIds);
   const toggleMarqueeBodyExcluded = useEditorStore((s) => s.toggleMarqueeBodyExcluded);
   const selectMode = useEditorStore((s) => s.selectMode);
@@ -130,6 +148,7 @@ export function Toolbar() {
   const isPivotTool = createTool === 'joints';
   const isSliderTool = createTool === 'slider';
   const isColliderTool = createTool === 'collider';
+  const isSpringTool = createTool === 'spring';
   const isTracerTool = createTool === 'tracer';
   const isMirrorTool = createTool === 'mirror';
 
@@ -169,6 +188,67 @@ export function Toolbar() {
           <div className="sim-hint">Click again to place end C</div>
           <div className="sim-hint">Select barrier line to assign bodies</div>
           <div className="sim-hint">Escape to cancel</div>
+        </>
+      );
+    }
+    if (isSpringTool) {
+      if (springPickPendingAnchor) {
+        if (springToolSubmode === 'jointJoint') {
+          return (
+            <>
+              <div className="sim-hint">First joint selected — click a second joint</div>
+              <div className="sim-hint">Orange ring marks the first anchor</div>
+              <div className="sim-hint">Click empty space or Escape to cancel</div>
+              <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+            </>
+          );
+        }
+        if (springToolSubmode === 'jointLink') {
+          return (
+            <>
+              <div className="sim-hint">
+                {springPickPendingAnchor.type === 'joint'
+                  ? 'Joint selected — click a link for the other end'
+                  : 'Pick a joint first, then a link'}
+              </div>
+              <div className="sim-hint">Orange ring marks the first anchor</div>
+              <div className="sim-hint">Escape — cancel pick or back to Pivot</div>
+              <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+            </>
+          );
+        }
+        return (
+          <>
+            <div className="sim-hint">First link point selected — click a second link or point</div>
+            <div className="sim-hint">Orange ring marks the first anchor</div>
+            <div className="sim-hint">Escape — cancel pick or back to Pivot</div>
+            <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+          </>
+        );
+      }
+      if (springToolSubmode === 'jointJoint') {
+        return (
+          <>
+            <div className="sim-hint">Joint ↔ joint: two joints (same or different bodies)</div>
+            <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+            <div className="sim-hint">Escape — back to Pivot</div>
+          </>
+        );
+      }
+      if (springToolSubmode === 'jointLink') {
+        return (
+          <>
+            <div className="sim-hint">Joint ↔ link: joint first, then click a link</div>
+            <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+            <div className="sim-hint">Escape — back to Pivot</div>
+          </>
+        );
+      }
+      return (
+        <>
+          <div className="sim-hint">Link ↔ link: two points on links (snapped along the bar)</div>
+          <div className="sim-hint">Click a linear spring to select; Shift toggles</div>
+          <div className="sim-hint">Escape — back to Pivot</div>
         </>
       );
     }
@@ -251,6 +331,17 @@ export function Toolbar() {
               <span className="tool-name">Collider</span>
             </button>
 
+            {/* Springs — linear axial elements; distinct from joint constraints */}
+            <div className="toolbar-group-label">Springs</div>
+
+            <button
+              className={`tool-btn ${isSpringTool ? 'active' : ''}`}
+              onClick={() => setCreateTool('spring')}
+            >
+              <IconSpring />
+              <span className="tool-name">Linear spring</span>
+            </button>
+
             {/* Shapes group */}
             <div className="toolbar-group-label">Shapes</div>
 
@@ -326,6 +417,43 @@ export function Toolbar() {
                 </div>
               </fieldset>
             </>
+          )}
+
+          {isSpringTool && (
+            <fieldset
+              className="toolbar-section panel-content interact-fieldset mirror-options-fieldset toolbar-spring-submodes"
+              aria-label="Linear spring: how endpoints attach"
+            >
+              <div className="mirror-options mirror-options-stack">
+                <label className="panel-toggle-row">
+                  <input
+                    type="radio"
+                    name="spring-submode"
+                    checked={springToolSubmode === 'jointJoint'}
+                    onChange={() => setSpringToolSubmode('jointJoint')}
+                  />
+                  <span>{'Joint\u00a0↔\u00a0joint'}</span>
+                </label>
+                <label className="panel-toggle-row">
+                  <input
+                    type="radio"
+                    name="spring-submode"
+                    checked={springToolSubmode === 'jointLink'}
+                    onChange={() => setSpringToolSubmode('jointLink')}
+                  />
+                  <span>{'Joint\u00a0↔\u00a0link'}</span>
+                </label>
+                <label className="panel-toggle-row">
+                  <input
+                    type="radio"
+                    name="spring-submode"
+                    checked={springToolSubmode === 'linkLink'}
+                    onChange={() => setSpringToolSubmode('linkLink')}
+                  />
+                  <span>{'Link\u00a0↔\u00a0link'}</span>
+                </label>
+              </div>
+            </fieldset>
           )}
 
           {showMarqueeBodiesPanel && (

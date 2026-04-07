@@ -1,4 +1,5 @@
-import type { Vec2, Joint, Link, Outline, Body } from '../types';
+import type { Vec2, Joint, Link, Outline, Body, MechanismSpring } from '../types';
+import { springEndpointsWorld } from '../core/springs/spring-solver';
 import { distance } from '../core/math/vec2';
 import { distToSegment } from '../core/math/vec2';
 import { HIT_RADIUS, LINK_HIT_THRESHOLD } from '../utils/constants';
@@ -51,6 +52,30 @@ export function hitTestJoint(
 
   hits.sort((a, b) => a.dist - b.dist || a.joint.id.localeCompare(b.joint.id));
   return hits[0].joint;
+}
+
+/** Nearest linear spring segment within hit distance (create-mode selection). */
+export function hitTestSpring(
+  worldPos: Vec2,
+  springs: Record<string, MechanismSpring>,
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+  zoom: number,
+): MechanismSpring | null {
+  const threshold = (LINK_HIT_THRESHOLD + 4) / zoom;
+  let closest: MechanismSpring | null = null;
+  let closestDist = Infinity;
+  for (const sp of Object.values(springs)) {
+    if (sp.kind !== 'linear') continue;
+    const ends = springEndpointsWorld(sp, joints, links);
+    if (!ends) continue;
+    const d = distToSegment(worldPos, ends.a, ends.b);
+    if (d < threshold && d < closestDist) {
+      closestDist = d;
+      closest = sp;
+    }
+  }
+  return closest;
 }
 
 export function hitTestLink(

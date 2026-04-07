@@ -1,6 +1,40 @@
-import { useEffect, useState } from 'react';
-import type { Body, Joint } from '../../types';
+import { useEffect, useMemo, useState } from 'react';
+import type { Body, Joint, Link, MechanismSpring, SpringAnchor } from '../../types';
 import { getJointDisplayName } from '../../utils/joint-labels';
+
+function springTouchesBody(
+  sp: MechanismSpring,
+  body: Body,
+  links: Record<string, Link>,
+): boolean {
+  const jset = new Set(body.jointIds);
+  const anchorTouches = (a: SpringAnchor): boolean => {
+    if (a.type === 'joint') return jset.has(a.jointId);
+    const link = links[a.linkId];
+    if (!link) return false;
+    return jset.has(link.jointIds[0]) && jset.has(link.jointIds[1]);
+  };
+  return anchorTouches(sp.anchorA) || anchorTouches(sp.anchorB);
+}
+
+function springListNumber(springId: string, springs: Record<string, MechanismSpring>): number {
+  const i = Object.keys(springs).sort().indexOf(springId);
+  return i >= 0 ? i + 1 : 0;
+}
+
+function SpringListIcon() {
+  return (
+    <svg width="14" height="10" viewBox="0 0 28 16" fill="none" aria-hidden style={{ flexShrink: 0, opacity: 0.85 }}>
+      <path
+        d="M1 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0 4 2 6 0"
+        stroke="rgba(100, 180, 120, 0.95)"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function ChevronDownIcon({ open }: { open: boolean }) {
   return (
@@ -71,10 +105,14 @@ type ListProps = {
   bodies: Record<string, Body>;
   baseBodyId: string;
   joints: Record<string, Joint>;
+  links: Record<string, Link>;
+  springs: Record<string, MechanismSpring>;
   onClose: () => void;
   removeJoint: (id: string) => void;
+  removeSpring: (id: string) => void;
   setJointLabel: (id: string, label: string) => void;
   select: (id: string) => void;
+  selectedIds: Set<string>;
   editingJointLabelId: string | null;
   setEditingJointLabelId: (id: string | null) => void;
 };
@@ -86,10 +124,14 @@ export function BodyNodesInlineList({
   bodies,
   baseBodyId,
   joints,
+  links,
+  springs,
   onClose,
   removeJoint,
+  removeSpring,
   setJointLabel,
   select,
+  selectedIds,
   editingJointLabelId,
   setEditingJointLabelId,
 }: ListProps) {
@@ -106,19 +148,26 @@ export function BodyNodesInlineList({
     .map((id) => joints[id])
     .filter((j): j is Joint => Boolean(j) && !j.hidden);
 
+  const bodySprings = useMemo(
+    () => Object.values(springs).filter((sp) => springTouchesBody(sp, body, links)),
+    [springs, body, links],
+  );
+
+  const showEmpty = visibleJoints.length === 0 && bodySprings.length === 0;
+
   return (
     <div className="body-nodes-inline">
-      <div className="body-nodes-inline-title">Nodes</div>
-      {visibleJoints.length === 0 ? (
-        <div className="body-nodes-empty">No nodes in this body</div>
-      ) : (
-        visibleJoints.map((joint) => {
+      <div className="body-nodes-inline-title">Features</div>
+      {showEmpty ? (
+        <div className="body-nodes-empty">No joints or linear springs on this body</div>
+      ) : null}
+      {visibleJoints.map((joint) => {
           const memberBodies = bodiesContainingJoint(joint.id, bodies, baseBodyId);
           const isEditing = editingJointLabelId === joint.id;
           return (
             <div
               key={joint.id}
-              className="body-nodes-row"
+              className={`body-nodes-row${selectedIds.has(joint.id) ? ' body-nodes-row-selected' : ''}`}
               role="row"
               onClick={() => select(joint.id)}
             >
@@ -153,7 +202,7 @@ export function BodyNodesInlineList({
                       e.stopPropagation();
                       setEditingJointLabelId(joint.id);
                     }}
-                    title="Rename node"
+                    title="Rename joint"
                   >
                     <span className="body-nodes-name-text">{getJointDisplayName(joint)}</span>
                     {joint.mirrored && <span className="body-nodes-mirror-badge">m</span>}
@@ -163,7 +212,7 @@ export function BodyNodesInlineList({
               <button
                 type="button"
                 className="body-nodes-delete tool-btn"
-                title="Delete node"
+                title="Delete joint"
                 onClick={(e) => {
                   e.stopPropagation();
                   removeJoint(joint.id);
@@ -173,8 +222,33 @@ export function BodyNodesInlineList({
               </button>
             </div>
           );
-        })
-      )}
+        })}
+      {bodySprings.map((sp) => (
+        <div
+          key={sp.id}
+          className={`body-nodes-row body-nodes-row-spring${selectedIds.has(sp.id) ? ' body-nodes-row-selected' : ''}`}
+          role="row"
+          onClick={() => select(sp.id)}
+        >
+          <SpringListIcon />
+          <div className="body-nodes-label-col">
+            <span className="body-nodes-name-text">
+              Linear spring {springListNumber(sp.id, springs)}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="body-nodes-delete tool-btn"
+            title="Delete linear spring"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeSpring(sp.id);
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -193,7 +267,7 @@ export function BodyNodesTrigger({ isOpen, onToggle }: TriggerProps) {
         e.stopPropagation();
         onToggle();
       }}
-      title="Nodes in this body"
+      title="Features on this body (joints & linear springs)"
       aria-expanded={isOpen}
       aria-haspopup="true"
     >

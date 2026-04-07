@@ -24,6 +24,7 @@ export function deleteSelectedEntities(): void {
     else if (mech.outlines[id]) mech.removeOutline(id);
     else if (mech.images[id]) mech.removeImage(id);
     else if (mech.tracers[id]) mech.removeTracer(id);
+    else if (mech.springs[id]) mech.removeSpring(id);
   }
   clearSelection();
 }

@@ -102,6 +102,27 @@ export interface Tracer {
   enabled: boolean;
 }
 
+/** End of a spring: joint or point along a rigid link (t ∈ [0,1]). Both ends are visible and move with the mechanism. */
+export type SpringAnchor =
+  | { type: 'joint'; jointId: string }
+  | { type: 'link'; linkId: string; t: number };
+
+/**
+ * Massless spring (forces applied in Simulate only).
+ * - `linear`: k [N/m], c [N·s/m], restLength + prestressDelta = equilibrium length.
+ * - `torsional`: reserved; solver skips until implemented.
+ */
+export interface MechanismSpring {
+  readonly id: string;
+  kind: 'linear' | 'torsional';
+  anchorA: SpringAnchor;
+  anchorB: SpringAnchor;
+  stiffness: number;
+  damping: number;
+  restLength: number;
+  prestressDelta: number;
+}
+
 export interface MechanismState {
   joints: Record<string, Joint>;
   links: Record<string, Link>;
@@ -112,4 +133,5 @@ export interface MechanismState {
   sliders: Record<string, SliderConstraint>;
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
+  springs: Record<string, MechanismSpring>;
 }

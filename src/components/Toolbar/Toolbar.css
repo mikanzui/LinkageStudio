@@ -221,6 +221,27 @@
   touch-action: pan-y;
 }
 
+/* Linear spring tool: compact radios, no separate Options heading */
+.toolbar-spring-submodes {
+  margin: 0;
+}
+
+.toolbar-spring-submodes .mirror-options-stack {
+  padding-top: 6px;
+}
+
+.toolbar-spring-submodes .panel-toggle-row {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-spring-submodes .panel-toggle-row > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
 .mirror-options-stack {
   display: flex;
   flex-direction: column;

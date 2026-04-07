@@ -1,10 +1,11 @@
-import type { Vec2 } from '../types';
-import { useEditorStore } from '../store/editor-store';
+import type { Vec2, Link, Joint, SpringAnchor } from '../types';
+import { useEditorStore, showTransientHint } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
-import { hitTest, hitTestJoint, hitTestOutline, hitTestOutlineFilled } from './hit-test';
+import { hitTest, hitTestJoint, hitTestOutline, hitTestOutlineFilled, hitTestSpring, hitTestLink } from './hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../renderer/draw-images';
 import { screenToWorld } from '../renderer/camera';
-import { snapToGrid, distance, sub, dot, lengthSq } from '../core/math/vec2';
+import { snapToGrid, distance, sub, dot, lengthSq, segmentClampedT } from '../core/math/vec2';
+import { quantizeSpringLinkT } from '../core/springs/spring-solver';
 import { computeBodyTransform, worldToLocal, localToWorld } from '../core/body-transform';
 import { DEFAULT_GRID_SIZE, HIT_RADIUS } from '../utils/constants';
 import { deleteSelectedEntities } from '../utils/delete-selection';
@@ -15,6 +16,19 @@ import {
   collectIdsInWorldBox,
   collectIdsInWorldLasso,
 } from './selection-marquee';
+
+function springLinkAnchorAtClick(
+  link: Link,
+  worldPos: Vec2,
+  joints: Record<string, Joint>,
+  resolutionSteps: number,
+): SpringAnchor {
+  const jA = joints[link.jointIds[0]];
+  const jB = joints[link.jointIds[1]];
+  const tRaw = segmentClampedT(worldPos, jA.position, jB.position);
+  const t = quantizeSpringLinkT(tRaw, resolutionSteps);
+  return { type: 'link', linkId: link.id, t };
+}
 
 /** Start the long-press arc selector timer for a given joint. No-op for touch input. */
 function startArcTimer(jointId: string, screenX: number, screenY: number) {
@@ -515,6 +529,137 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
+  // --- SPRING TOOL ---
+  if (editor.createTool === 'spring') {
+    const sub = editor.springToolSubmode;
+    const pending = editor.springPickPendingAnchor;
+    const springSteps = useEditorStore.getState().springLinkResolution;
+
+    const jHit = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
+    const linkHit = hitTestLink(worldPos, mechanism.links, mechanism.joints, editor.camera.zoom);
+    const spHit = hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom);
+
+    if (spHit) {
+      if (e.shiftKey) editor.toggleSelect(spHit.id);
+      else editor.select(spHit.id);
+      return;
+    }
+
+    const clearPick = () => useEditorStore.getState().clearSpringPickPending();
+
+    if (sub === 'jointJoint') {
+      if (jHit && !jHit.hidden) {
+        if (!pending) {
+          useEditorStore.setState({ springPickPendingAnchor: { type: 'joint', jointId: jHit.id } });
+          editor.select(jHit.id);
+          showTransientHint('Pick a second joint (same or different body). Escape to cancel.');
+          return;
+        }
+        if (pending.type !== 'joint') {
+          showTransientHint('Pick a second joint.');
+          return;
+        }
+        if (pending.jointId === jHit.id) {
+          showTransientHint('Pick a different joint for the other end.');
+          return;
+        }
+        const sid = mechanism.addSpringJointToJoint(pending.jointId, jHit.id);
+        clearPick();
+        if (sid) {
+          editor.select(sid);
+          editor.setCreateTool('joints');
+        }
+        return;
+      }
+      if (linkHit) {
+        showTransientHint('Joint ↔ joint: click joints, not the link bar. Switch mode for joint ↔ link.');
+        return;
+      }
+      if (pending) {
+        clearPick();
+        showTransientHint('Cancelled first pick.');
+        return;
+      }
+      if (editor.selectedIds.size > 0) editor.clearSelection();
+      return;
+    }
+
+    if (sub === 'jointLink') {
+      if (!pending) {
+        if (jHit && !jHit.hidden) {
+          useEditorStore.setState({ springPickPendingAnchor: { type: 'joint', jointId: jHit.id } });
+          editor.select(jHit.id);
+          showTransientHint('Click a link for the other end. Escape to cancel.');
+          return;
+        }
+        if (linkHit) {
+          showTransientHint('Joint ↔ link: pick a joint first, then a link.');
+          return;
+        }
+        if (editor.selectedIds.size > 0) editor.clearSelection();
+        return;
+      }
+      if (pending.type === 'joint') {
+        if (linkHit) {
+          const anchorB = springLinkAnchorAtClick(linkHit, worldPos, mechanism.joints, springSteps);
+          const sid = mechanism.addSpringJointToLink(pending.jointId, anchorB.linkId, anchorB.t);
+          clearPick();
+          if (sid) {
+            editor.select(sid);
+            editor.setCreateTool('joints');
+          }
+          return;
+        }
+        if (jHit && !jHit.hidden) {
+          showTransientHint('Click a link for the second end.');
+          return;
+        }
+        clearPick();
+        showTransientHint('Cancelled first pick.');
+        return;
+      }
+      clearPick();
+      return;
+    }
+
+    // linkLink
+    if (!pending) {
+      if (linkHit) {
+        const a = springLinkAnchorAtClick(linkHit, worldPos, mechanism.joints, springSteps);
+        useEditorStore.setState({ springPickPendingAnchor: a });
+        showTransientHint('Click another link (or another point on a link). Escape to cancel.');
+        return;
+      }
+      if (jHit && !jHit.hidden) {
+        showTransientHint('Link ↔ link: pick a link first, then a second link or point.');
+        return;
+      }
+      if (editor.selectedIds.size > 0) editor.clearSelection();
+      return;
+    }
+    if (pending.type === 'link') {
+      if (linkHit) {
+        const b = springLinkAnchorAtClick(linkHit, worldPos, mechanism.joints, springSteps);
+        const sid = mechanism.addSpringLinkToLink(pending.linkId, pending.t, b.linkId, b.t);
+        clearPick();
+        if (sid) {
+          editor.select(sid);
+          editor.setCreateTool('joints');
+        }
+        return;
+      }
+      if (jHit) {
+        showTransientHint('Click a link for the second end.');
+        return;
+      }
+      clearPick();
+      showTransientHint('Cancelled first pick.');
+      return;
+    }
+    clearPick();
+    return;
+  }
+
   // --- IMAGE TOOL ---
   if (editor.createTool === 'image') {
     // Check if clicking on already-selected image handles
@@ -920,9 +1065,9 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
-  // --- BOX / LASSO (Pivot tool, Select viewport mode) ---
+  // --- BOX / LASSO (Pivot or Spring tool, Select viewport mode) ---
   if (
-    editor.createTool === 'joints' &&
+    (editor.createTool === 'joints' || editor.createTool === 'spring') &&
     editor.activeTool === 'select' &&
     editor.selectMode !== 'single' &&
     !hitTestJointsToolBlock(worldPos, editor.camera.zoom, mechanism)
@@ -956,6 +1101,13 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     dragJointId = joint.id;
     mechanism.pushHistory();
     startArcTimer(joint.id, e.clientX, e.clientY);
+    return;
+  }
+
+  const springPick = hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom);
+  if (springPick) {
+    if (e.shiftKey) editor.toggleSelect(springPick.id);
+    else editor.select(springPick.id);
     return;
   }
 
@@ -1306,7 +1458,12 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
   }
 
   const hoverJoint = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
-  editor.setHovered(hoverJoint ? hoverJoint.id : null);
+  const springCount = Object.keys(mechanism.springs).length;
+  const hoverSpring =
+    !hoverJoint && springCount > 0
+      ? hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom)
+      : null;
+  editor.setHovered(hoverJoint ? hoverJoint.id : hoverSpring ? hoverSpring.id : null);
   lastMouse = screenPos;
 }
 
@@ -1432,6 +1589,16 @@ export function handleKeyDown(e: KeyboardEvent) {
         if (editor.createTool === 'mirror') {
           editor.setMirrorPreview(null);
           editor.setCreateTool('joints');
+          e.preventDefault();
+          return;
+        }
+        if (editor.createTool === 'spring') {
+          if (editor.springPickPendingAnchor) {
+            useEditorStore.getState().clearSpringPickPending();
+            showTransientHint('Cancelled first pick.');
+          } else {
+            editor.setCreateTool('joints');
+          }
           e.preventDefault();
           return;
         }

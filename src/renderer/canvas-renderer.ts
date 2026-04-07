@@ -1,6 +1,6 @@
 import type {
   Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2, SimDragState, AppMode,
-  ForceVector, CreateTool, GridLevel, SelectionGesture,
+  ForceVector, CreateTool, GridLevel, SelectionGesture, MechanismSpring, SpringAnchor,
 } from '../types';
 import type { CameraState } from '../types';
 import { applyCamera, resetCamera } from './camera';
@@ -8,7 +8,7 @@ import { drawMechanism, drawOutlineGhost, drawSliderGhost, drawColliderGhost, dr
 import { drawImages } from './draw-images';
 import {
   drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInteraction, drawModeBadge, drawHUD, clearCanvas,
-  drawCOMMarkers, drawArcSelector, drawMirrorAxisGuide, drawSelectionGesture,
+  drawCOMMarkers, drawArcSelector, drawMirrorAxisGuide, drawSelectionGesture, drawSpringJointPickHighlight, drawSpringLinkPickHighlight,
 } from './draw-overlays';
 import { lerp } from '../core/math/vec2';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from '../core/body-transform';
@@ -23,6 +23,7 @@ export interface RenderState {
   sliders: Record<string, SliderConstraint>;
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
+  springs: Record<string, MechanismSpring>;
   tracerPaths: Map<string, Vec2[]>;
   selectedIds: Set<string>;
   hoveredId: string | null;
@@ -54,6 +55,8 @@ export interface RenderState {
   arcSelector?: { jointId: string | null; colliderId: string | null; tracerId: string | null; position: Vec2; showTime: number; collapseTime: number | null; createdBodyId: string | null } | null;
   mirrorPreview?: { axis: 'vertical' | 'horizontal'; value: number } | null;
   selectionGesture?: SelectionGesture | null;
+  /** Spring tool: highlight first picked anchor while waiting for second click. */
+  springPickPendingAnchor?: SpringAnchor | null;
 }
 
 export function render(
@@ -83,7 +86,7 @@ export function render(
     frozenPts = new Map(frozenPts);
     frozenPts.delete(state.editingOutlineId);
   }
-  drawMechanism(ctx, state.joints, state.links, state.bodies, state.outlines, state.sliders, state.colliders, state.selectedIds, state.hoveredId, state.camera.zoom, state.showLinks, state.baseBodyId, frozenPts);
+  drawMechanism(ctx, state.joints, state.links, state.bodies, state.outlines, state.sliders, state.colliders, state.springs, state.selectedIds, state.hoveredId, state.camera.zoom, state.showLinks, state.baseBodyId, frozenPts);
 
   drawPathTraces(ctx, state.pathTraces, state.camera.zoom);
 
@@ -117,6 +120,15 @@ export function render(
   // Collider ghost (placing second point)
   if (state.mode === 'create' && state.createTool === 'collider' && state.colliderPointA) {
     drawColliderGhost(ctx, state.colliderPointA, state.cursorWorld, state.camera.zoom);
+  }
+
+  if (state.mode === 'create' && state.createTool === 'spring' && state.springPickPendingAnchor) {
+    const pa = state.springPickPendingAnchor;
+    if (pa.type === 'joint') {
+      drawSpringJointPickHighlight(ctx, state.joints[pa.jointId], state.camera.zoom);
+    } else {
+      drawSpringLinkPickHighlight(ctx, state.links[pa.linkId], pa.t, state.joints, state.camera.zoom);
+    }
   }
 
   if (state.mode === 'simulate' && state.forceVectors.length > 0 && state.showVectors) {

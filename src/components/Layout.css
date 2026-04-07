@@ -494,28 +494,359 @@
   border-color: rgba(255, 255, 255, 0.11);
 }
 
+/* Solid fills — translucent surfaces make native <select> + options illegible on some platforms. */
 .panel-content select {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  padding: 4px 8px;
+  color-scheme: dark;
+  -webkit-appearance: menulist;
+  appearance: auto;
+  background-color: #2c3038;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f0f2f5;
+  padding: 5px 10px;
   border-radius: 8px;
   font-size: 12px;
+  line-height: 1.35;
+  min-height: 30px;
   cursor: pointer;
   transition:
-    background var(--transition-tactile),
+    background-color var(--transition-tactile),
     border-color var(--transition-tactile);
 }
 
 .panel-content select:hover {
-  background: var(--surface-hover);
-  border-color: rgba(255, 255, 255, 0.12);
+  background-color: #353a44;
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .panel-content select:focus {
   outline: none;
-  border-color: rgba(0, 122, 255, 0.42);
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
+  background-color: #353a44;
+  border-color: rgba(0, 122, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+.panel-content select option {
+  background-color: #2c3038;
+  color: #f0f2f5;
+}
+
+.panel-content select option:checked,
+.panel-content select option:hover {
+  background-color: #3d4452;
+  color: #ffffff;
+}
+
+/* Spring card: select matches native list shape better (OS menus stay square; avoid ultra-pill clash) */
+.panel-spring-combined select.panel-spring-select {
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-height: 28px;
+}
+
+.panel-spring-combined select.panel-spring-select option {
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+/* Spring property panel — single combined card (From / To + params) */
+.panel-spring-combined {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.1);
+  padding: 6px 8px 7px;
+  overflow: visible;
+  position: relative;
+  z-index: 0;
+}
+
+.panel-spring-combined:focus-within {
+  z-index: 2;
+}
+
+.panel-spring-attachment-segment {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 0 5px;
+}
+
+.panel-spring-attachment-segment + .panel-spring-attachment-segment {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 6px;
+}
+
+/* From / To: fixed label column so titles stay aligned; radios fill the rest */
+.panel-spring-attach-head {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+  width: 100%;
+}
+
+.panel-spring-end-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.panel-spring-attach-head .panel-spring-type-radios {
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.panel-spring-params {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 6px;
+  margin-top: 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/*
+ * Spring params: two-row stack — slider full width, then value + unit.
+ * Avoids native range thumbs painting over number inputs (single-row grid was unreliable).
+ */
+.panel-param-slider-row {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  column-gap: 7px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.panel-param-slider-row > .panel-num-axis {
+  line-height: 1.15;
+  font-size: 11px;
+  justify-self: end;
+  text-align: right;
+}
+
+.panel-param-slider-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+}
+
+.panel-param-range-cell {
+  width: 100%;
+  min-width: 0;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.panel-param-range-input {
+  flex: none;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 18px;
+  margin: 0;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.panel-param-value-suffix {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.panel-param-value-suffix--solo {
+  justify-content: flex-start;
+}
+
+.panel-param-slider-num {
+  display: flex;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.panel-param-slider-num input[type='number'] {
+  width: 5.5rem;
+  min-width: 4.75rem;
+  max-width: 7rem;
+  box-sizing: border-box;
+}
+
+.panel-param-suffix {
+  font-size: 9px;
+  color: var(--text-tertiary, #777);
+  line-height: 1.15;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Link attachment: along-bar row aligns with param grid (no separate “t” label) */
+.panel-spring-along-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: stretch;
+}
+
+.panel-spring-along-slider-row {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  column-gap: 7px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.panel-spring-along-slider-row .panel-param-slider-body {
+  padding-top: 0;
+}
+
+.panel-spring-along-axis-gap {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.panel-spring-along-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.panel-spring-end-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.panel-spring-end-row > span:first-child {
+  min-width: 52px;
+  color: var(--text-tertiary);
+}
+
+.panel-spring-end-type-row {
+  align-items: center;
+}
+
+.panel-spring-type-radios {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-spring-type-radio {
+  margin: 0;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.panel-spring-type-radio input[type='radio'] {
+  flex-shrink: 0;
+}
+
+/* Global .panel-content rules style radios like checkboxes with no :checked state — restore proper radio affordance */
+.panel-content .panel-spring-type-radio input[type='radio'] {
+  border-radius: 50%;
+}
+
+.panel-content .panel-spring-type-radio input[type='radio']::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  transform: scale(0);
+  transition: transform 120ms ease;
+}
+
+.panel-content .panel-spring-type-radio input[type='radio']:checked {
+  border-color: rgba(88, 167, 255, 0.85);
+  background: rgba(0, 122, 255, 0.26);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.16);
+}
+
+.panel-content .panel-spring-type-radio input[type='radio']:checked::after {
+  background: #f0f7ff;
+  transform: scale(1);
+}
+
+.panel-spring-end-row select {
+  flex: 1;
+  min-width: 140px;
+}
+
+.panel-spring-end-select-row {
+  margin-top: 0;
+}
+
+.panel-spring-end-select-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Compact track + thumb so stacked rows stay short */
+.panel-spring-combined .panel-param-range-cell input[type='range'] {
+  width: 100%;
+  height: 3px;
+  min-height: 18px;
+  accent-color: rgba(0, 122, 255, 0.75);
+}
+
+.panel-spring-combined .panel-param-range-cell input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+}
+
+.panel-spring-combined .panel-param-range-cell input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffffff, #d8e5ff 58%, #b8caf0);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(0, 122, 255, 0.14);
+}
+
+.panel-spring-combined .panel-param-range-cell input[type='range']::-moz-range-track {
+  height: 3px;
+}
+
+.panel-spring-combined .panel-param-range-cell input[type='range']::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffffff, #d8e5ff 58%, #b8caf0);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(0, 122, 255, 0.14);
+}
+
+.panel-spring-combined .panel-param-slider-num input[type='number'] {
+  min-height: 22px;
+  padding: 2px 6px;
+  font-size: 11px;
 }
 
 /* Joint type / small readouts — pill that responds on hover */
@@ -1215,6 +1546,19 @@
 
 .body-nodes-row:hover {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.body-nodes-row-selected {
+  background: rgba(74, 158, 255, 0.14);
+}
+
+.body-nodes-row-selected:hover {
+  background: rgba(74, 158, 255, 0.2);
+}
+
+.body-nodes-row-spring .body-nodes-label-col {
+  display: flex;
+  align-items: center;
 }
 
 .body-nodes-swatches {

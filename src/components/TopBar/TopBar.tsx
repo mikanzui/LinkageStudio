@@ -43,6 +43,7 @@ function serializeCurrentProject(): string {
     mech.sliders,
     mech.colliders,
     mech.tracers,
+    mech.springs,
     name,
     viewPreferences,
     simulationSettings,
@@ -408,7 +409,7 @@ export function TopBar() {
       </div>
 
       <div className="top-bar-brand">
-        <span>Slinker v{__APP_VERSION__}</span>
+        <span>Slinker V{__APP_VERSION__}</span>
       </div>
 
       {clearAllOpen &&

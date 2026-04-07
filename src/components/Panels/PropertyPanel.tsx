@@ -1,15 +1,225 @@
+import { useMemo } from 'react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
-import type { Joint, Outline, CanvasImage } from '../../types';
+import type { Joint, Link, Outline, CanvasImage, SpringAnchor, MechanismSpring } from '../../types';
+import { getJointDisplayName } from '../../utils/joint-labels';
+import { ParamSliderRow } from './ParamSliderRow';
+
+function linkRowLabel(link: Link, joints: Record<string, Joint>): string {
+  const ja = joints[link.jointIds[0]];
+  const jb = joints[link.jointIds[1]];
+  if (!ja || !jb) return 'Link';
+  return `${getJointDisplayName(ja)} ↔ ${getJointDisplayName(jb)}`;
+}
+
+function SpringEndEditor(props: {
+  title: string;
+  anchor: SpringAnchor;
+  springId: string;
+  patchKey: 'anchorA' | 'anchorB';
+  joints: Record<string, Joint>;
+  visibleJointIds: string[];
+  visibleLinks: Link[];
+  allLinks: Record<string, Link>;
+  springLinkResolution: number;
+  updateSpring: (
+    id: string,
+    updates: Partial<Pick<MechanismSpring, 'anchorA' | 'anchorB'>>,
+  ) => void;
+}) {
+  const {
+    title,
+    anchor,
+    springId,
+    patchKey,
+    joints,
+    visibleJointIds,
+    visibleLinks,
+    allLinks,
+    springLinkResolution,
+    updateSpring,
+  } = props;
+
+  const patch = (next: SpringAnchor) =>
+    updateSpring(springId, patchKey === 'anchorA' ? { anchorA: next } : { anchorB: next });
+
+  const tStep = 1 / Math.max(2, Math.floor(springLinkResolution));
+
+  const onTypeChange = (type: 'joint' | 'link') => {
+    if (type === 'joint') {
+      const jid = anchor.type === 'joint' ? anchor.jointId : visibleJointIds[0];
+      if (!jid) return;
+      patch({ type: 'joint', jointId: jid });
+    } else {
+      const lk = visibleLinks[0];
+      if (!lk) return;
+      patch({ type: 'link', linkId: lk.id, t: 0.5 });
+    }
+  };
+
+  const jointIdsForSelect =
+    anchor.type === 'joint' && !visibleJointIds.includes(anchor.jointId)
+      ? [anchor.jointId, ...visibleJointIds]
+      : visibleJointIds;
+
+  const linkSelectList = (() => {
+    const byId = new Map(visibleLinks.map((l) => [l.id, l]));
+    if (anchor.type === 'link' && !byId.has(anchor.linkId) && allLinks[anchor.linkId]) {
+      byId.set(anchor.linkId, allLinks[anchor.linkId]);
+    }
+    return [...byId.values()].sort((a, b) =>
+      linkRowLabel(a, joints).localeCompare(linkRowLabel(b, joints)),
+    );
+  })();
+
+  const typeRadioName = `spring-${springId}-${patchKey}-attach`;
+
+  return (
+    <div className="panel-spring-attachment-segment">
+      <div className="panel-spring-attach-head">
+        <span className="panel-spring-end-title">{title}</span>
+        <div
+          className="panel-spring-type-radios"
+          role="radiogroup"
+          aria-label={`${title} attachment`}
+        >
+          <label className="panel-toggle-row panel-spring-type-radio">
+            <input
+              type="radio"
+              name={typeRadioName}
+              value="joint"
+              checked={anchor.type === 'joint'}
+              disabled={visibleJointIds.length === 0}
+              onChange={() => onTypeChange('joint')}
+            />
+            <span>Joint</span>
+          </label>
+          <label className="panel-toggle-row panel-spring-type-radio">
+            <input
+              type="radio"
+              name={typeRadioName}
+              value="link"
+              checked={anchor.type === 'link'}
+              disabled={visibleLinks.length === 0}
+              onChange={() => onTypeChange('link')}
+            />
+            <span>Link</span>
+          </label>
+        </div>
+      </div>
+      {anchor.type === 'joint' ? (
+        <div className="panel-spring-end-row panel-spring-end-select-row">
+          <select
+            className="panel-spring-select"
+            aria-label={`${title} joint`}
+            value={anchor.jointId}
+            onChange={(e) => patch({ type: 'joint', jointId: e.target.value })}
+          >
+            {jointIdsForSelect.map((jid) => (
+              <option key={jid} value={jid}>
+                {joints[jid] ? getJointDisplayName(joints[jid]) : jid}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <>
+          <div className="panel-spring-end-row panel-spring-end-select-row">
+            <select
+              className="panel-spring-select"
+              aria-label={`${title} link`}
+              value={anchor.linkId}
+              onChange={(e) => {
+                const lk = e.target.value;
+                const keepT = anchor.type === 'link' && anchor.linkId === lk;
+                patch({ type: 'link', linkId: lk, t: keepT ? anchor.t : 0.5 });
+              }}
+            >
+              {linkSelectList.map((lk) => (
+                <option key={lk.id} value={lk.id}>
+                  {linkRowLabel(lk, joints)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="panel-spring-along-bar">
+            <span className="panel-spring-along-label">Along bar (0–1)</span>
+            <div className="panel-spring-along-slider-row">
+              <span className="panel-num-axis panel-spring-along-axis-gap" aria-hidden="true" />
+              <div className="panel-param-slider-body">
+                <div className="panel-param-range-cell">
+                  <input
+                    className="panel-param-range-input"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={tStep}
+                    value={anchor.t}
+                    aria-label={`${title} position along link`}
+                    onChange={(e) => patch({ type: 'link', linkId: anchor.linkId, t: +e.target.value })}
+                  />
+                </div>
+                <div className="panel-param-value-suffix panel-param-value-suffix--solo">
+                  <label className="panel-param-slider-num">
+                    <input
+                      type="number"
+                      min={0}
+                      max={1}
+                      step={tStep}
+                      value={anchor.t}
+                      aria-label={`${title} position along link (0–1)`}
+                      onChange={(e) =>
+                        patch({
+                          type: 'link',
+                          linkId: anchor.linkId,
+                          t: Math.max(0, Math.min(1, +e.target.value)),
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function PropertyPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
+  const springLinkResolution = useEditorStore((s) => s.springLinkResolution);
+  const setSpringLinkResolution = useEditorStore((s) => s.setSpringLinkResolution);
   const joints = useMechanismStore((s) => s.joints);
+  const links = useMechanismStore((s) => s.links);
   const outlines = useMechanismStore((s) => s.outlines);
   const images = useMechanismStore((s) => s.images);
+  const springs = useMechanismStore((s) => s.springs);
   const bodies = useMechanismStore((s) => s.bodies);
   const moveJoint = useMechanismStore((s) => s.moveJoint);
   const updateImage = useMechanismStore((s) => s.updateImage);
+  const updateSpring = useMechanismStore((s) => s.updateSpring);
+
+  const visibleJointIds = useMemo(
+    () =>
+      Object.keys(joints)
+        .filter((id) => joints[id] && !joints[id].hidden)
+        .sort((a, b) => getJointDisplayName(joints[a]).localeCompare(getJointDisplayName(joints[b]))),
+    [joints],
+  );
+
+  const visibleLinks = useMemo(
+    () =>
+      Object.values(links)
+        .filter((l) => {
+          const ja = joints[l.jointIds[0]];
+          const jb = joints[l.jointIds[1]];
+          return ja && jb && !ja.hidden && !jb.hidden;
+        })
+        .sort((a, b) => linkRowLabel(a, joints).localeCompare(linkRowLabel(b, joints))),
+    [links, joints],
+  );
 
   if (selectedIds.size === 0) {
     return null;
@@ -120,6 +330,104 @@ export function PropertyPanel() {
         <div className="panel-surface panel-section">
           <div className="panel-info">Body: {body?.name ?? 'Unknown'}</div>
           <div className="panel-info">{outline.points.length} vertices</div>
+        </div>
+      </div>
+    );
+  }
+
+  const spring = springs[id];
+  if (spring) {
+    return (
+      <div className="panel-content">
+        <div className="panel-section-header">
+          <div className="panel-title">Linear spring</div>
+        </div>
+        <div className="panel-surface panel-section">
+          <div className="panel-spring-combined">
+            <SpringEndEditor
+              title="From"
+              anchor={spring.anchorA}
+              springId={spring.id}
+              patchKey="anchorA"
+              joints={joints}
+              visibleJointIds={visibleJointIds}
+              visibleLinks={visibleLinks}
+              allLinks={links}
+              springLinkResolution={springLinkResolution}
+              updateSpring={updateSpring}
+            />
+            <SpringEndEditor
+              title="To"
+              anchor={spring.anchorB}
+              springId={spring.id}
+              patchKey="anchorB"
+              joints={joints}
+              visibleJointIds={visibleJointIds}
+              visibleLinks={visibleLinks}
+              allLinks={links}
+              springLinkResolution={springLinkResolution}
+              updateSpring={updateSpring}
+            />
+            <div className="panel-spring-params">
+              <ParamSliderRow
+                key={`${spring.id}-stiffness`}
+                axisLabel="k"
+                suffix="N/m"
+                value={spring.stiffness}
+                onChange={(v) => updateSpring(spring.id, { stiffness: v })}
+                defaultMin={0}
+                defaultMax={500}
+                step={1}
+                clamp={(v) => Math.max(0, v)}
+              />
+              <ParamSliderRow
+                key={`${spring.id}-damping`}
+                axisLabel="c"
+                suffix="N·s/m"
+                value={spring.damping}
+                onChange={(v) => updateSpring(spring.id, { damping: v })}
+                defaultMin={0}
+                defaultMax={80}
+                step={0.5}
+                clamp={(v) => Math.max(0, v)}
+              />
+              <ParamSliderRow
+                key={`${spring.id}-rest`}
+                axisLabel="L₀"
+                suffix="m"
+                value={spring.restLength}
+                onChange={(v) => updateSpring(spring.id, { restLength: v })}
+                defaultMin={0}
+                defaultMax={400}
+                step={0.01}
+                displayDecimals={3}
+                clamp={(v) => Math.max(1e-9, v)}
+              />
+              <ParamSliderRow
+                key={`${spring.id}-prestress`}
+                axisLabel="Δ"
+                suffix={'prestress\u00a0m'}
+                value={spring.prestressDelta}
+                onChange={(v) => updateSpring(spring.id, { prestressDelta: v })}
+                defaultMin={-100}
+                defaultMax={100}
+                step={0.01}
+                clamp={(v) => v}
+              />
+              <ParamSliderRow
+                key="spring-link-snap-resolution"
+                axisLabel="#"
+                suffix={'snap\u00a0steps'}
+                value={springLinkResolution}
+                onChange={(v) => setSpringLinkResolution(v)}
+                defaultMin={2}
+                defaultMax={48}
+                step={1}
+                integer
+                clamp={(v) => Math.max(2, Math.round(v))}
+              />
+            </div>
+          </div>
         </div>
       </div>
     );

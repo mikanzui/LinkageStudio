@@ -78,6 +78,21 @@ const IconColliderSmall = () => (
   </svg>
 );
 
+const IconSpringSmall = () => (
+  <svg width="18" height="18" viewBox="0 0 16 16">
+    <path
+      d="M2 8c0-1 1-1.5 2-1.5s2 1 2 2 1 2 2 2 2-1 2-2 1-2 2-2 2 0.5 2 1.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="2" cy="8" r="1" fill="currentColor" />
+    <circle cx="14" cy="8" r="1" fill="currentColor" />
+  </svg>
+);
+
 const IconTracerSmall = () => (
   <svg width="18" height="18" viewBox="0 0 16 16">
     <circle cx="8" cy="8" r="3.5" fill="none" stroke="currentColor" strokeWidth="1" />
@@ -341,6 +356,16 @@ export function Layout() {
                   title="Collider barrier"
                 >
                   <IconColliderSmall />
+                </button>
+
+                <div className="collapsed-divider" />
+                <div className="collapsed-group-label">Springs</div>
+                <button
+                  className={`collapsed-tool-btn ${createTool === 'spring' ? 'active' : ''}`}
+                  onClick={() => setCreateTool('spring')}
+                  title="Linear spring — joint or link endpoints"
+                >
+                  <IconSpringSmall />
                 </button>
 
                 <div className="collapsed-divider" />

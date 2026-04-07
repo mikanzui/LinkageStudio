@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, AngleConstraint, JointType } from '../types';
+import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, AngleConstraint, JointType, MechanismSpring, SpringAnchor } from '../types';
 import type { Vec2 } from '../types';
 import { createId } from '../utils/id';
 import { showTransientHint, useEditorStore } from './editor-store';
 import { generateBodyLinks } from '../core/body-links';
 import { computeBodyTransform, localToWorld, worldToLocal } from '../core/body-transform';
-import { BASE_BODY_COLOR, BODY_COLORS } from '../utils/constants';
+import { BASE_BODY_COLOR, BODY_COLORS, DEFAULT_SPRING_DAMPING_NS_PER_M, DEFAULT_SPRING_STIFFNESS_NM } from '../utils/constants';
+import { quantizeSpringLinkT, springEndpointsWorld } from '../core/springs/spring-solver';
 import { assignMissingJointLabels, nextJointDisplayNumber } from '../utils/joint-labels';
 
 interface HistorySnapshot {
@@ -18,6 +19,7 @@ interface HistorySnapshot {
   sliders: Record<string, SliderConstraint>;
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
+  springs: Record<string, MechanismSpring>;
 }
 
 const BASE_BODY_ID = 'base';
@@ -56,6 +58,48 @@ function createBaseBody(): Body {
   return { id: BASE_BODY_ID, name: 'Base', color: BASE_BODY_COLOR, jointIds: [], useOutlineCOM: false, showLinks: true };
 }
 
+function distanceBetweenSpringAnchors(
+  a: SpringAnchor,
+  b: SpringAnchor,
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+): number | null {
+  const ends = springEndpointsWorld(
+    {
+      id: '_tmp',
+      kind: 'linear',
+      anchorA: a,
+      anchorB: b,
+      stiffness: 0,
+      damping: 0,
+      restLength: 0,
+      prestressDelta: 0,
+    },
+    joints,
+    links,
+  );
+  if (!ends) return null;
+  const dx = ends.b.x - ends.a.x;
+  const dy = ends.b.y - ends.a.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function withQuantizedLinkT(anchor: SpringAnchor, resolutionSteps: number): SpringAnchor {
+  if (anchor.type !== 'link') return anchor;
+  return { ...anchor, t: quantizeSpringLinkT(anchor.t, resolutionSteps) };
+}
+
+/** True if both anchors attach to the same geometric point. */
+function springAnchorsCoincide(a: SpringAnchor, b: SpringAnchor, resolutionSteps: number): boolean {
+  if (a.type === 'joint' && b.type === 'joint') return a.jointId === b.jointId;
+  if (a.type === 'link' && b.type === 'link' && a.linkId === b.linkId) {
+    const s = Math.max(2, Math.floor(resolutionSteps));
+    const minSep = 0.5 / s;
+    return Math.abs(a.t - b.t) < minSep;
+  }
+  return false;
+}
+
 interface MechanismStore {
   joints: Record<string, Joint>;
   links: Record<string, Link>;
@@ -66,6 +110,7 @@ interface MechanismStore {
   sliders: Record<string, SliderConstraint>;
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
+  springs: Record<string, MechanismSpring>;
   angleConstraints: AngleConstraint[];
 
   past: HistorySnapshot[];
@@ -114,6 +159,20 @@ interface MechanismStore {
 
   addTracer(bodyId: string, localPosition: Vec2): string;
   removeTracer(id: string): void;
+
+  /** Joint ↔ point on link; rest length = current distance. */
+  addSpringJointToLink(jointId: string, linkId: string, tAlongLinkRaw: number): string | null;
+  /** Point on link ↔ point on link; rest length = current distance. */
+  addSpringLinkToLink(linkIdA: string, tA: number, linkIdB: string, tB: number): string | null;
+  /** Joint–joint linear spring (any bodies); rest length = current distance. */
+  addSpringJointToJoint(jointIdA: string, jointIdB: string): string | null;
+  removeSpring(id: string): void;
+  updateSpring(
+    id: string,
+    updates: Partial<
+      Pick<MechanismSpring, 'stiffness' | 'damping' | 'restLength' | 'prestressDelta' | 'kind' | 'anchorA' | 'anchorB'>
+    >,
+  ): void;
   updateTracerBody(tracerId: string, bodyId: string): void;
   moveTracer(id: string, localPosition: Vec2): void;
   toggleTracerEnabled(id: string): void;
@@ -129,7 +188,7 @@ interface MechanismStore {
   reprojectOutlinesFromWorld(frozenWorldPoints: Map<string, Vec2[]>): void;
 
   clearAll(): void;
-  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer> }): void;
+  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; springs?: Record<string, MechanismSpring> }): void;
   pushHistory(): void;
   undo(): void;
   redo(): void;
@@ -150,6 +209,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   sliders: {},
   colliders: {},
   tracers: {},
+  springs: {},
   angleConstraints: [],
   past: [],
   future: [],
@@ -193,7 +253,13 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     const { newLinks, angleConstraints } = regenConstraints(bodies, joints, newSliders);
     const newJoints = { ...joints };
     updateJointConnections(newJoints, newLinks);
-    set({ sliders: newSliders, links: newLinks, joints: newJoints, angleConstraints });
+    set({
+      sliders: newSliders,
+      links: newLinks,
+      joints: newJoints,
+      angleConstraints,
+      springs: pruneSprings(get().springs, newJoints, newLinks),
+    });
     return id;
   },
 
@@ -205,7 +271,13 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       const newJoints = { ...s.joints };
       const { newLinks, angleConstraints } = regenConstraints(s.bodies, newJoints, newSliders);
       updateJointConnections(newJoints, newLinks);
-      return { sliders: newSliders, joints: newJoints, links: newLinks, angleConstraints };
+      return {
+        sliders: newSliders,
+        joints: newJoints,
+        links: newLinks,
+        angleConstraints,
+        springs: pruneSprings(s.springs, newJoints, newLinks),
+      };
     });
   },
 
@@ -311,6 +383,150 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       const tracer = s.tracers[id];
       if (!tracer) return s;
       return { tracers: { ...s.tracers, [id]: { ...tracer, enabled: !tracer.enabled } } };
+    });
+  },
+
+  addSpringJointToLink(jointId, linkId, tAlongLinkRaw) {
+    const joint = get().joints[jointId];
+    const link = get().links[linkId];
+    if (!joint || !link || joint.hidden) return null;
+    const jA = get().joints[link.jointIds[0]];
+    const jB = get().joints[link.jointIds[1]];
+    if (!jA || !jB || jA.hidden || jB.hidden) return null;
+    const steps = useEditorStore.getState().springLinkResolution;
+    const t = quantizeSpringLinkT(tAlongLinkRaw, steps);
+    const anchorA: SpringAnchor = { type: 'joint', jointId };
+    const anchorB: SpringAnchor = { type: 'link', linkId, t };
+    const rest = distanceBetweenSpringAnchors(anchorA, anchorB, get().joints, get().links);
+    if (rest === null) return null;
+    get().pushHistory();
+    const id = createId();
+    const spring: MechanismSpring = {
+      id,
+      kind: 'linear',
+      anchorA,
+      anchorB,
+      stiffness: DEFAULT_SPRING_STIFFNESS_NM,
+      damping: DEFAULT_SPRING_DAMPING_NS_PER_M,
+      restLength: rest,
+      prestressDelta: 0,
+    };
+    set((s) => ({ springs: { ...s.springs, [id]: spring } }));
+    return id;
+  },
+
+  addSpringLinkToLink(linkIdA, tARaw, linkIdB, tBRaw) {
+    const linkA = get().links[linkIdA];
+    const linkB = get().links[linkIdB];
+    if (!linkA || !linkB) return null;
+    const steps = useEditorStore.getState().springLinkResolution;
+    const tA = quantizeSpringLinkT(tARaw, steps);
+    const tB = quantizeSpringLinkT(tBRaw, steps);
+    const s = Math.max(2, Math.floor(steps));
+    const minSep = 0.5 / s;
+    if (linkIdA === linkIdB && Math.abs(tA - tB) < minSep) {
+      showTransientHint('Pick two different points (or two different links).');
+      return null;
+    }
+    const anchorA: SpringAnchor = { type: 'link', linkId: linkIdA, t: tA };
+    const anchorB: SpringAnchor = { type: 'link', linkId: linkIdB, t: tB };
+    const rest = distanceBetweenSpringAnchors(anchorA, anchorB, get().joints, get().links);
+    if (rest === null) return null;
+    get().pushHistory();
+    const id = createId();
+    const spring: MechanismSpring = {
+      id,
+      kind: 'linear',
+      anchorA,
+      anchorB,
+      stiffness: DEFAULT_SPRING_STIFFNESS_NM,
+      damping: DEFAULT_SPRING_DAMPING_NS_PER_M,
+      restLength: rest,
+      prestressDelta: 0,
+    };
+    set((s) => ({ springs: { ...s.springs, [id]: spring } }));
+    return id;
+  },
+
+  addSpringJointToJoint(jointIdA, jointIdB) {
+    if (jointIdA === jointIdB) return null;
+    const { joints, links } = get();
+    const ja = joints[jointIdA];
+    const jb = joints[jointIdB];
+    if (!ja || !jb) return null;
+    const direct = directLinkBetween(jointIdA, jointIdB, links);
+    if (direct) {
+      showTransientHint('These joints are already linked; a spring may fight that distance constraint.');
+    }
+    get().pushHistory();
+    const id = createId();
+    const dx = jb.position.x - ja.position.x;
+    const dy = jb.position.y - ja.position.y;
+    const rest = Math.sqrt(dx * dx + dy * dy);
+    const spring: MechanismSpring = {
+      id,
+      kind: 'linear',
+      anchorA: { type: 'joint', jointId: jointIdA },
+      anchorB: { type: 'joint', jointId: jointIdB },
+      stiffness: DEFAULT_SPRING_STIFFNESS_NM,
+      damping: DEFAULT_SPRING_DAMPING_NS_PER_M,
+      restLength: rest,
+      prestressDelta: 0,
+    };
+    set((s) => ({ springs: { ...s.springs, [id]: spring } }));
+    return id;
+  },
+
+  removeSpring(id) {
+    get().pushHistory();
+    set((s) => {
+      if (!s.springs[id]) return s;
+      const springs = { ...s.springs };
+      delete springs[id];
+      return { springs };
+    });
+  },
+
+  updateSpring(id, updates) {
+    const cur = get().springs[id];
+    if (!cur) return;
+
+    const hasAnchorA = Object.prototype.hasOwnProperty.call(updates, 'anchorA');
+    const hasAnchorB = Object.prototype.hasOwnProperty.call(updates, 'anchorB');
+
+    let nextA = cur.anchorA;
+    let nextB = cur.anchorB;
+    if (hasAnchorA && updates.anchorA !== undefined) nextA = updates.anchorA;
+    if (hasAnchorB && updates.anchorB !== undefined) nextB = updates.anchorB;
+
+    const steps = useEditorStore.getState().springLinkResolution;
+    nextA = withQuantizedLinkT(nextA, steps);
+    nextB = withQuantizedLinkT(nextB, steps);
+
+    if (hasAnchorA || hasAnchorB) {
+      const { joints, links } = get();
+      if (!springAnchorValid(nextA, joints, links) || !springAnchorValid(nextB, joints, links)) {
+        showTransientHint('That attachment is not valid.');
+        return;
+      }
+      if (springAnchorsCoincide(nextA, nextB, steps)) {
+        showTransientHint('Both ends cannot attach to the same point.');
+        return;
+      }
+      get().pushHistory();
+    }
+
+    set((s) => {
+      const sp = s.springs[id];
+      if (!sp) return s;
+      const patched: MechanismSpring = { ...sp, ...updates };
+      if (hasAnchorA || hasAnchorB) {
+        patched.anchorA = nextA;
+        patched.anchorB = nextB;
+        const d = distanceBetweenSpringAnchors(patched.anchorA, patched.anchorB, s.joints, s.links);
+        if (d !== null) patched.restLength = d;
+      }
+      return { springs: { ...s.springs, [id]: patched } };
     });
   },
 
@@ -527,6 +743,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       tracers: newTracers,
       links: newLinks,
       angleConstraints,
+      springs: pruneSprings(snapshot.springs ?? {}, newJoints, newLinks),
     });
 
     if (createdIds.length > 0) {
@@ -639,6 +856,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       sliders: {},
       colliders: {},
       tracers: {},
+      springs: {},
       angleConstraints: [],
       past: [],
       future: [],
@@ -652,6 +870,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     newJoints = assignMissingJointLabels(newJoints);
     const { newLinks, angleConstraints: ac } = regenConstraints(state.bodies, newJoints, sliders);
     updateJointConnections(newJoints, newLinks);
+    const rawSprings = state.springs || {};
     set({
       joints: newJoints,
       links: newLinks,
@@ -662,6 +881,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       sliders,
       colliders: state.colliders || {},
       tracers: state.tracers || {},
+      springs: pruneSprings(rawSprings, newJoints, newLinks),
       angleConstraints: ac,
       past: [],
       future: [],
@@ -669,15 +889,15 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   pushHistory() {
-    const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, past } = get();
+    const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs, past } = get();
     set({
-      past: [...past.slice(-50), { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers } }],
+      past: [...past.slice(-50), { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs } }],
       future: [],
     });
   },
 
   undo() {
-    const { past, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers } = get();
+    const { past, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs } = get();
     if (past.length === 0) return;
     const prev = past[past.length - 1];
     set({
@@ -690,13 +910,14 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       sliders: prev.sliders || {},
       colliders: prev.colliders || {},
       tracers: prev.tracers || {},
+      springs: prev.springs || {},
       past: past.slice(0, -1),
-      future: [{ joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers } }, ...get().future],
+      future: [{ joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs } }, ...get().future],
     });
   },
 
   redo() {
-    const { future, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers } = get();
+    const { future, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs } = get();
     if (future.length === 0) return;
     const next = future[0];
     set({
@@ -709,8 +930,9 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       sliders: next.sliders || {},
       colliders: next.colliders || {},
       tracers: next.tracers || {},
+      springs: next.springs || {},
       future: future.slice(1),
-      past: [...get().past, { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers } }],
+      past: [...get().past, { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs } }],
     });
   },
 
@@ -749,7 +971,15 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     const { newLinks, angleConstraints: newAngle } = regenConstraints(newBodies, newJoints, get().sliders);
     updateJointConnections(newJoints, newLinks);
 
-    set({ joints: newJoints, links: newLinks, bodies: newBodies, outlines: newOutlines, tracers: newTracers, angleConstraints: newAngle });
+    set({
+      joints: newJoints,
+      links: newLinks,
+      bodies: newBodies,
+      outlines: newOutlines,
+      tracers: newTracers,
+      angleConstraints: newAngle,
+      springs: pruneSprings(get().springs, newJoints, newLinks),
+    });
     return id;
   },
 
@@ -799,7 +1029,16 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     const { newLinks, angleConstraints: newAngle } = regenConstraints(newBodies, newJoints, get().sliders);
     updateJointConnections(newJoints, newLinks);
 
-    set({ joints: newJoints, links: newLinks, bodies: newBodies, outlines: newOutlines, tracers: newTracers, sliders: newSliders, angleConstraints: newAngle });
+    set({
+      joints: newJoints,
+      links: newLinks,
+      bodies: newBodies,
+      outlines: newOutlines,
+      tracers: newTracers,
+      sliders: newSliders,
+      angleConstraints: newAngle,
+      springs: pruneSprings(get().springs, newJoints, newLinks),
+    });
   },
 
   moveJoint(id, position) {
@@ -883,7 +1122,11 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
           };
         }
       }
-      return { links: newLinks, joints: newJoints };
+      return {
+        links: newLinks,
+        joints: newJoints,
+        springs: pruneSprings(s.springs, newJoints, newLinks),
+      };
     });
   },
 
@@ -920,7 +1163,14 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       if (outline.bodyId === id) delete newOutlines[oid];
     }
 
-    set({ bodies: newBodies, joints: newJoints, links: newLinks, outlines: newOutlines, angleConstraints: newAngle });
+    set({
+      bodies: newBodies,
+      joints: newJoints,
+      links: newLinks,
+      outlines: newOutlines,
+      angleConstraints: newAngle,
+      springs: pruneSprings(get().springs, newJoints, newLinks),
+    });
   },
 
   renameBody(id, name) {
@@ -960,7 +1210,15 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     const { newLinks, angleConstraints: newAngle } = regenConstraints(newBodies, newJoints, get().sliders);
     updateJointConnections(newJoints, newLinks);
 
-    set({ bodies: newBodies, joints: newJoints, links: newLinks, outlines: newOutlines, tracers: newTracers, angleConstraints: newAngle });
+    set({
+      bodies: newBodies,
+      joints: newJoints,
+      links: newLinks,
+      outlines: newOutlines,
+      tracers: newTracers,
+      angleConstraints: newAngle,
+      springs: pruneSprings(get().springs, newJoints, newLinks),
+    });
 
     if (!check.ok) {
       showTransientHint(check.message);
@@ -984,7 +1242,15 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     const { newLinks, angleConstraints: newAngle } = regenConstraints(newBodies, newJoints, get().sliders);
     updateJointConnections(newJoints, newLinks);
 
-    set({ bodies: newBodies, joints: newJoints, links: newLinks, outlines: newOutlines, tracers: newTracers, angleConstraints: newAngle });
+    set({
+      bodies: newBodies,
+      joints: newJoints,
+      links: newLinks,
+      outlines: newOutlines,
+      tracers: newTracers,
+      angleConstraints: newAngle,
+      springs: pruneSprings(get().springs, newJoints, newLinks),
+    });
   },
 
   regenerateLinks() {
@@ -993,7 +1259,12 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     syncJointTypes(newJoints, bodies, baseBodyId);
     const { newLinks, angleConstraints } = regenConstraints(bodies, newJoints, get().sliders);
     updateJointConnections(newJoints, newLinks);
-    set({ joints: newJoints, links: newLinks, angleConstraints });
+    set({
+      joints: newJoints,
+      links: newLinks,
+      angleConstraints,
+      springs: pruneSprings(get().springs, newJoints, newLinks),
+    });
   },
 
   addOutline(bodyId, localPoints) {
@@ -1079,6 +1350,39 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
 }));
 
 // --- Helpers ---
+
+function directLinkBetween(jointIdA: string, jointIdB: string, links: Record<string, Link>): Link | null {
+  for (const l of Object.values(links)) {
+    const [a, b] = l.jointIds;
+    if ((a === jointIdA && b === jointIdB) || (a === jointIdB && b === jointIdA)) return l;
+  }
+  return null;
+}
+
+function springAnchorValid(
+  anchor: MechanismSpring['anchorA'] | MechanismSpring['anchorB'],
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+): boolean {
+  if (anchor.type === 'joint') return !!joints[anchor.jointId];
+  const link = links[anchor.linkId];
+  if (!link) return false;
+  return !!joints[link.jointIds[0]] && !!joints[link.jointIds[1]];
+}
+
+function pruneSprings(
+  springs: Record<string, MechanismSpring>,
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+): Record<string, MechanismSpring> {
+  const out: Record<string, MechanismSpring> = {};
+  for (const [id, sp] of Object.entries(springs)) {
+    if (springAnchorValid(sp.anchorA, joints, links) && springAnchorValid(sp.anchorB, joints, links)) {
+      out[id] = sp;
+    }
+  }
+  return out;
+}
 
 function buildLinksRecord(links: Link[]): Record<string, Link> {
   const record: Record<string, Link> = {};
