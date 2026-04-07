@@ -1,7 +1,15 @@
 import type { Vec2, Link, Joint, SpringAnchor } from '../types';
 import { useEditorStore, showTransientHint } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
-import { hitTest, hitTestJoint, hitTestOutline, hitTestOutlineFilled, hitTestSpring, hitTestLink } from './hit-test';
+import {
+  hitTest,
+  hitTestJoint,
+  hitTestOutline,
+  hitTestOutlineFilled,
+  hitTestSpring,
+  hitTestLink,
+  bodyHasJointsInsideOutline,
+} from './hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../renderer/draw-images';
 import { screenToWorld } from '../renderer/camera';
 import { snapToGrid, distance, sub, dot, lengthSq, segmentClampedT } from '../core/math/vec2';
@@ -479,34 +487,39 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     if (outlineHit) {
       const body = mechanism.bodies[outlineHit.bodyId];
       if (body) {
-        const hasFreeJoint = body.jointIds.some((jid) => !isFixed(jid));
-        if (!hasFreeJoint) return;
+        const allowInteriorGrab =
+          editor.outlineSimGrabInteriorWithJoints ||
+          !bodyHasJointsInsideOutline(outlineHit, body, mechanism.joints);
+        if (allowInteriorGrab) {
+          const hasFreeJoint = body.jointIds.some((jid) => !isFixed(jid));
+          if (!hasFreeJoint) return;
 
-        // Create a temp joint linked to 2 nearest body joints (doesn't change body structure)
-        const tempId = mechanism.addTempJoint(worldPos, body.id);
+          // Create a temp joint linked to 2 nearest body joints (doesn't change body structure)
+          const tempId = mechanism.addTempJoint(worldPos, body.id);
 
-        const mech2 = useMechanismStore.getState();
-        const tempJoint = mech2.joints[tempId];
-        if (!tempJoint) return;
+          const mech2 = useMechanismStore.getState();
+          const tempJoint = mech2.joints[tempId];
+          if (!tempJoint) return;
 
-        // Find a temp link connected to the temp joint
-        const linkId = tempJoint.connectedLinkIds[0] || null;
-        let grabT = 0;
-        if (linkId) {
-          const link = mech2.links[linkId];
-          if (link) grabT = link.jointIds[0] === tempId ? 0 : 1;
+          // Find a temp link connected to the temp joint
+          const linkId = tempJoint.connectedLinkIds[0] || null;
+          let grabT = 0;
+          if (linkId) {
+            const link = mech2.links[linkId];
+            if (link) grabT = link.jointIds[0] === tempId ? 0 : 1;
+          }
+
+          editor.setSimDrag({
+            active: true,
+            grabPoint: worldPos,
+            cursorPoint: worldPos,
+            jointId: tempId,
+            linkId,
+            grabT,
+            tempJointId: tempId,
+            directJointId: null,
+          });
         }
-
-        editor.setSimDrag({
-          active: true,
-          grabPoint: worldPos,
-          cursorPoint: worldPos,
-          jointId: tempId,
-          linkId,
-          grabT,
-          tempJointId: tempId,
-          directJointId: null,
-        });
       }
     }
     return;
@@ -1050,6 +1063,38 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
+  // --- FORCE SENSOR TOOL ---
+  if (editor.createTool === 'forceSensor') {
+    // Check for existing sensor hit (select/deselect)
+    for (const sensor of Object.values(mechanism.forceSensors)) {
+      const link = mechanism.links[sensor.linkId];
+      if (!link) continue;
+      const jA = mechanism.joints[link.jointIds[0]];
+      const jB = mechanism.joints[link.jointIds[1]];
+      if (!jA || !jB) continue;
+      const midX = (jA.position.x + jB.position.x) / 2;
+      const midY = (jA.position.y + jB.position.y) / 2;
+      if (distance(worldPos, { x: midX, y: midY }) < HIT_RADIUS / editor.camera.zoom) {
+        editor.select(sensor.id);
+        return;
+      }
+    }
+    // Hit-test links to place a new sensor
+    const hitLink = hitTestLink(worldPos, mechanism.links, mechanism.joints, editor.camera.zoom);
+    if (hitLink) {
+      // Don't add duplicate sensor on same link
+      const existing = Object.values(mechanism.forceSensors).find((s) => s.linkId === hitLink.id);
+      if (existing) {
+        editor.select(existing.id);
+      } else {
+        const sensorId = mechanism.addForceSensor(hitLink.id);
+        editor.select(sensorId);
+      }
+      return;
+    }
+    return;
+  }
+
   // --- OUTLINE TOOL ---
   if (editor.createTool === 'outline') {
     // --- OUTLINE EDIT MODE ---
@@ -1196,6 +1241,36 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     if (e.shiftKey) editor.toggleSelect(springPick.id);
     else editor.select(springPick.id);
     return;
+  }
+
+  // Collider barrier (pivot tool): long-press opens radial menu, same as collider tool / right-click
+  {
+    const z = editor.camera.zoom;
+    const threshold = HIT_RADIUS / z;
+    let bestCollider: { id: string; closest: Vec2 } | null = null;
+    let bestD = Infinity;
+    for (const collider of Object.values(mechanism.colliders)) {
+      const jA = mechanism.joints[collider.jointIdA];
+      const jC = mechanism.joints[collider.jointIdC];
+      if (!jA || !jC) continue;
+      const ab = sub(jC.position, jA.position);
+      const ap = sub(worldPos, jA.position);
+      const abLenSq = lengthSq(ab);
+      if (abLenSq < 1e-8) continue;
+      const t = Math.max(0, Math.min(1, dot(ap, ab) / abLenSq));
+      const closest: Vec2 = { x: jA.position.x + ab.x * t, y: jA.position.y + ab.y * t };
+      const dist = distance(worldPos, closest);
+      if (dist < threshold && dist < bestD) {
+        bestD = dist;
+        bestCollider = { id: collider.id, closest };
+      }
+    }
+    if (bestCollider) {
+      if (e.shiftKey) editor.toggleSelect(bestCollider.id);
+      else editor.select(bestCollider.id);
+      startColliderArcTimer(bestCollider.id, bestCollider.closest, e.clientX, e.clientY);
+      return;
+    }
   }
 
   const bHitThreshold = (HIT_RADIUS * 1.4) / editor.camera.zoom;

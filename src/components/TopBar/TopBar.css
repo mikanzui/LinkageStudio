@@ -219,6 +219,44 @@
   color: #ffcdd2;
 }
 
+/* Export dialog fields */
+.export-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.export-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 52px;
+  text-align: right;
+}
+
+.export-select {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.export-select:focus {
+  border-color: rgba(0, 122, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.22);
+}
+
+.export-select option {
+  background: #1e1e22;
+  color: var(--text-primary);
+}
+
 @media (hover: none) and (pointer: coarse) {
   .top-bar {
     height: auto;

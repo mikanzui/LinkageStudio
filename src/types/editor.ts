@@ -19,6 +19,7 @@ export type CreateTool =
   | 'outline'
   | 'image'
   | 'tracer'
+  | 'forceSensor'
   | 'mirror';
 
 /** Spring tool: two-click placement pattern (both ends are joint or link). */

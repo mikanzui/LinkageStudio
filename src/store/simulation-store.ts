@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Vec2, SolverResult } from '../types';
+import { resetForceSmoothing } from '../core/solver/force-analysis';
 
 interface SimulationStore {
   isPlaying: boolean;
@@ -20,6 +21,8 @@ interface SimulationStore {
   damping: number;
   dragMultiplier: number;
   dragDamping: number;
+  /** Force sensor time-series: sensorId → array of { time, force } */
+  forceSensorData: Map<string, { time: number; force: number }[]>;
 
   play(): void;
   pause(): void;
@@ -33,6 +36,7 @@ interface SimulationStore {
   advanceTime(dt: number): void;
   recordTrace(jointId: string, pos: Vec2): void;
   recordTracerTrace(tracerId: string, pos: Vec2): void;
+  recordForceSensorData(sensorId: string, time: number, force: number): void;
   clearTraces(): void;
   toggleTracing(jointId: string): void;
   toggleGravity(): void;
@@ -61,10 +65,11 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
   damping: 0.5,
   dragMultiplier: 25,
   dragDamping: 0.25,
+  forceSensorData: new Map(),
 
   play() { set({ isPlaying: true }); },
   pause() { set({ isPlaying: false }); },
-  reset() { set({ isPlaying: false, time: 0, driverAngle: 0, pathTraces: new Map(), tracerPaths: new Map() }); },
+  reset() { resetForceSmoothing(); set({ isPlaying: false, time: 0, driverAngle: 0, pathTraces: new Map(), tracerPaths: new Map(), forceSensorData: new Map() }); },
   setSpeed(speed) { set({ speed }); },
 
   setDriver(jointId, linkId, type) {
@@ -101,7 +106,18 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
     });
   },
 
-  clearTraces() { set({ pathTraces: new Map(), tracerPaths: new Map() }); },
+  recordForceSensorData(sensorId, time, force) {
+    set((s) => {
+      const data = new Map(s.forceSensorData);
+      const arr = data.get(sensorId) || [];
+      // Limit to 600 data points (~10 seconds at 60fps)
+      const next = arr.length >= 600 ? [...arr.slice(1), { time, force }] : [...arr, { time, force }];
+      data.set(sensorId, next);
+      return { forceSensorData: data };
+    });
+  },
+
+  clearTraces() { set({ pathTraces: new Map(), tracerPaths: new Map(), forceSensorData: new Map() }); },
 
   toggleTracing(jointId) {
     set((s) => {

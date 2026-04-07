@@ -87,6 +87,15 @@ const IconOutline = () => (
   </svg>
 );
 
+const IconForceSensor = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.4" />
+    <polyline points="3,12 5,8 7,10 9,4 11,9 13,6" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    <circle cx="2" cy="8" r="1.5" fill="currentColor" />
+    <circle cx="14" cy="8" r="1.5" fill="currentColor" />
+  </svg>
+);
+
 const IconImage = () => (
   <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
     <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
@@ -175,6 +184,7 @@ export function Toolbar() {
   const isLinearAxialTool = createTool === 'spring' || createTool === 'damper';
   const isTorsionSpringTool = createTool === 'torsionSpring';
   const isTracerTool = createTool === 'tracer';
+  const isForceSensorTool = createTool === 'forceSensor';
   const isMirrorTool = createTool === 'mirror';
 
   const renderHints = () => {
@@ -203,6 +213,15 @@ export function Toolbar() {
           <div className="sim-hint">Select a body, then click to place</div>
           <div className="sim-hint">Traces path during simulation</div>
           <div className="sim-hint">Hold on tracer to change body</div>
+        </>
+      );
+    }
+    if (isForceSensorTool) {
+      return (
+        <>
+          <div className="sim-hint">Click a link to attach sensor</div>
+          <div className="sim-hint">Records axial force over time</div>
+          <div className="sim-hint">View plot during simulation</div>
         </>
       );
     }
@@ -444,6 +463,14 @@ export function Toolbar() {
             >
               <IconTracer />
               <span className="tool-name">Path Plotter</span>
+            </button>
+
+            <button
+              className={`tool-btn ${isForceSensorTool ? 'active' : ''}`}
+              onClick={() => setCreateTool('forceSensor')}
+            >
+              <IconForceSensor />
+              <span className="tool-name">Force Sensor</span>
             </button>
           </div>
 

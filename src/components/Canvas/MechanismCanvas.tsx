@@ -7,12 +7,19 @@ import { screenToWorld } from '../../renderer/camera';
 import {
   handleMouseDown, handleMouseMove, handleMouseUp, handleDoubleClick, handleWheel, handleKeyDown, handleKeyUp,
 } from '../../interaction/tool-manager';
-import { hitTestAny, hitTestJoint, hitTestOutlineFilled, hitTestLink, hitTestSpring } from '../../interaction/hit-test';
+import {
+  hitTestAny,
+  hitTestJoint,
+  hitTestOutlineFilled,
+  hitTestLink,
+  hitTestSpring,
+  bodyHasJointsInsideOutline,
+} from '../../interaction/hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../../renderer/draw-images';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import type { Vec2 } from '../../types';
 import { distance, distToSegment, segmentClampedT } from '../../core/math/vec2';
-import { HIT_RADIUS, LINK_HIT_THRESHOLD } from '../../utils/constants';
+import { HIT_RADIUS } from '../../utils/constants';
 import { getDofHudHelpTooltipRect } from '../../renderer/draw-overlays';
 import { DOF_TOOLTIP } from '../../core/solver/dof';
 
@@ -152,6 +159,10 @@ export function MechanismCanvas() {
           editor.mode === 'create' && editor.createTool === 'torsionSpring'
             ? editor.torsionSpringPick
             : null,
+        showLoads: editor.showLoads,
+        forceAnalysis: sim.solverResult?.forceAnalysis ?? null,
+        forceSensors: mechanism.forceSensors,
+        forceSensorData: sim.forceSensorData,
       });
     } catch (e) {
       console.error('Render error:', e);
@@ -217,10 +228,13 @@ export function MechanismCanvas() {
     canvas.addEventListener('gesturestart', preventGesture);
     canvas.addEventListener('gesturechange', preventGesture);
     canvas.addEventListener('gestureend', preventGesture);
+    const onWheel = (e: WheelEvent) => handleWheel(e, canvas);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       canvas.removeEventListener('gesturestart', preventGesture);
       canvas.removeEventListener('gesturechange', preventGesture);
       canvas.removeEventListener('gestureend', preventGesture);
+      canvas.removeEventListener('wheel', onWheel);
     };
   }, []);
 
@@ -333,11 +347,37 @@ export function MechanismCanvas() {
         const mechanism = useMechanismStore.getState();
         const worldPos = screenToWorld(screenPos, editor.camera);
 
-        // Check if touching a joint, link, filled outline, or image (including handles).
+        // Check if touching a joint, link, filled outline (simulate only, gated), or image (including handles).
         // Use hitTestAny (non-mutating) so the authoritative hitTest in handleMouseDown
         // gets a clean state for click-cycling overlapping joints.
-        let componentHit = hitTestAny(worldPos, mechanism.joints, mechanism.links, editor.camera.zoom)
-          || hitTestOutlineFilled(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, mechanism.baseBodyId);
+        let componentHit = hitTestAny(worldPos, mechanism.joints, mechanism.links, editor.camera.zoom);
+        if (editor.mode === 'simulate') {
+          const outlineFill = hitTestOutlineFilled(
+            worldPos,
+            mechanism.outlines,
+            mechanism.bodies,
+            mechanism.joints,
+            mechanism.baseBodyId,
+          );
+          if (outlineFill) {
+            const b = mechanism.bodies[outlineFill.bodyId];
+            const allowFill =
+              editor.outlineSimGrabInteriorWithJoints ||
+              !b ||
+              !bodyHasJointsInsideOutline(outlineFill, b, mechanism.joints);
+            if (allowFill) componentHit = true;
+          }
+        } else {
+          componentHit =
+            componentHit ||
+            !!hitTestOutlineFilled(
+              worldPos,
+              mechanism.outlines,
+              mechanism.bodies,
+              mechanism.joints,
+              mechanism.baseBodyId,
+            );
+        }
 
         // Also check images and their handles
         if (
@@ -546,7 +586,7 @@ export function MechanismCanvas() {
           activePointers.clear();
         }
       }}
-      onWheel={(e) => handleWheel(e.nativeEvent, canvasRef.current!)}
+      /* wheel handler registered via useEffect with { passive: false } */
       onContextMenu={(e) => {
         e.preventDefault();
         const canvas = canvasRef.current!;
@@ -567,6 +607,29 @@ export function MechanismCanvas() {
           editor.setWorldContextMenu({
             targetType: 'joint',
             targetId: joint.id,
+            screenPosition: screenPos,
+            openMode: 'context',
+          });
+          return;
+        }
+
+        // Collider barrier before link: A–C uses a rigid link; link hit-test would steal the segment.
+        const colliderThreshold = HIT_RADIUS / editor.camera.zoom;
+        let bestCollider: { id: string; d: number } | null = null;
+        for (const collider of Object.values(mechanism.colliders)) {
+          const jA = mechanism.joints[collider.jointIdA];
+          const jC = mechanism.joints[collider.jointIdC];
+          if (!jA || !jC) continue;
+          const d = distToSegment(worldPos, jA.position, jC.position);
+          if (d < colliderThreshold && (!bestCollider || d < bestCollider.d)) {
+            bestCollider = { id: collider.id, d };
+          }
+        }
+        if (bestCollider) {
+          editor.select(bestCollider.id);
+          editor.setWorldContextMenu({
+            targetType: 'collider',
+            targetId: bestCollider.id,
             screenPosition: screenPos,
             openMode: 'context',
           });
@@ -603,25 +666,6 @@ export function MechanismCanvas() {
             editor.setWorldContextMenu({
               targetType: 'tracer',
               targetId: tracer.id,
-              screenPosition: screenPos,
-              openMode: 'context',
-            });
-            return;
-          }
-        }
-
-        // Collider barrier hit
-        const colliderThreshold = LINK_HIT_THRESHOLD / editor.camera.zoom;
-        for (const collider of Object.values(mechanism.colliders)) {
-          const jA = mechanism.joints[collider.jointIdA];
-          const jC = mechanism.joints[collider.jointIdC];
-          if (!jA || !jC) continue;
-          const d = distToSegment(worldPos, jA.position, jC.position);
-          if (d < colliderThreshold) {
-            editor.select(collider.id);
-            editor.setWorldContextMenu({
-              targetType: 'collider',
-              targetId: collider.id,
               screenPosition: screenPos,
               openMode: 'context',
             });

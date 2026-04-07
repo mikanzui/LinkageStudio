@@ -1,8 +1,8 @@
 /**
  * DXF Export — generates a minimal DXF R12 (AC1009) file.
  *
- * Coordinate system: 1 DXF unit = 1mm.
- * World units: 25 world units = 1cm = 10mm, scale = 1/2.5.
+ * World units: 25 world units = 1 cm = 10 mm.
+ * Output unit is configurable via the `unit` parameter (default: mm).
  *
  * Uses the simplest possible DXF structure for maximum import compatibility.
  * R12 is supported by virtually every CAD tool (AutoCAD, Onshape, FreeCAD, etc).
@@ -10,8 +10,9 @@
 
 import type { Joint, Link, Body, Outline, SliderConstraint, ColliderConstraint } from '../types';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
+import type { ExportUnit } from './export-manager';
+import { worldToUnit, mmToUnit, dxfInsUnitsCode } from './export-manager';
 
-const SCALE = 1 / 2.5;
 const JOINT_RADIUS_MM = 1.5;
 const FIXED_JOINT_RADIUS_MM = 2.0;
 
@@ -47,7 +48,13 @@ export function exportDXF(
   sliders: Record<string, SliderConstraint>,
   colliders: Record<string, ColliderConstraint>,
   showLinksGlobal: boolean = true,
+  unit: ExportUnit = 'mm',
 ): string {
+  const SCALE = worldToUnit(unit);
+  const JOINT_RADIUS = JOINT_RADIUS_MM * mmToUnit(unit);
+  const FIXED_JOINT_RADIUS = FIXED_JOINT_RADIUS_MM * mmToUnit(unit);
+  const INSUNITS = dxfInsUnitsCode(unit);
+
   const out: string[] = [];
   const p = (code: number, val: string | number) => { out.push(String(code)); out.push(String(val)); };
 
@@ -56,7 +63,7 @@ export function exportDXF(
   // ==================== SECTION: HEADER ====================
   p(0, 'SECTION'); p(2, 'HEADER');
   p(9, '$ACADVER'); p(1, 'AC1009');
-  p(9, '$INSUNITS'); p(70, 4);
+  p(9, '$INSUNITS'); p(70, INSUNITS);
   p(0, 'ENDSEC');
 
   // ==================== SECTION: TABLES ====================
@@ -96,7 +103,7 @@ export function exportDXF(
     for (const jid of body.jointIds) {
       const j = joints[jid];
       if (!j || j.hidden) continue;
-      const r = j.type === 'fixed' ? FIXED_JOINT_RADIUS_MM : JOINT_RADIUS_MM;
+      const r = j.type === 'fixed' ? FIXED_JOINT_RADIUS : JOINT_RADIUS;
       p(0, 'CIRCLE'); p(8, layer);
       p(10, (j.position.x * SCALE).toFixed(4));
       p(20, (-j.position.y * SCALE).toFixed(4));

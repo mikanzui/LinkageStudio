@@ -5,6 +5,9 @@ import { useMechanismStore } from '../../store/mechanism-store';
 import { useSimulationStore } from '../../store/simulation-store';
 import { serializeMechanism, deserializeMechanism, saveFileAs, openFilePicker, downloadFile } from '../../utils/file-io';
 import { exportDXF } from '../../utils/export-dxf';
+import { exportSolidWorksMacro } from '../../utils/export-solidworks';
+import type { ExportUnit, ExportFormat } from '../../utils/export-manager';
+import { UNIT_LABELS, FORMAT_LABELS, FORMAT_EXTENSIONS } from '../../utils/export-manager';
 import { deleteSelectedEntities } from '../../utils/delete-selection';
 import { showTransientHint } from '../../store/editor-store';
 import type { GridLevel } from '../../types';
@@ -23,6 +26,7 @@ function serializeCurrentProject(): string {
     showVectors: editor.showVectors,
     showRulers: editor.showRulers,
     showForceUnits: editor.showForceUnits,
+    outlineSimGrabInteriorWithJoints: editor.outlineSimGrabInteriorWithJoints,
     gridLevel: editor.gridLevel,
     camera: { pan: { ...editor.camera.pan }, zoom: editor.camera.zoom },
   };
@@ -102,6 +106,9 @@ export function TopBar() {
   const [clearAllSaveBusy, setClearAllSaveBusy] = useState(false);
   const [openUnsavedOpen, setOpenUnsavedOpen] = useState(false);
   const [openUnsavedSaveBusy, setOpenUnsavedSaveBusy] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('dxf');
+  const [exportUnit, setExportUnit] = useState<ExportUnit>('mm');
   const lastSavedFingerprintRef = useRef<string | null>(null);
 
   const undo = useMechanismStore((s) => s.undo);
@@ -181,6 +188,9 @@ export function TopBar() {
       if (vp.showVectors !== undefined) { if (vp.showVectors !== editor.showVectors) editor.toggleShowVectors(); }
       if (vp.showRulers !== undefined) { if (vp.showRulers !== editor.showRulers) editor.toggleShowRulers(); }
       if (vp.showForceUnits !== undefined) { if (vp.showForceUnits !== editor.showForceUnits) editor.toggleShowForceUnits(); }
+      if (vp.outlineSimGrabInteriorWithJoints !== undefined) {
+        useEditorStore.setState({ outlineSimGrabInteriorWithJoints: vp.outlineSimGrabInteriorWithJoints });
+      }
       if (vp.gridLevel) editor.setGridLevel(vp.gridLevel as GridLevel);
       if (vp.camera) {
         useEditorStore.setState({ camera: { pan: vp.camera.pan, zoom: vp.camera.zoom } });
@@ -386,17 +396,8 @@ export function TopBar() {
       <div className="top-bar-group">
         <button
           className="top-bar-btn"
-          onClick={() => {
-            const mech = useMechanismStore.getState();
-            const editor = useEditorStore.getState();
-            const dxf = exportDXF(
-              mech.joints, mech.links, mech.bodies, mech.baseBodyId,
-              mech.outlines, mech.sliders, mech.colliders, editor.showLinks,
-            );
-            const name = editor.projectName || 'Untitled';
-            downloadFile(dxf, `${name}.dxf`);
-          }}
-          title="Export as DXF"
+          onClick={() => setExportOpen(true)}
+          title="Export mechanism to CAD format"
           disabled={!isCreate}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -404,7 +405,7 @@ export function TopBar() {
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          Export DXF
+          Export
         </button>
       </div>
 
@@ -499,6 +500,104 @@ export function TopBar() {
                   onClick={handleOpenWithoutSaving}
                 >
                   Open anyway
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {exportOpen &&
+        createPortal(
+          <div
+            className="top-bar-modal-backdrop"
+            role="presentation"
+            onClick={() => setExportOpen(false)}
+          >
+            <div
+              className="top-bar-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="export-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="export-title" className="top-bar-modal-title">
+                Export Mechanism
+              </h2>
+              <p className="top-bar-modal-text">
+                Export your mechanism as a CAD-compatible file.
+              </p>
+
+              <div className="export-field">
+                <label className="export-label" htmlFor="export-format">Format</label>
+                <select
+                  id="export-format"
+                  className="export-select"
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+                >
+                  {(Object.keys(FORMAT_LABELS) as ExportFormat[]).map((fmt) => (
+                    <option key={fmt} value={fmt}>{FORMAT_LABELS[fmt]}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="export-field">
+                <label className="export-label" htmlFor="export-unit">Units</label>
+                <select
+                  id="export-unit"
+                  className="export-select"
+                  value={exportUnit}
+                  onChange={(e) => setExportUnit(e.target.value as ExportUnit)}
+                >
+                  {(Object.keys(UNIT_LABELS) as ExportUnit[]).map((u) => (
+                    <option key={u} value={u}>{UNIT_LABELS[u]} ({u})</option>
+                  ))}
+                </select>
+              </div>
+
+              {exportFormat === 'solidworks' && (
+                <p className="top-bar-modal-text" style={{ fontSize: '10px', color: '#888', marginTop: 8 }}>
+                  Generates a .swb macro for SolidWorks. Open via Tools → Macro → Run to create a Part with a sketch.
+                </p>
+              )}
+
+              <div className="top-bar-modal-actions" style={{ marginTop: 16 }}>
+                <button type="button" className="top-bar-modal-btn" onClick={() => setExportOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="top-bar-modal-btn top-bar-modal-btn-primary"
+                  onClick={() => {
+                    const mech = useMechanismStore.getState();
+                    const editor = useEditorStore.getState();
+                    const name = editor.projectName || 'Untitled';
+
+                    let content: string;
+                    let ext: string;
+
+                    if (exportFormat === 'solidworks') {
+                      content = exportSolidWorksMacro(
+                        mech.joints, mech.links, mech.bodies, mech.baseBodyId,
+                        mech.outlines, mech.sliders, mech.colliders, editor.showLinks,
+                        exportUnit,
+                      );
+                      ext = '.swb';
+                    } else {
+                      content = exportDXF(
+                        mech.joints, mech.links, mech.bodies, mech.baseBodyId,
+                        mech.outlines, mech.sliders, mech.colliders, editor.showLinks,
+                        exportUnit,
+                      );
+                      ext = '.dxf';
+                    }
+
+                    downloadFile(content, `${name}${ext}`);
+                    setExportOpen(false);
+                  }}
+                >
+                  Export
                 </button>
               </div>
             </div>

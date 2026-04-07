@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
+import { useSimulationStore } from '../../store/simulation-store';
 import type { Joint, Link, Outline, CanvasImage, SpringAnchor, MechanismSpring } from '../../types';
 import { getJointDisplayName } from '../../utils/joint-labels';
+import { formatForce } from '../../utils/units';
 import { ParamSliderRow } from './ParamSliderRow';
 
 function linkRowLabel(link: Link, joints: Record<string, Joint>): string {
@@ -299,6 +301,12 @@ export function PropertyPanel() {
 
   if (joint) {
     const step = 0.1;
+    const mode = useEditorStore.getState().mode;
+    const showLoads = useEditorStore.getState().showLoads;
+    const forceAnalysis = useSimulationStore.getState().solverResult?.forceAnalysis;
+    const jointReaction = (mode === 'simulate' && showLoads && forceAnalysis)
+      ? forceAnalysis.jointReactions.get(joint.id) ?? null
+      : null;
     return (
       <div className="panel-content">
         <div className="panel-section-header">
@@ -383,6 +391,30 @@ export function PropertyPanel() {
             </div>
           </label>
         </div>
+        {jointReaction && (
+          <>
+            <div className="panel-section-header" style={{ marginTop: 8 }}>
+              <div className="panel-subtitle">Reaction Forces</div>
+            </div>
+            <div className="panel-surface panel-section" style={{ fontSize: 11, fontFamily: 'monospace' }}>
+              <div className="panel-info" style={{ fontWeight: 'bold' }}>
+                Total: {formatForce(jointReaction.magnitude)}
+                {' '}
+                ({(Math.atan2(jointReaction.reactionForce.y, jointReaction.reactionForce.x) * 180 / Math.PI).toFixed(1)}°)
+              </div>
+              {jointReaction.contributions.map((c, i) => {
+                const mag = Math.sqrt(c.force.x * c.force.x + c.force.y * c.force.y);
+                const link = links[c.linkId];
+                const label = link ? linkRowLabel(link, joints) : c.linkId;
+                return (
+                  <div key={i} className="panel-info" style={{ paddingLeft: 6 }}>
+                    {label}: {formatForce(mag)}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     );
   }

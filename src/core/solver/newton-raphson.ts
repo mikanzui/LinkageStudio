@@ -1,6 +1,7 @@
 import type { Joint, Link, SliderConstraint, ColliderConstraint, AngleConstraint, Vec2, SolverResult, ForceVector, MechanismSpring } from '../../types';
 import { accumulateLinearSpringAccelerations, accumulateTorsionalSpringAccelerations } from '../springs/spring-solver';
 import { distanceConstraint, angleDriverConstraint } from './constraints';
+import { analyzeForces, smoothForceAnalysis, type LinkCorrection } from './force-analysis';
 import { createMatrix, solveLU } from '../math/linalg';
 import { SOLVER_MAX_ITERATIONS, SOLVER_TOLERANCE, SOLVER_DAMPING } from '../../utils/constants';
 
@@ -319,7 +320,9 @@ export function solveWithForce(
   const effectiveStrength = PULL_STRENGTH * dragMultiplier;
 
   // --- Substep loop ---
+  const linkCorrections: LinkCorrection[] = [];
   for (let sub = 0; sub < NUM_SUBSTEPS; sub++) {
+    const isLastSubstep = sub === NUM_SUBSTEPS - 1;
     const springAx = new Float64Array(freeJoints.length);
     const springAy = new Float64Array(freeJoints.length);
     if (springs && Object.keys(springs).length > 0) {
@@ -432,6 +435,7 @@ export function solveWithForce(
 
     // 3. Project distance constraints + slider constraints
     for (let pass = 0; pass < CONSTRAINT_PASSES; pass++) {
+      const isLastPass = isLastSubstep && pass === CONSTRAINT_PASSES - 1;
       for (const link of linkArray) {
         const idxI = jointIndex.get(link.jointIds[0]);
         const idxJ = jointIndex.get(link.jointIds[1]);
@@ -459,6 +463,19 @@ export function solveWithForce(
         const cy = ddy * diff / w;
         if (isFreeI) { predicted[idxI!] += cx; predicted[idxI! + 1] += cy; }
         if (isFreeJ) { predicted[idxJ!] -= cx; predicted[idxJ! + 1] -= cy; }
+
+        // Record corrections on the last pass of the last substep for force analysis
+        if (isLastPass) {
+          linkCorrections.push({
+            linkId: link.id,
+            jointIdA: link.jointIds[0],
+            jointIdB: link.jointIds[1],
+            dxA: isFreeI ? cx : 0,
+            dyA: isFreeI ? cy : 0,
+            dxB: isFreeJ ? -cx : 0,
+            dyB: isFreeJ ? -cy : 0,
+          });
+        }
       }
 
       // Slider constraints: B must lie on segment AC (between A and C).
@@ -826,5 +843,11 @@ export function solveWithForce(
     if (joint.type === 'fixed') positions.set(joint.id, joint.position);
   }
 
-  return { converged: true, iterations: 0, residual: 0, positions, forceVectors };
+  // --- Force analysis from PBD constraint corrections (with temporal smoothing) ---
+  const rawForceAnalysis = linkCorrections.length > 0
+    ? analyzeForces(linkCorrections, joints, links, positions, subDt, CONSTRAINT_PASSES)
+    : undefined;
+  const forceAnalysis = rawForceAnalysis ? smoothForceAnalysis(rawForceAnalysis) : undefined;
+
+  return { converged: true, iterations: 0, residual: 0, positions, forceVectors, forceAnalysis };
 }

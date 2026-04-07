@@ -1,5 +1,54 @@
-import type { Vec2, CameraState, SimDragState, ForceVector, GridLevel, SelectionGesture, Joint, Link } from '../types';
+import type { Vec2, CameraState, SimDragState, ForceVector, GridLevel, SelectionGesture, Joint, Link, ForceAnalysisResult, Body, ForceSensor } from '../types';
 import { GRID_COLOR, GRID_MAJOR_COLOR, BACKGROUND_COLOR } from '../utils/constants';
+import { forceToColor, formatForce } from '../utils/units';
+
+function drawBadgeLabel(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  bgColor: string,
+  textColor: string,
+  zoom: number,
+  fontSizeScreen: number = 11
+) {
+  const fontSize = fontSizeScreen / zoom;
+  ctx.font = `bold ${fontSize}px monospace`;
+  
+  const paddingX = 4 / zoom;
+  const paddingY = 2 / zoom;
+  const w = ctx.measureText(text).width + paddingX * 2;
+  const h = fontSize + paddingY * 2;
+  
+  const r = Math.min(w, h) / 3;
+  const left = x - w / 2;
+  const top = y - h / 2;
+  
+  ctx.beginPath();
+  ctx.moveTo(left + r, top);
+  ctx.lineTo(left + w - r, top);
+  ctx.arcTo(left + w, top, left + w, top + r, r);
+  ctx.lineTo(left + w, top + h - r);
+  ctx.arcTo(left + w, top + h, left + w - r, top + h, r);
+  ctx.lineTo(left + r, top + h);
+  ctx.arcTo(left, top + h, left, top + h - r, r);
+  ctx.lineTo(left, top + r);
+  ctx.arcTo(left, top, left + r, top, r);
+  ctx.closePath();
+  
+  ctx.fillStyle = bgColor;
+  ctx.globalAlpha = 0.9;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+  
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Slight nudge for middle monospace alignment
+  ctx.fillText(text, x, y + (0.5 / zoom));
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+}
 
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
@@ -825,4 +874,291 @@ export function clearCanvas(
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = BACKGROUND_COLOR;
   ctx.fillRect(0, 0, width, height);
+}
+
+/**
+ * Draw link load coloring: overlay each link with a tension/compression colour
+ * and optionally label the force magnitude at the link midpoint.
+ */
+export function drawLinkLoads(
+  ctx: CanvasRenderingContext2D,
+  forceAnalysis: ForceAnalysisResult,
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+  bodies: Record<string, Body>,
+  zoom: number,
+  baseBodyId: string,
+  showForceUnits: boolean = false,
+) {
+  const { linkForces, maxLinkForce } = forceAnalysis;
+  if (maxLinkForce < 1e-6) return;
+
+  for (const link of Object.values(links)) {
+    const lf = linkForces.get(link.id);
+    if (!lf) continue;
+
+    const jA = joints[link.jointIds[0]];
+    const jB = joints[link.jointIds[1]];
+    if (!jA || !jB) continue;
+    if (jA.hidden || jB.hidden) continue;
+
+    // Skip base-body-only links (same logic as drawMechanism)
+    let hasNonBase = false;
+    for (const body of Object.values(bodies)) {
+      if (body.id === baseBodyId) continue;
+      if (body.jointIds.includes(link.jointIds[0]) && body.jointIds.includes(link.jointIds[1])) {
+        hasNonBase = true;
+        break;
+      }
+    }
+    if (!hasNonBase) continue;
+
+    const color = forceToColor(lf.axialForce, maxLinkForce);
+
+    // Draw halo/outline behind the link (rendered before mechanism layer)
+    ctx.beginPath();
+    ctx.moveTo(jA.position.x, jA.position.y);
+    ctx.lineTo(jB.position.x, jB.position.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 12 / zoom;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Force magnitude label at midpoint
+    if (showForceUnits) {
+      const abs = Math.abs(lf.axialForce);
+      if (abs > maxLinkForce * 0.01) {
+        const midX = (jA.position.x + jB.position.x) / 2;
+        const midY = (jA.position.y + jB.position.y) / 2;
+        // Pass abs force so it drops the negative sign
+        const label = formatForce(abs);
+        const prefix = lf.axialForce > 0 ? 'T ' : lf.axialForce < 0 ? 'C ' : '';
+
+        // Offset label perpendicular to link
+        const dx = jB.position.x - jA.position.x;
+        const dy = jB.position.y - jA.position.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const nx = len > 1e-6 ? -dy / len : 0;
+        const ny = len > 1e-6 ? dx / len : 1;
+        const offsetDist = 18 / zoom;
+
+        drawBadgeLabel(ctx, prefix + label, midX + nx * offsetDist, midY + ny * offsetDist, color, '#FFFFFF', zoom, 12);
+      }
+    }
+  }
+}
+
+/**
+ * Draw joint reaction force arrows at each joint.
+ * Fixed joints show ground reactions; free joints show net constraint forces.
+ */
+export function drawJointReactions(
+  ctx: CanvasRenderingContext2D,
+  forceAnalysis: ForceAnalysisResult,
+  joints: Record<string, Joint>,
+  zoom: number,
+  showForceUnits: boolean = false,
+) {
+  const { jointReactions, maxJointReaction } = forceAnalysis;
+  if (maxJointReaction < 1e-6) return;
+
+  const ARROW_SCALE = 0.02;
+  const MIN_ARROW_LEN = 8 / zoom;
+
+  for (const [jointId, reaction] of jointReactions) {
+    const joint = joints[jointId];
+    if (!joint || joint.hidden) continue;
+
+    const fx = reaction.reactionForce.x;
+    const fy = reaction.reactionForce.y;
+    const mag = reaction.magnitude;
+    if (mag < maxJointReaction * 0.01) continue;
+
+    // Scale arrow length: proportional to force, with minimum visibility
+    const arrowLen = Math.max(MIN_ARROW_LEN, mag * ARROW_SCALE);
+    const ux = fx / mag;
+    const uy = fy / mag;
+
+    const fromX = joint.position.x;
+    const fromY = joint.position.y;
+    const toX = fromX + ux * arrowLen;
+    const toY = fromY + uy * arrowLen;
+
+    // Use green for reaction arrows to distinguish from gravity (blue) and drag (orange)
+    const arrowColor = joint.type === 'fixed' ? '#4CAF50' : '#AB47BC';
+
+    // Draw arrow line
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.strokeStyle = arrowColor;
+    ctx.lineWidth = 2 / zoom;
+    ctx.stroke();
+
+    // Arrowhead
+    const headLen = 8 / zoom;
+    const angle = Math.atan2(uy, ux);
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headLen * Math.cos(angle - 0.4), toY - headLen * Math.sin(angle - 0.4));
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headLen * Math.cos(angle + 0.4), toY - headLen * Math.sin(angle + 0.4));
+    ctx.strokeStyle = arrowColor;
+    ctx.lineWidth = 2 / zoom;
+    ctx.stroke();
+
+    // Magnitude label
+    if (showForceUnits && mag > maxJointReaction * 0.05) {
+      const label = formatForce(mag);
+      const labelX = toX + ux * (10 / zoom);
+      const labelY = toY + uy * (10 / zoom);
+      
+      drawBadgeLabel(ctx, label, labelX, labelY, arrowColor, '#FFFFFF', zoom, 11);
+    }
+  }
+}
+
+/**
+ * Draw force sensor icons on links and mini force-vs-time plots.
+ * Shown in both create mode (icon only) and simulate mode (icon + live plot).
+ */
+export function drawForceSensors(
+  ctx: CanvasRenderingContext2D,
+  forceSensors: Record<string, ForceSensor>,
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+  selectedIds: Set<string>,
+  zoom: number,
+  forceSensorData: Map<string, { time: number; force: number }[]>,
+  isSimulating: boolean,
+) {
+  for (const sensor of Object.values(forceSensors)) {
+    if (!sensor.enabled) continue;
+    const link = links[sensor.linkId];
+    if (!link) continue;
+    const jA = joints[link.jointIds[0]];
+    const jB = joints[link.jointIds[1]];
+    if (!jA || !jB || jA.hidden || jB.hidden) continue;
+
+    const midX = (jA.position.x + jB.position.x) / 2;
+    const midY = (jA.position.y + jB.position.y) / 2;
+    const isSelected = selectedIds.has(sensor.id);
+
+    // Sensor icon: small diamond on the link midpoint
+    const iconSize = 6 / zoom;
+    ctx.beginPath();
+    ctx.moveTo(midX, midY - iconSize);
+    ctx.lineTo(midX + iconSize, midY);
+    ctx.lineTo(midX, midY + iconSize);
+    ctx.lineTo(midX - iconSize, midY);
+    ctx.closePath();
+    ctx.fillStyle = isSelected ? '#FF9800' : '#E91E63';
+    ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1.5 / zoom;
+    ctx.stroke();
+
+    // Mini force-vs-time plot (only during simulation with data)
+    const data = forceSensorData.get(sensor.id);
+    if (!isSimulating || !data || data.length < 2) continue;
+
+    // Plot dimensions (in world units)
+    const plotW = 80 / zoom;
+    const plotH = 40 / zoom;
+    const plotPad = 4 / zoom;
+
+    // Offset plot perpendicular to link direction
+    const dx = jB.position.x - jA.position.x;
+    const dy = jB.position.y - jA.position.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const nx = len > 1e-6 ? -dy / len : 0;
+    const ny = len > 1e-6 ? dx / len : 1;
+    const plotOffsetDist = 30 / zoom;
+    const plotCX = midX + nx * plotOffsetDist;
+    const plotCY = midY + ny * plotOffsetDist;
+    const plotLeft = plotCX - plotW / 2;
+    const plotTop = plotCY - plotH / 2;
+
+    // Background panel
+    ctx.fillStyle = 'rgba(30, 30, 30, 0.85)';
+    ctx.strokeStyle = isSelected ? '#FF9800' : '#555';
+    ctx.lineWidth = 1 / zoom;
+    const r = 3 / zoom;
+    ctx.beginPath();
+    ctx.moveTo(plotLeft + r, plotTop);
+    ctx.lineTo(plotLeft + plotW - r, plotTop);
+    ctx.arcTo(plotLeft + plotW, plotTop, plotLeft + plotW, plotTop + r, r);
+    ctx.lineTo(plotLeft + plotW, plotTop + plotH - r);
+    ctx.arcTo(plotLeft + plotW, plotTop + plotH, plotLeft + plotW - r, plotTop + plotH, r);
+    ctx.lineTo(plotLeft + r, plotTop + plotH);
+    ctx.arcTo(plotLeft, plotTop + plotH, plotLeft, plotTop + plotH - r, r);
+    ctx.lineTo(plotLeft, plotTop + r);
+    ctx.arcTo(plotLeft, plotTop, plotLeft + r, plotTop, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Zero line
+    const chartLeft = plotLeft + plotPad;
+    const chartRight = plotLeft + plotW - plotPad;
+    const chartTop = plotTop + plotPad;
+    const chartBottom = plotTop + plotH - plotPad;
+    const chartW = chartRight - chartLeft;
+    const chartH = chartBottom - chartTop;
+
+    // Find data range
+    let maxAbs = 0;
+    for (const pt of data) {
+      const a = Math.abs(pt.force);
+      if (a > maxAbs) maxAbs = a;
+    }
+    if (maxAbs < 1e-6) maxAbs = 1;
+
+    // Zero line (center of chart)
+    const zeroY = chartTop + chartH / 2;
+    ctx.beginPath();
+    ctx.moveTo(chartLeft, zeroY);
+    ctx.lineTo(chartRight, zeroY);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 0.5 / zoom;
+    ctx.setLineDash([2 / zoom, 2 / zoom]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Plot the force curve
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const px = chartLeft + (i / (data.length - 1)) * chartW;
+      const normalized = data[i].force / maxAbs;
+      const py = zeroY - normalized * (chartH / 2) * 0.9;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = '#4FC3F7';
+    ctx.lineWidth = 1.5 / zoom;
+    ctx.stroke();
+
+    // Current value label
+    const latest = data[data.length - 1];
+    const absForce = Math.abs(latest.force);
+    const prefix = latest.force > 0.001 ? 'T ' : latest.force < -0.001 ? 'C ' : '';
+    const valStr = formatForce(absForce);
+    ctx.font = `bold ${8 / zoom}px monospace`;
+    ctx.fillStyle = '#4FC3F7';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(prefix + valStr, chartLeft, plotTop + 1 / zoom);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+
+    // Leader line from icon to plot
+    ctx.beginPath();
+    ctx.moveTo(midX, midY);
+    ctx.lineTo(plotCX, plotCY);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 0.75 / zoom;
+    ctx.setLineDash([3 / zoom, 2 / zoom]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }

@@ -187,6 +187,15 @@ function App() {
             const worldPt = localToWorld(tracer.localPosition, transform);
             sim.recordTracerTrace(tracer.id, worldPt);
           }
+          // Record force sensor data
+          if (result.forceAnalysis) {
+            for (const sensor of Object.values(mech.forceSensors)) {
+              if (!sensor.enabled) continue;
+              const lf = result.forceAnalysis.linkForces.get(sensor.linkId);
+              const force = lf ? lf.axialForce : 0;
+              sim.recordForceSensorData(sensor.id, sim.time, force);
+            }
+          }
         }
         return;
       }

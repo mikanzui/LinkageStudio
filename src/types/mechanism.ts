@@ -102,6 +102,16 @@ export interface Tracer {
   enabled: boolean;
 }
 
+/**
+ * Force sensor: attached to a link to record and display axial force
+ * over time during simulation. Works like a strain gauge / load cell.
+ */
+export interface ForceSensor {
+  readonly id: string;
+  linkId: string;
+  enabled: boolean;
+}
+
 /** End of a spring: joint or point along a rigid link (t ∈ [0,1]). Both ends are visible and move with the mechanism. */
 export type SpringAnchor =
   | { type: 'joint'; jointId: string }
@@ -136,4 +146,5 @@ export interface MechanismState {
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
   springs: Record<string, MechanismSpring>;
+  forceSensors: Record<string, ForceSensor>;
 }

@@ -39,6 +39,12 @@ interface EditorStore {
   showVectors: boolean;
   showRulers: boolean;
   showForceUnits: boolean;
+  showLoads: boolean;
+  /**
+   * Simulate: allow dragging filled shape interior (COM/temp joint) when pivots on the same body
+   * lie inside the outline. Off makes joints/links easier to pick on overlapping geometry.
+   */
+  outlineSimGrabInteriorWithJoints: boolean;
   projectName: string;
   createTool: CreateTool;
   jointMode: JointMode;
@@ -93,6 +99,8 @@ interface EditorStore {
   toggleShowVectors(): void;
   toggleShowRulers(): void;
   toggleShowForceUnits(): void;
+  toggleShowLoads(): void;
+  toggleOutlineSimGrabInteriorWithJoints(): void;
   setProjectName(name: string): void;
   setCreateTool(tool: CreateTool): void;
   setJointMode(mode: JointMode): void;
@@ -173,6 +181,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   showVectors: true,
   showRulers: true,
   showForceUnits: true,
+  showLoads: false,
+  outlineSimGrabInteriorWithJoints: true,
   projectName: 'Untitled',
   createTool: 'joints' as CreateTool,
   jointMode: 'manual' as JointMode,
@@ -373,6 +383,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   toggleShowForceUnits() {
     set((s) => ({ showForceUnits: !s.showForceUnits }));
+  },
+
+  toggleShowLoads() {
+    set((s) => ({ showLoads: !s.showLoads }));
+  },
+
+  toggleOutlineSimGrabInteriorWithJoints() {
+    set((s) => ({ outlineSimGrabInteriorWithJoints: !s.outlineSimGrabInteriorWithJoints }));
   },
 
   setProjectName(name) {

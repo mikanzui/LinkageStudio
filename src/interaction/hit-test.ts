@@ -212,6 +212,22 @@ export function hitTestOutlineFilled(
   return nonBase[0].outline;
 }
 
+/**
+ * True when any non-hidden joint on the outline's body lies inside the outline polygon (world space).
+ * Used to avoid filled-shape simulation grabs stealing drags from co-located pivots on the same body.
+ */
+export function bodyHasJointsInsideOutline(outline: Outline, body: Body, joints: Record<string, Joint>): boolean {
+  if (outline.points.length < 3) return false;
+  const transform = computeBodyTransform(body, joints);
+  const worldPts = outline.points.map((p) => localToWorld(p, transform));
+  for (const jid of body.jointIds) {
+    const j = joints[jid];
+    if (!j || j.hidden) continue;
+    if (pointInPolygon(j.position, worldPts)) return true;
+  }
+  return false;
+}
+
 export function hitTest(
   worldPos: Vec2,
   joints: Record<string, Joint>,

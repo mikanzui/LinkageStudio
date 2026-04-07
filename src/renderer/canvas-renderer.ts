@@ -1,6 +1,6 @@
 import type {
   Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2, SimDragState, AppMode,
-  ForceVector, CreateTool, GridLevel, SelectionGesture, MechanismSpring, SpringAnchor,
+  ForceVector, CreateTool, GridLevel, SelectionGesture, MechanismSpring, SpringAnchor, ForceAnalysisResult, ForceSensor,
 } from '../types';
 import type { CameraState } from '../types';
 import { applyCamera, resetCamera } from './camera';
@@ -9,6 +9,7 @@ import { drawImages } from './draw-images';
 import {
   drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInteraction, drawModeBadge, drawHUD, clearCanvas,
   drawCOMMarkers, drawArcSelector, drawMirrorAxisGuide, drawSelectionGesture, drawSpringJointPickHighlight, drawSpringLinkPickHighlight,
+  drawLinkLoads, drawJointReactions, drawForceSensors,
 } from './draw-overlays';
 import { lerp } from '../core/math/vec2';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from '../core/body-transform';
@@ -59,6 +60,14 @@ export interface RenderState {
   springPickPendingAnchor?: SpringAnchor | null;
   /** Torsion spring tool: pivot + optional first link highlight. */
   torsionSpringPick?: { pivotJointId: string; linkAId?: string } | null;
+  /** Show link load coloring and joint reaction arrows. */
+  showLoads?: boolean;
+  /** Force analysis data from solver. */
+  forceAnalysis?: ForceAnalysisResult | null;
+  /** Force sensors attached to links. */
+  forceSensors?: Record<string, ForceSensor>;
+  /** Force sensor time-series data. */
+  forceSensorData?: Map<string, { time: number; force: number }[]>;
 }
 
 export function render(
@@ -81,6 +90,11 @@ export function render(
 
   // Draw images behind mechanism
   drawImages(ctx, state.images, state.camera.zoom, state.selectedIds);
+
+  // Draw link load halos BEFORE mechanism so body-colored links render on top
+  if (state.showLoads && state.forceAnalysis) {
+    drawLinkLoads(ctx, state.forceAnalysis, state.joints, state.links, state.bodies, state.camera.zoom, state.baseBodyId, state.showForceUnits);
+  }
 
   // When editing an outline, exclude it from frozen points so it renders from live data
   let frozenPts = state.frozenOutlinePoints;
@@ -152,6 +166,19 @@ export function render(
 
   if (state.mode === 'simulate' && state.forceVectors.length > 0 && state.showVectors) {
     drawForceVectors(ctx, state.forceVectors, state.camera.zoom, state.showForceUnits);
+  }
+
+  // Draw joint reaction arrows on top of mechanism
+  if (state.showLoads && state.forceAnalysis) {
+    drawJointReactions(ctx, state.forceAnalysis, state.joints, state.camera.zoom, state.showForceUnits);
+  }
+
+  // Draw force sensors (diamond icons + mini plots during simulation)
+  if (state.forceSensors && Object.keys(state.forceSensors).length > 0) {
+    drawForceSensors(
+      ctx, state.forceSensors, state.joints, state.links, state.selectedIds,
+      state.camera.zoom, state.forceSensorData ?? new Map(), state.mode === 'simulate',
+    );
   }
 
   // Draw CoM markers for bodies with useOutlineCOM enabled (both modes)

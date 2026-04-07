@@ -30,8 +30,10 @@ export function SimulationPanel() {
   const showVectors = useEditorStore((s) => s.showVectors);
   const showRulers = useEditorStore((s) => s.showRulers);
   const showForceUnits = useEditorStore((s) => s.showForceUnits);
+  const showLoads = useEditorStore((s) => s.showLoads);
   const lockOutlines = useEditorStore((s) => s.lockOutlines);
   const gridLevel = useEditorStore((s) => s.gridLevel);
+  const outlineSimGrabInteriorWithJoints = useEditorStore((s) => s.outlineSimGrabInteriorWithJoints);
 
   // Physics controls - visible in both modes (title rendered above box)
   const physicsSection = (
@@ -130,6 +132,25 @@ export function SimulationPanel() {
           onChange={() => useEditorStore.getState().toggleShowForceUnits()}
         />
         Show force units
+      </label>
+      <label className="panel-toggle-row">
+        <input
+          type="checkbox"
+          checked={showLoads}
+          onChange={() => useEditorStore.getState().toggleShowLoads()}
+        />
+        Show loads
+      </label>
+      <label
+        className="panel-toggle-row"
+        title="Simulate mode: when on, you can drag a filled shape’s interior even if pivots on the same body lie inside that outline. When off, interior shape drags are skipped in that case so joints and links are easier to pick."
+      >
+        <input
+          type="checkbox"
+          checked={outlineSimGrabInteriorWithJoints}
+          onChange={() => useEditorStore.getState().toggleOutlineSimGrabInteriorWithJoints()}
+        />
+        <span>Shape interior grab (joints inside)</span>
       </label>
       {mode === 'create' && (
         <label className="panel-toggle-row">

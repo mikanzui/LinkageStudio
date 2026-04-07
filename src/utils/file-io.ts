@@ -21,6 +21,8 @@ interface ViewPreferences {
   showVectors?: boolean;
   showRulers?: boolean;
   showForceUnits?: boolean;
+  /** Simulate: allow filled-shape drag when pivots on the same body lie inside the outline */
+  outlineSimGrabInteriorWithJoints?: boolean;
   gridLevel?: string;
   camera?: { pan: Vec2; zoom: number };
 }

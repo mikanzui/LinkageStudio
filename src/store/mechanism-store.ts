@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, AngleConstraint, JointType, MechanismSpring, SpringAnchor } from '../types';
+import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, ForceSensor, AngleConstraint, JointType, MechanismSpring, SpringAnchor } from '../types';
 import type { Vec2 } from '../types';
 import { createId } from '../utils/id';
 import { showTransientHint, useEditorStore } from './editor-store';
@@ -188,6 +188,10 @@ interface MechanismStore {
   addTracer(bodyId: string, localPosition: Vec2): string;
   removeTracer(id: string): void;
 
+  addForceSensor(linkId: string): string;
+  removeForceSensor(id: string): void;
+  toggleForceSensorEnabled(id: string): void;
+
   /** Joint ↔ point on link; rest length = current distance. */
   addSpringJointToLink(jointId: string, linkId: string, tAlongLinkRaw: number): string | null;
   /** Point on link ↔ point on link; rest length = current distance. */
@@ -221,7 +225,7 @@ interface MechanismStore {
   reprojectOutlinesFromWorld(frozenWorldPoints: Map<string, Vec2[]>): void;
 
   clearAll(): void;
-  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; springs?: Record<string, MechanismSpring> }): void;
+  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; springs?: Record<string, MechanismSpring>; forceSensors?: Record<string, ForceSensor> }): void;
   pushHistory(): void;
   undo(): void;
   redo(): void;
@@ -243,6 +247,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   colliders: {},
   tracers: {},
   springs: {},
+  forceSensors: {},
   angleConstraints: [],
   past: [],
   future: [],
@@ -382,6 +387,31 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       const newTracers = { ...s.tracers };
       delete newTracers[id];
       return { tracers: newTracers };
+    });
+  },
+
+  addForceSensor(linkId) {
+    const id = createId();
+    get().pushHistory();
+    const sensor: ForceSensor = { id, linkId, enabled: true };
+    set((s) => ({ forceSensors: { ...s.forceSensors, [id]: sensor } }));
+    return id;
+  },
+
+  removeForceSensor(id) {
+    get().pushHistory();
+    set((s) => {
+      const ns = { ...s.forceSensors };
+      delete ns[id];
+      return { forceSensors: ns };
+    });
+  },
+
+  toggleForceSensorEnabled(id) {
+    set((s) => {
+      const sensor = s.forceSensors[id];
+      if (!sensor) return s;
+      return { forceSensors: { ...s.forceSensors, [id]: { ...sensor, enabled: !sensor.enabled } } };
     });
   },
 
@@ -1036,6 +1066,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       colliders: {},
       tracers: {},
       springs: {},
+      forceSensors: {},
       angleConstraints: [],
       past: [],
       future: [],
@@ -1061,6 +1092,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       colliders: state.colliders || {},
       tracers: state.tracers || {},
       springs: pruneSprings(rawSprings, newJoints, newLinks),
+      forceSensors: (state as any).forceSensors || {},
       angleConstraints: ac,
       past: [],
       future: [],
@@ -1068,15 +1100,15 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   pushHistory() {
-    const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs, past } = get();
+    const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs, forceSensors, past } = get();
     set({
-      past: [...past.slice(-50), { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs } }],
+      past: [...past.slice(-50), { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs }, forceSensors: { ...forceSensors } }],
       future: [],
     });
   },
 
   undo() {
-    const { past, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs } = get();
+    const { past, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs, forceSensors } = get();
     if (past.length === 0) return;
     const prev = past[past.length - 1];
     set({
@@ -1090,13 +1122,14 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       colliders: prev.colliders || {},
       tracers: prev.tracers || {},
       springs: prev.springs || {},
+      forceSensors: prev.forceSensors || {},
       past: past.slice(0, -1),
-      future: [{ joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs } }, ...get().future],
+      future: [{ joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs }, forceSensors: { ...forceSensors } }, ...get().future],
     });
   },
 
   redo() {
-    const { future, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs } = get();
+    const { future, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs, forceSensors } = get();
     if (future.length === 0) return;
     const next = future[0];
     set({
@@ -1110,8 +1143,9 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       colliders: next.colliders || {},
       tracers: next.tracers || {},
       springs: next.springs || {},
+      forceSensors: next.forceSensors || {},
       future: future.slice(1),
-      past: [...get().past, { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs } }],
+      past: [...get().past, { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers }, springs: { ...springs }, forceSensors: { ...forceSensors } }],
     });
   },
 

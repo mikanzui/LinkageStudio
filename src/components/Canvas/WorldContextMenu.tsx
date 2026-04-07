@@ -94,7 +94,7 @@ export function WorldContextMenu() {
     }
     setIsClosing(false);
     if (menu.openMode === 'hold') {
-      // Hold-menu opens from a press gesture; assume pressed until pointerup.
+      // Hold-menu: pointer was down to open; release dismisses (see onPointerUp).
       primaryDownRef.current = true;
     }
 
@@ -124,10 +124,9 @@ export function WorldContextMenu() {
     const onPrimaryDown = (event: PointerEvent) => {
       if (event.button === 0) primaryDownRef.current = true;
     };
-    const onPrimaryUp = () => {
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.button !== 0) return;
       primaryDownRef.current = false;
-    };
-    const onPointerUp = () => {
       if (menu.openMode === 'hold') requestClose();
     };
 
@@ -146,7 +145,6 @@ export function WorldContextMenu() {
     window.addEventListener('pointerdown', onGlobalPointerDown, true);
     window.addEventListener('keydown', onEsc);
     window.addEventListener('pointerdown', onPrimaryDown, true);
-    window.addEventListener('pointerup', onPrimaryUp, true);
     window.addEventListener('pointerup', onPointerUp, true);
     window.addEventListener('wheel', onWheel, { capture: true, passive: true });
     window.addEventListener('resize', onResize);
@@ -155,7 +153,6 @@ export function WorldContextMenu() {
       window.removeEventListener('pointerdown', onGlobalPointerDown, true);
       window.removeEventListener('keydown', onEsc);
       window.removeEventListener('pointerdown', onPrimaryDown, true);
-      window.removeEventListener('pointerup', onPrimaryUp, true);
       window.removeEventListener('pointerup', onPointerUp, true);
       window.removeEventListener('wheel', onWheel, { capture: true });
       window.removeEventListener('resize', onResize);
