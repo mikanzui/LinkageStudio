@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import type { AppMode } from '../../types';
@@ -60,46 +61,28 @@ export function Toolbar() {
   const mode = useEditorStore((s) => s.mode);
   const createTool = useEditorStore((s) => s.createTool);
   const setCreateTool = useEditorStore((s) => s.setCreateTool);
-  const setMode = useEditorStore((s) => s.setMode);
-  const removeJoint = useMechanismStore((s) => s.removeJoint);
-  const removeOutline = useMechanismStore((s) => s.removeOutline);
-  const removeImage = useMechanismStore((s) => s.removeImage);
-  const removeTracer = useMechanismStore((s) => s.removeTracer);
-  const joints = useMechanismStore((s) => s.joints);
-  const outlines = useMechanismStore((s) => s.outlines);
-  const tracers = useMechanismStore((s) => s.tracers);
-  const images = useMechanismStore((s) => s.images);
-  const selectedIds = useEditorStore((s) => s.selectedIds);
-  const clearSelection = useEditorStore((s) => s.clearSelection);
+  const mirrorScope = useEditorStore((s) => s.mirrorScope);
+  const setMirrorScope = useEditorStore((s) => s.setMirrorScope);
+  const marqueeExcludedBodyIds = useEditorStore((s) => s.marqueeExcludedBodyIds);
+  const toggleMarqueeBodyExcluded = useEditorStore((s) => s.toggleMarqueeBodyExcluded);
+  const selectMode = useEditorStore((s) => s.selectMode);
+  const activeTool = useEditorStore((s) => s.activeTool);
+  /** Box/lasso filters — only relevant when using those viewport modes (not pan). */
+  const showMarqueeBodiesPanel =
+    mode === 'create' && activeTool === 'select' && (selectMode === 'box' || selectMode === 'lasso');
   const addImage = useMechanismStore((s) => s.addImage);
   const baseBodyId = useMechanismStore((s) => s.baseBodyId);
+  const bodies = useMechanismStore((s) => s.bodies);
 
-  const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
-  const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
-  const removeOutlineVertex = useMechanismStore((s) => s.removeOutlineVertex);
-  const setEditingVertexIndex = useEditorStore((s) => s.setEditingVertexIndex);
-
-  const hasSelection = selectedIds.size > 0;
-  const hasVertexSelection = editingOutlineId !== null && editingVertexIndex !== null;
-  const canDeleteVertex = hasVertexSelection && (() => {
-    const outline = outlines[editingOutlineId!];
-    return outline && outline.points.length > 3;
-  })();
-
-  const handleDeleteSelected = () => {
-    if (hasVertexSelection && canDeleteVertex) {
-      removeOutlineVertex(editingOutlineId!, editingVertexIndex!);
-      setEditingVertexIndex(null);
-      return;
-    }
-    for (const id of selectedIds) {
-      if (joints[id]) removeJoint(id);
-      else if (outlines[id]) removeOutline(id);
-      else if (images[id]) removeImage(id);
-      else if (tracers[id]) removeTracer(id);
-    }
-    clearSelection();
-  };
+  const sortedBodies = useMemo(() => {
+    const list = Object.values(bodies);
+    list.sort((a, b) => {
+      if (a.id === baseBodyId) return -1;
+      if (b.id === baseBodyId) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    return list;
+  }, [bodies, baseBodyId]);
 
   const handleModeSwitch = (newMode: AppMode) => switchMode(newMode);
 
@@ -148,7 +131,7 @@ export function Toolbar() {
   const isSliderTool = createTool === 'slider';
   const isColliderTool = createTool === 'collider';
   const isTracerTool = createTool === 'tracer';
-  const isJointsTool = isPivotTool || isSliderTool || isColliderTool;
+  const isMirrorTool = createTool === 'mirror';
 
   const renderHints = () => {
     if (isPivotTool) {
@@ -198,6 +181,15 @@ export function Toolbar() {
         </>
       );
     }
+    if (isMirrorTool) {
+      return (
+        <>
+          <div className="sim-hint">Hover a grid line to preview mirror axis</div>
+          <div className="sim-hint">Click to mirror ({mirrorScope === 'all' ? 'all items' : 'selection'})</div>
+          <div className="sim-hint">Items on axis stay shared and are not duplicated</div>
+        </>
+      );
+    }
     // image
     return (
       <>
@@ -211,7 +203,7 @@ export function Toolbar() {
 
   return (
     <div className="toolbar">
-      <div className="toolbar-section mode-toggle">
+      <div className="toolbar-mode-row">
         <button
           className={`mode-btn ${mode === 'create' ? 'active' : ''}`}
           onClick={() => handleModeSwitch('create')}
@@ -228,9 +220,10 @@ export function Toolbar() {
 
       {mode === 'create' ? (
         <>
+          <div className="panel-section-header">
+            <div className="panel-title">Tools</div>
+          </div>
           <div className="toolbar-section">
-            <div className="toolbar-label">Tools</div>
-
             {/* Joints group */}
             <div className="toolbar-group-label">Joints</div>
 
@@ -297,39 +290,90 @@ export function Toolbar() {
             </button>
           </div>
 
-          {(hasSelection || hasVertexSelection) && (
-            <div className="toolbar-section">
-              <button
-                className="tool-btn"
-                onClick={handleDeleteSelected}
-                title={hasVertexSelection ? 'Delete vertex (Backspace)' : 'Delete selected (Backspace)'}
-                style={{ color: '#E53935' }}
-                disabled={hasVertexSelection && !canDeleteVertex}
-              >
-                {hasVertexSelection ? 'Delete Vertex' : 'Delete'}
-              </button>
-            </div>
-          )}
-
-          <div className="toolbar-section">
+          <div className="panel-section-header">
+            <div className="panel-title">Interact</div>
+          </div>
+          <div className="toolbar-section interact-hints-fieldset">
             {renderHints()}
           </div>
+
+          {isMirrorTool && (
+            <>
+              <div className="panel-section-header">
+                <div className="panel-title">Options</div>
+              </div>
+              <fieldset className="toolbar-section panel-content interact-fieldset mirror-options-fieldset">
+                <legend className="interact-fieldset-legend">Mirror scope</legend>
+                <div className="mirror-options mirror-options-stack">
+                  <label className="panel-toggle-row">
+                    <input
+                      type="radio"
+                      name="mirror-scope"
+                      checked={mirrorScope === 'selection'}
+                      onChange={() => setMirrorScope('selection')}
+                    />
+                    <span>Selection</span>
+                  </label>
+                  <label className="panel-toggle-row">
+                    <input
+                      type="radio"
+                      name="mirror-scope"
+                      checked={mirrorScope === 'all'}
+                      onChange={() => setMirrorScope('all')}
+                    />
+                    <span>All</span>
+                  </label>
+                </div>
+              </fieldset>
+            </>
+          )}
+
+          {showMarqueeBodiesPanel && (
+            <>
+              <div className="panel-section-header">
+                <div className="panel-title">Selection</div>
+              </div>
+              <div className="toolbar-section marquee-selection-fieldset">
+                <p className="toolbar-marquee-hint">
+                  Uncheck to exclude a body from box and lasso selection.
+                </p>
+                <div className="marquee-body-list">
+                  {sortedBodies.map((body) => (
+                    <label key={body.id} className="panel-toggle-row">
+                      <input
+                        type="checkbox"
+                        checked={!marqueeExcludedBodyIds.has(body.id)}
+                        onChange={() => toggleMarqueeBodyExcluded(body.id)}
+                      />
+                      <span
+                        className="layer-color"
+                        style={{ backgroundColor: body.color }}
+                        aria-hidden
+                      />
+                      <span className="layer-name">{body.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </>
       ) : (
-        <div className="toolbar-section">
-          <div className="toolbar-label">Interact</div>
-          <div className="sim-hint">Click & drag joints, links, or shapes to apply force</div>
-          <div className="sim-hint">Middle-click to pan</div>
-          <div className="sim-hint">Scroll to zoom</div>
-        </div>
+        <>
+          <div className="panel-section-header">
+            <div className="panel-title">Interact</div>
+          </div>
+          <div className="toolbar-section">
+            <div className="sim-hint">Click & drag joints, links, or shapes to apply force</div>
+            <div className="sim-hint">Middle-click to pan</div>
+            <div className="sim-hint">Scroll to zoom</div>
+          </div>
+        </>
       )}
 
-      <div style={{ marginTop: 'auto', padding: '8px', borderTop: '1px solid #333' }}>
+      <div className="toolbar-footer">
         <div style={{ fontSize: 9, color: '#555', lineHeight: 1.4 }}>
-          VibeCoded by Hugo Wilson
-        </div>
-        <div style={{ fontSize: 9, color: '#555', lineHeight: 1.4 }}>
-          Claude Opus 4.6
+          Written by Hugo Wilson and Jake Whiting
         </div>
       </div>
     </div>

@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, AngleConstraint, JointType } from '../types';
 import type { Vec2 } from '../types';
 import { createId } from '../utils/id';
+import { showTransientHint, useEditorStore } from './editor-store';
 import { generateBodyLinks } from '../core/body-links';
 import { computeBodyTransform, localToWorld, worldToLocal } from '../core/body-transform';
 import { BASE_BODY_COLOR, BODY_COLORS } from '../utils/constants';
+import { assignMissingJointLabels, nextJointDisplayNumber } from '../utils/joint-labels';
 
 interface HistorySnapshot {
   joints: Record<string, Joint>;
@@ -19,6 +21,36 @@ interface HistorySnapshot {
 }
 
 const BASE_BODY_ID = 'base';
+
+/**
+ * Slider midpoint B may only share a body with its rail joints A and C (one moving rigid
+ * assembly). If B is grouped with any other joint, pairwise distance links fight the slider.
+ */
+export function canSliderMidpointJoinBody(
+  jointId: string,
+  bodyId: string,
+  bodies: Record<string, Body>,
+  sliders: Record<string, SliderConstraint>,
+): { ok: true } | { ok: false; message: string } {
+  const slider = Object.values(sliders).find((s) => s.jointIdB === jointId);
+  if (!slider) return { ok: true };
+
+  const body = bodies[bodyId];
+  if (!body) return { ok: true };
+
+  const others = body.jointIds.filter((id) => id !== jointId);
+  if (others.length === 0) return { ok: true };
+
+  const isRail = (id: string) => id === slider.jointIdA || id === slider.jointIdC;
+  const hasExtra = others.some((id) => !isRail(id));
+  if (!hasExtra) return { ok: true };
+
+  return {
+    ok: false,
+    message:
+      'Slider midpoint (B) is in a rigid body with other joints besides A and C — extra distance links can fight the slider. Prefer leaving B unassigned, or put A, B, and C on one moving body together.',
+  };
+}
 
 function createBaseBody(): Body {
   return { id: BASE_BODY_ID, name: 'Base', color: BASE_BODY_COLOR, jointIds: [], useOutlineCOM: false, showLinks: true };
@@ -43,6 +75,7 @@ interface MechanismStore {
   removeJoint(id: string): void;
   moveJoint(id: string, position: Vec2): void;
   updateJointType(id: string, type: JointType): void;
+  setJointLabel(id: string, label: string): void;
   addLink(jointIdA: string, jointIdB: string): string | null;
   removeLink(id: string): void;
 
@@ -84,6 +117,12 @@ interface MechanismStore {
   updateTracerBody(tracerId: string, bodyId: string): void;
   moveTracer(id: string, localPosition: Vec2): void;
   toggleTracerEnabled(id: string): void;
+  mirrorAcrossAxis(
+    axis: 'vertical' | 'horizontal',
+    axisValue: number,
+    scope: 'selection' | 'all',
+    selectedIds?: string[],
+  ): void;
 
   addTempJoint(position: Vec2, bodyId: string): string;
   removeTempJoint(id: string): void;
@@ -159,10 +198,14 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   removeSlider(id) {
+    get().pushHistory();
     set((s) => {
       const newSliders = { ...s.sliders };
       delete newSliders[id];
-      return { sliders: newSliders };
+      const newJoints = { ...s.joints };
+      const { newLinks, angleConstraints } = regenConstraints(s.bodies, newJoints, newSliders);
+      updateJointConnections(newJoints, newLinks);
+      return { sliders: newSliders, joints: newJoints, links: newLinks, angleConstraints };
     });
   },
 
@@ -269,6 +312,229 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       if (!tracer) return s;
       return { tracers: { ...s.tracers, [id]: { ...tracer, enabled: !tracer.enabled } } };
     });
+  },
+
+  mirrorAcrossAxis(axis, axisValue, scope, selectedIds = []) {
+    const snapshot = get();
+    const sourceJoints = snapshot.joints;
+    const sourceBodies = snapshot.bodies;
+    const sourceOutlines = snapshot.outlines;
+    const sourceImages = snapshot.images;
+    const sourceSliders = snapshot.sliders;
+    const sourceColliders = snapshot.colliders;
+    const sourceTracers = snapshot.tracers;
+
+    const selected = new Set(selectedIds);
+    const includeAll = scope === 'all';
+    const mirrorEpsilon = Math.max(1e-4, snapshot.baseBodyId ? 0.001 : 0.001);
+
+    const targetJointIds = new Set<string>();
+    const targetOutlineIds = new Set<string>();
+    const targetImageIds = new Set<string>();
+    const targetSliderIds = new Set<string>();
+    const targetColliderIds = new Set<string>();
+    const targetTracerIds = new Set<string>();
+
+    if (includeAll) {
+      for (const joint of Object.values(sourceJoints)) if (!joint.hidden) targetJointIds.add(joint.id);
+      for (const id of Object.keys(sourceOutlines)) targetOutlineIds.add(id);
+      for (const id of Object.keys(sourceImages)) targetImageIds.add(id);
+      for (const id of Object.keys(sourceSliders)) targetSliderIds.add(id);
+      for (const id of Object.keys(sourceColliders)) targetColliderIds.add(id);
+      for (const id of Object.keys(sourceTracers)) targetTracerIds.add(id);
+    } else {
+      for (const id of selected) {
+        if (sourceJoints[id] && !sourceJoints[id].hidden) targetJointIds.add(id);
+        if (sourceOutlines[id]) targetOutlineIds.add(id);
+        if (sourceImages[id]) targetImageIds.add(id);
+        if (sourceSliders[id]) targetSliderIds.add(id);
+        if (sourceColliders[id]) targetColliderIds.add(id);
+        if (sourceTracers[id]) targetTracerIds.add(id);
+      }
+      for (const sliderId of targetSliderIds) {
+        const s = sourceSliders[sliderId];
+        if (!s) continue;
+        targetJointIds.add(s.jointIdA);
+        targetJointIds.add(s.jointIdB);
+        targetJointIds.add(s.jointIdC);
+      }
+      for (const colliderId of targetColliderIds) {
+        const c = sourceColliders[colliderId];
+        if (!c) continue;
+        targetJointIds.add(c.jointIdA);
+        targetJointIds.add(c.jointIdC);
+      }
+    }
+
+    if (
+      targetJointIds.size === 0 &&
+      targetOutlineIds.size === 0 &&
+      targetImageIds.size === 0 &&
+      targetSliderIds.size === 0 &&
+      targetColliderIds.size === 0 &&
+      targetTracerIds.size === 0
+    ) {
+      return;
+    }
+
+    get().pushHistory();
+
+    const newJoints: Record<string, Joint> = { ...sourceJoints };
+    const newBodies: Record<string, Body> = { ...sourceBodies };
+    const newOutlines: Record<string, Outline> = { ...sourceOutlines };
+    const newImages: Record<string, CanvasImage> = { ...sourceImages };
+    const newSliders: Record<string, SliderConstraint> = { ...sourceSliders };
+    const newColliders: Record<string, ColliderConstraint> = { ...sourceColliders };
+    const newTracers: Record<string, Tracer> = { ...sourceTracers };
+
+    const jointMap = new Map<string, string>();
+    const modifiedBodyIds = new Set<string>();
+    const createdIds: string[] = [];
+
+    const reflectPoint = (p: Vec2): Vec2 =>
+      axis === 'vertical'
+        ? { x: axisValue * 2 - p.x, y: p.y }
+        : { x: p.x, y: axisValue * 2 - p.y };
+    const isOnAxis = (p: Vec2): boolean =>
+      axis === 'vertical'
+        ? Math.abs(p.x - axisValue) <= mirrorEpsilon
+        : Math.abs(p.y - axisValue) <= mirrorEpsilon;
+
+    for (const jointId of targetJointIds) {
+      const joint = sourceJoints[jointId];
+      if (!joint || joint.hidden) continue;
+      if (isOnAxis(joint.position)) {
+        jointMap.set(jointId, jointId);
+        continue;
+      }
+      const mirroredId = createId();
+      const jn = nextJointDisplayNumber(newJoints);
+      const mirroredJoint: Joint = {
+        ...joint,
+        id: mirroredId,
+        position: reflectPoint(joint.position),
+        connectedLinkIds: [],
+        mirrored: true,
+        label: `Joint ${jn}`,
+      };
+      newJoints[mirroredId] = mirroredJoint;
+      jointMap.set(jointId, mirroredId);
+      createdIds.push(mirroredId);
+
+      for (const body of Object.values(sourceBodies)) {
+        if (!body.jointIds.includes(jointId)) continue;
+        const current = newBodies[body.id];
+        if (!current.jointIds.includes(mirroredId)) {
+          newBodies[body.id] = { ...current, jointIds: [...current.jointIds, mirroredId] };
+          modifiedBodyIds.add(body.id);
+        }
+      }
+    }
+
+    for (const bodyId of modifiedBodyIds) {
+      reprojectOutlines(newOutlines, bodyId, sourceBodies[bodyId], newBodies[bodyId], sourceJoints, newJoints);
+      reprojectTracers(newTracers, bodyId, sourceBodies[bodyId], newBodies[bodyId], sourceJoints, newJoints);
+    }
+
+    for (const sliderId of targetSliderIds) {
+      const slider = sourceSliders[sliderId];
+      if (!slider) continue;
+      const a = jointMap.get(slider.jointIdA) ?? slider.jointIdA;
+      const b = jointMap.get(slider.jointIdB) ?? slider.jointIdB;
+      const c = jointMap.get(slider.jointIdC) ?? slider.jointIdC;
+      if (a === slider.jointIdA && b === slider.jointIdB && c === slider.jointIdC) continue;
+      const mirroredSliderId = createId();
+      newSliders[mirroredSliderId] = { ...slider, id: mirroredSliderId, jointIdA: a, jointIdB: b, jointIdC: c };
+      createdIds.push(mirroredSliderId);
+    }
+
+    for (const colliderId of targetColliderIds) {
+      const collider = sourceColliders[colliderId];
+      if (!collider) continue;
+      const a = jointMap.get(collider.jointIdA) ?? collider.jointIdA;
+      const c = jointMap.get(collider.jointIdC) ?? collider.jointIdC;
+      if (a === collider.jointIdA && c === collider.jointIdC) continue;
+      const mirroredColliderId = createId();
+      newColliders[mirroredColliderId] = { ...collider, id: mirroredColliderId, jointIdA: a, jointIdC: c };
+      createdIds.push(mirroredColliderId);
+    }
+
+    for (const outlineId of targetOutlineIds) {
+      const outline = sourceOutlines[outlineId];
+      const body = sourceBodies[outline.bodyId];
+      if (!outline || !body) continue;
+      const srcTransform = computeBodyTransform(body, sourceJoints);
+      const dstTransform = computeBodyTransform(newBodies[body.id], newJoints);
+      const mirroredWorld = outline.points.map((p) => reflectPoint(localToWorld(p, srcTransform)));
+      if (mirroredWorld.every((p) => isOnAxis(p))) continue;
+      const mirroredLocal = mirroredWorld.map((p) => worldToLocal(p, dstTransform));
+      const mirroredOutlineId = createId();
+      newOutlines[mirroredOutlineId] = {
+        ...outline,
+        id: mirroredOutlineId,
+        points: mirroredLocal,
+      };
+      createdIds.push(mirroredOutlineId);
+    }
+
+    for (const imageId of targetImageIds) {
+      const image = sourceImages[imageId];
+      if (!image) continue;
+      if (isOnAxis(image.position)) continue;
+      const mirroredImageId = createId();
+      const mirroredRotation =
+        axis === 'vertical'
+          ? Math.PI - image.rotation
+          : -image.rotation;
+      newImages[mirroredImageId] = {
+        ...image,
+        id: mirroredImageId,
+        position: reflectPoint(image.position),
+        rotation: mirroredRotation,
+      };
+      createdIds.push(mirroredImageId);
+    }
+
+    for (const tracerId of targetTracerIds) {
+      const tracer = sourceTracers[tracerId];
+      const body = sourceBodies[tracer.bodyId];
+      if (!tracer || !body) continue;
+      const srcTransform = computeBodyTransform(body, sourceJoints);
+      const dstTransform = computeBodyTransform(newBodies[body.id], newJoints);
+      const world = localToWorld(tracer.localPosition, srcTransform);
+      if (isOnAxis(world)) continue;
+      const mirroredTracerId = createId();
+      const mirroredWorld = reflectPoint(world);
+      newTracers[mirroredTracerId] = {
+        ...tracer,
+        id: mirroredTracerId,
+        localPosition: worldToLocal(mirroredWorld, dstTransform),
+      };
+      createdIds.push(mirroredTracerId);
+    }
+
+    const { newLinks, angleConstraints } = regenConstraints(newBodies, newJoints, newSliders);
+    updateJointConnections(newJoints, newLinks);
+    syncJointTypes(newJoints, newBodies, snapshot.baseBodyId);
+
+    set({
+      joints: newJoints,
+      bodies: newBodies,
+      outlines: newOutlines,
+      images: newImages,
+      sliders: newSliders,
+      colliders: newColliders,
+      tracers: newTracers,
+      links: newLinks,
+      angleConstraints,
+    });
+
+    if (createdIds.length > 0) {
+      useEditorStore.setState({ selectedIds: new Set(createdIds) });
+      showTransientHint(
+        `Mirrored ${createdIds.length} item${createdIds.length === 1 ? '' : 's'}. If duplicated twice, use Undo.`,
+      );
+    }
   },
 
   addTempJoint(position, bodyId) {
@@ -381,10 +647,14 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
 
   loadState(state) {
     const sliders = state.sliders || {};
-    const { angleConstraints: ac } = generateBodyLinks(state.bodies, state.joints, sliders);
+    let newJoints = { ...state.joints };
+    syncJointTypes(newJoints, state.bodies, state.baseBodyId);
+    newJoints = assignMissingJointLabels(newJoints);
+    const { newLinks, angleConstraints: ac } = regenConstraints(state.bodies, newJoints, sliders);
+    updateJointConnections(newJoints, newLinks);
     set({
-      joints: state.joints,
-      links: state.links,
+      joints: newJoints,
+      links: newLinks,
       bodies: state.bodies,
       baseBodyId: state.baseBodyId,
       outlines: state.outlines,
@@ -447,7 +717,8 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   addJoint(type, position, bodyIds) {
     const id = createId();
     get().pushHistory();
-    const joint: Joint = { id, type, position, connectedLinkIds: [] };
+    const jn = nextJointDisplayNumber(get().joints);
+    const joint: Joint = { id, type, position, connectedLinkIds: [], label: `Joint ${jn}` };
 
     // Add joint to state
     const newJoints = { ...get().joints, [id]: joint };
@@ -545,6 +816,19 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       const joint = s.joints[id];
       if (!joint) return s;
       return { joints: { ...s.joints, [id]: { ...joint, type } } };
+    });
+  },
+
+  setJointLabel(id, label) {
+    get().pushHistory();
+    set((s) => {
+      const joint = s.joints[id];
+      if (!joint) return s;
+      const trimmed = label.trim();
+      const next: Joint = { ...joint };
+      if (trimmed) next.label = trimmed;
+      else delete next.label;
+      return { joints: { ...s.joints, [id]: next } };
     });
   },
 
@@ -656,11 +940,15 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   addJointToBody(jointId, bodyId) {
+    const state = get();
+    const body = state.bodies[bodyId];
+    if (!body || body.jointIds.includes(jointId)) return;
+
+    const check = canSliderMidpointJoinBody(jointId, bodyId, state.bodies, state.sliders);
+
     get().pushHistory();
     const oldBodies = get().bodies;
     const newBodies = { ...oldBodies };
-    const body = newBodies[bodyId];
-    if (!body || body.jointIds.includes(jointId)) return;
     newBodies[bodyId] = { ...body, jointIds: [...body.jointIds, jointId] };
 
     const newJoints = { ...get().joints };
@@ -673,6 +961,10 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     updateJointConnections(newJoints, newLinks);
 
     set({ bodies: newBodies, joints: newJoints, links: newLinks, outlines: newOutlines, tracers: newTracers, angleConstraints: newAngle });
+
+    if (!check.ok) {
+      showTransientHint(check.message);
+    }
   },
 
   removeJointFromBody(jointId, bodyId) {

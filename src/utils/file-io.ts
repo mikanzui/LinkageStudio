@@ -25,7 +25,14 @@ interface SimulationSettings {
 /** Serializable format for a linkage file (.slinker) */
 interface SlinkerFile {
   version: string;
-  joints: Record<string, { id: string; type: string; position: Vec2; connectedLinkIds: string[] }>;
+  joints: Record<string, {
+    id: string;
+    type: string;
+    position: Vec2;
+    connectedLinkIds: string[];
+    label?: string;
+    mirrored?: boolean;
+  }>;
   links: Record<string, { id: string; jointIds: [string, string]; restLength: number; mass: number }>;
   bodies: Record<string, { id: string; name: string; color: string; jointIds: string[]; useOutlineCOM: boolean; showLinks?: boolean }>;
   baseBodyId: string;
@@ -65,7 +72,14 @@ export function serializeMechanism(
   for (const [id, j] of Object.entries(joints)) {
     // Skip hidden bracing joints — they are regenerated on load
     if (j.hidden) continue;
-    data.joints[id] = { id: j.id, type: j.type, position: { x: j.position.x, y: j.position.y }, connectedLinkIds: [...j.connectedLinkIds] };
+    data.joints[id] = {
+      id: j.id,
+      type: j.type,
+      position: { x: j.position.x, y: j.position.y },
+      connectedLinkIds: [...j.connectedLinkIds],
+      ...(j.label ? { label: j.label } : {}),
+      ...(j.mirrored ? { mirrored: true } : {}),
+    };
   }
   for (const [id, l] of Object.entries(links)) {
     // Skip links involving hidden bracing joints
@@ -146,6 +160,8 @@ export function deserializeMechanism(json: string): {
         type: j.type as 'revolute' | 'fixed',
         position: { x: j.position.x, y: j.position.y },
         connectedLinkIds: j.connectedLinkIds || [],
+        ...(j.label ? { label: j.label } : {}),
+        ...(j.mirrored ? { mirrored: true } : {}),
       };
     }
 

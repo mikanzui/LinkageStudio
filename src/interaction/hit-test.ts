@@ -6,8 +6,7 @@ import { computeBodyTransform, localToWorld } from '../core/body-transform';
 
 /**
  * Lightweight boolean hit-test — checks if worldPos is near any joint or link.
- * Does NOT mutate click-cycling state (lastHitJointId). Use this for
- * touch gesture classification (interact vs pan) where we just need a yes/no.
+ * Use this for touch gesture classification (interact vs pan) where we just need a yes/no.
  */
 export function hitTestAny(
   worldPos: Vec2,
@@ -31,9 +30,7 @@ export function hitTestAny(
   return false;
 }
 
-// Track last hit joint for click-cycling through overlapping joints
-let lastHitJointId: string | null = null;
-
+/** Nearest joint within hit radius. Hover and click both use this — no cycling (cycling on every mousemove broke overlap picks, e.g. slider C vs B). */
 export function hitTestJoint(
   worldPos: Vec2,
   joints: Record<string, Joint>,
@@ -41,7 +38,6 @@ export function hitTestJoint(
 ): Joint | null {
   const threshold = HIT_RADIUS / zoom;
 
-  // Collect all joints within hit radius (skip hidden bracing joints)
   const hits: { joint: Joint; dist: number }[] = [];
   for (const joint of Object.values(joints)) {
     if (joint.hidden) continue;
@@ -51,30 +47,10 @@ export function hitTestJoint(
     }
   }
 
-  if (hits.length === 0) {
-    lastHitJointId = null;
-    return null;
-  }
+  if (hits.length === 0) return null;
 
-  // Sort by distance (closest first), then by id for stable order
   hits.sort((a, b) => a.dist - b.dist || a.joint.id.localeCompare(b.joint.id));
-
-  // If only one hit or last hit not in the set, return closest
-  if (hits.length === 1 || !lastHitJointId) {
-    lastHitJointId = hits[0].joint.id;
-    return hits[0].joint;
-  }
-
-  // Find the last hit joint in the current hits and cycle to the next one
-  const lastIdx = hits.findIndex((h) => h.joint.id === lastHitJointId);
-  if (lastIdx === -1) {
-    lastHitJointId = hits[0].joint.id;
-    return hits[0].joint;
-  }
-
-  const nextIdx = (lastIdx + 1) % hits.length;
-  lastHitJointId = hits[nextIdx].joint.id;
-  return hits[nextIdx].joint;
+  return hits[0].joint;
 }
 
 export function hitTestLink(

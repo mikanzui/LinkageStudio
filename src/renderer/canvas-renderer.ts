@@ -1,9 +1,15 @@
-import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2, SimDragState, AppMode, ForceVector, CreateTool } from '../types';
+import type {
+  Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2, SimDragState, AppMode,
+  ForceVector, CreateTool, GridLevel, SelectionGesture,
+} from '../types';
 import type { CameraState } from '../types';
 import { applyCamera, resetCamera } from './camera';
 import { drawMechanism, drawOutlineGhost, drawSliderGhost, drawColliderGhost, drawOutlineEditMode, drawTracers, drawTracerPaths } from './draw-mechanism';
 import { drawImages } from './draw-images';
-import { drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInteraction, drawModeBadge, drawHUD, clearCanvas, drawCOMMarkers, drawArcSelector } from './draw-overlays';
+import {
+  drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInteraction, drawModeBadge, drawHUD, clearCanvas,
+  drawCOMMarkers, drawArcSelector, drawMirrorAxisGuide, drawSelectionGesture,
+} from './draw-overlays';
 import { lerp } from '../core/math/vec2';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from '../core/body-transform';
 import { getArcCirclePositions, getArcAddButtonPosition } from '../interaction/tool-manager';
@@ -23,6 +29,7 @@ export interface RenderState {
   camera: CameraState;
   gridEnabled: boolean;
   gridSize: number;
+  gridLevel: GridLevel;
   dof: number;
   cursorWorld: Vec2 | null;
   pathTraces: Map<string, Vec2[]>;
@@ -45,6 +52,8 @@ export interface RenderState {
   editingOutlineId?: string | null;
   editingVertexIndex?: number | null;
   arcSelector?: { jointId: string | null; colliderId: string | null; tracerId: string | null; position: Vec2; showTime: number; collapseTime: number | null; createdBodyId: string | null } | null;
+  mirrorPreview?: { axis: 'vertical' | 'horizontal'; value: number } | null;
+  selectionGesture?: SelectionGesture | null;
 }
 
 export function render(
@@ -59,7 +68,10 @@ export function render(
   applyCamera(ctx, state.camera);
 
   if (state.gridEnabled) {
-    drawGrid(ctx, state.camera, w, h, state.gridSize);
+    drawGrid(ctx, state.camera, w, h, state.gridSize, state.gridLevel);
+  }
+  if (state.mode === 'create' && state.createTool === 'mirror') {
+    drawMirrorAxisGuide(ctx, state.camera, w, h, state.mirrorPreview ?? null);
   }
 
   // Draw images behind mechanism
@@ -152,11 +164,16 @@ export function render(
         const jB = state.joints[link.jointIds[1]];
         if (jA && jB) grabWorldPos = lerp(jA.position, jB.position, state.simDrag.grabT);
       }
+    } else if (state.simDrag.directJointId) {
+      const j = state.joints[state.simDrag.directJointId];
+      if (j) grabWorldPos = j.position;
     }
     drawDragInteraction(ctx, state.simDrag, grabWorldPos, state.camera.zoom);
   }
 
   resetCamera(ctx);
+
+  drawSelectionGesture(ctx, state.selectionGesture ?? null);
 
   // Rulers are drawn in screen-space, pinned to viewport edges
   if (state.showRulers) {

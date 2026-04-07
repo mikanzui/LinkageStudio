@@ -2,6 +2,7 @@ import { useSimulationStore } from '../../store/simulation-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { useEditorStore } from '../../store/editor-store';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
+import { DOF_TOOLTIP } from '../../core/solver/dof';
 
 export function SimulationPanel() {
   const mode = useEditorStore((s) => s.mode);
@@ -32,21 +33,20 @@ export function SimulationPanel() {
   const lockOutlines = useEditorStore((s) => s.lockOutlines);
   const gridLevel = useEditorStore((s) => s.gridLevel);
 
-  // Physics controls - visible in both modes
+  // Physics controls - visible in both modes (title rendered above box)
   const physicsSection = (
     <>
-      <div className="panel-title" style={{ marginTop: 8 }}>Physics</div>
-      <label>
+      <label className="panel-toggle-row">
         <input
           type="checkbox"
           checked={gravityEnabled}
           onChange={toggleGravity}
         />
-        {' '}Gravity
+        <span>Gravity</span>
       </label>
       {gravityEnabled && (
-        <label>
-          Strength
+        <label className="panel-slider-row">
+          <span className="panel-slider-label">Strength</span>
           <input
             type="range"
             min={100}
@@ -55,11 +55,11 @@ export function SimulationPanel() {
             value={gravityStrength}
             onChange={(e) => setGravityStrength(+e.target.value)}
           />
-          <span>{gravityStrength}</span>
+          <span className="panel-slider-value">{gravityStrength}</span>
         </label>
       )}
-      <label>
-        Damping
+      <label className="panel-slider-row">
+        <span className="panel-slider-label">Damping</span>
         <input
           type="range"
           min={0}
@@ -68,10 +68,10 @@ export function SimulationPanel() {
           value={Math.round((1 - dampingVal) * 100)}
           onChange={(e) => setDamping(1 - (+e.target.value) / 100)}
         />
-        <span>{Math.round((1 - dampingVal) * 100)}</span>
+        <span className="panel-slider-value">{Math.round((1 - dampingVal) * 100)}</span>
       </label>
-      <label>
-        Drag Force
+      <label className="panel-slider-row">
+        <span className="panel-slider-label">Drag Force</span>
         <input
           type="range"
           min={1}
@@ -80,10 +80,10 @@ export function SimulationPanel() {
           value={dragMult}
           onChange={(e) => setDragMultiplier(+e.target.value)}
         />
-        <span>{dragMult}x</span>
+        <span className="panel-slider-value">{dragMult}x</span>
       </label>
-      <label>
-        Drag Damping
+      <label className="panel-slider-row">
+        <span className="panel-slider-label">Drag Damping</span>
         <input
           type="range"
           min={0}
@@ -92,15 +92,14 @@ export function SimulationPanel() {
           value={Math.round(dragDamp * 100)}
           onChange={(e) => setDragDamping(+e.target.value / 100)}
         />
-        <span>{Math.round(dragDamp * 100)}</span>
+        <span className="panel-slider-value">{Math.round(dragDamp * 100)}</span>
       </label>
     </>
   );
 
   const viewSection = (
     <>
-      <div className="panel-title" style={{ marginTop: 8 }}>View</div>
-      <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <label className="panel-toggle-row">
         <input
           type="checkbox"
           checked={showLinks}
@@ -108,7 +107,7 @@ export function SimulationPanel() {
         />
         Show links
       </label>
-      <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <label className="panel-toggle-row">
         <input
           type="checkbox"
           checked={showVectors}
@@ -116,7 +115,7 @@ export function SimulationPanel() {
         />
         Show vectors
       </label>
-      <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <label className="panel-toggle-row">
         <input
           type="checkbox"
           checked={showRulers}
@@ -124,7 +123,7 @@ export function SimulationPanel() {
         />
         Show rulers
       </label>
-      <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <label className="panel-toggle-row">
         <input
           type="checkbox"
           checked={showForceUnits}
@@ -133,7 +132,7 @@ export function SimulationPanel() {
         Show force units
       </label>
       {mode === 'create' && (
-        <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <label className="panel-toggle-row">
           <input
             type="checkbox"
             checked={lockOutlines}
@@ -163,7 +162,7 @@ export function SimulationPanel() {
           Lock outlines
         </label>
       )}
-      <div style={{ fontSize: 11, color: '#999', marginTop: 6 }}>Grid (G)</div>
+      <div className="panel-subtitle">Grid (G)</div>
       <div style={{ display: 'flex', gap: 2 }}>
         {(['normal', 'fine', 'ultrafine', 'off'] as const).map((level) => (
           <button
@@ -190,30 +189,42 @@ export function SimulationPanel() {
   if (mode === 'simulate') {
     return (
       <div className="panel-content">
-        <div className="panel-title">Simulation</div>
-        <div className="panel-info">DOF: {dof}</div>
-        <div className="panel-info">Time: {time.toFixed(2)}s</div>
-
-        <div className="sim-controls">
-          <button className="tool-btn" onClick={clearTraces}>Clear Traces</button>
+        <div className="panel-section-header">
+          <div className="panel-title">Simulation</div>
+        </div>
+        <div className="panel-surface panel-section">
+          <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
+          <div className="panel-info">Time: {time.toFixed(2)}s</div>
+          <div className="sim-controls">
+            <button className="tool-btn" onClick={clearTraces}>Clear Traces</button>
+          </div>
+          <label className="panel-slider-row">
+            <span className="panel-slider-label">Speed</span>
+            <input
+              type="range"
+              min={0.1}
+              max={5}
+              step={0.1}
+              value={speed}
+              onChange={(e) => setSpeed(+e.target.value)}
+            />
+            <span className="panel-slider-value">{speed.toFixed(1)}x</span>
+          </label>
         </div>
 
-        {physicsSection}
+        <div className="panel-section-header">
+          <div className="panel-title">Physics</div>
+        </div>
+        <div className="panel-surface panel-section">
+          {physicsSection}
+        </div>
 
-        <label style={{ marginTop: 4 }}>
-          Speed
-          <input
-            type="range"
-            min={0.1}
-            max={5}
-            step={0.1}
-            value={speed}
-            onChange={(e) => setSpeed(+e.target.value)}
-          />
-          <span>{speed.toFixed(1)}x</span>
-        </label>
-
-        {viewSection}
+        <div className="panel-section-header">
+          <div className="panel-title">View</div>
+        </div>
+        <div className="panel-surface panel-section">
+          {viewSection}
+        </div>
       </div>
     );
   }
@@ -221,12 +232,26 @@ export function SimulationPanel() {
   // --- CREATE MODE ---
   return (
     <div className="panel-content">
-      <div className="panel-title">Properties</div>
-      <div className="panel-info">DOF: {dof}</div>
+      <div className="panel-section-header">
+        <div className="panel-title">Properties</div>
+      </div>
+      <div className="panel-surface panel-section">
+        <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
+      </div>
 
-      {physicsSection}
+      <div className="panel-section-header">
+        <div className="panel-title">Physics</div>
+      </div>
+      <div className="panel-surface panel-section">
+        {physicsSection}
+      </div>
 
-      {viewSection}
+      <div className="panel-section-header">
+        <div className="panel-title">View</div>
+      </div>
+      <div className="panel-surface panel-section">
+        {viewSection}
+      </div>
     </div>
   );
 }

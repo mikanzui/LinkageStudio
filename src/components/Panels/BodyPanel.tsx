@@ -3,6 +3,7 @@ import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { BODY_COLORS } from '../../utils/constants';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
+import { BodyNodesInlineList, BodyNodesTrigger } from './BodyNodesMenu';
 
 /** Eye open SVG icon */
 function EyeIcon() {
@@ -44,6 +45,8 @@ export function BodyPanel() {
   const images = useMechanismStore((s) => s.images);
   const baseBodyId = useMechanismStore((s) => s.baseBodyId);
   const removeBody = useMechanismStore((s) => s.removeBody);
+  const removeJoint = useMechanismStore((s) => s.removeJoint);
+  const setJointLabel = useMechanismStore((s) => s.setJointLabel);
   const renameBody = useMechanismStore((s) => s.renameBody);
   const setBodyColor = useMechanismStore((s) => s.setBodyColor);
   const addJointToBody = useMechanismStore((s) => s.addJointToBody);
@@ -68,6 +71,8 @@ export function BodyPanel() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [collapsedBodies, setCollapsedBodies] = useState<Set<string>>(new Set());
+  const [nodesMenuBodyId, setNodesMenuBodyId] = useState<string | null>(null);
+  const [editingJointLabelId, setEditingJointLabelId] = useState<string | null>(null);
 
   const tracers = useMechanismStore((s) => s.tracers);
   const toggleTracerEnabled = useMechanismStore((s) => s.toggleTracerEnabled);
@@ -101,8 +106,8 @@ export function BodyPanel() {
 
   return (
     <div className="panel-content">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className="panel-title" style={{ margin: 0 }}>Bodies</div>
+      <div className="body-panel-header">
+        <div className="panel-title">Bodies</div>
         <button
           className="tool-btn"
           style={{ fontSize: 11, padding: '2px 8px' }}
@@ -111,7 +116,8 @@ export function BodyPanel() {
           + Add Body
         </button>
       </div>
-      {bodyList.map((body) => {
+      <div className="panel-surface body-list-group">
+        {bodyList.map((body) => {
         const isActive = activeBodyIds.has(body.id);
         const isBase = body.id === baseBodyId;
         const isEditing = editingId === body.id;
@@ -124,15 +130,10 @@ export function BodyPanel() {
         const isCollapsed = collapsedBodies.has(body.id);
 
         return (
-          <div key={body.id}>
+          <div key={body.id} className="body-node-group" data-body-node-menu={body.id}>
             {/* Body row */}
             <div
-              style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '3px 6px', marginBottom: 1, borderRadius: 4,
-                backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-                cursor: 'pointer',
-              }}
+              className={`body-row ${isActive ? 'active' : ''}`}
               onClick={() => {
                 if (isOutlineMode) setActiveBody(body.id);
                 else if (selectedColliderId) {
@@ -155,6 +156,16 @@ export function BodyPanel() {
               ) : (
                 <span style={{ width: 10, flexShrink: 0 }} />
               )}
+
+              <div className="body-nodes-wrap">
+                <BodyNodesTrigger
+                  isOpen={nodesMenuBodyId === body.id}
+                  onToggle={() => {
+                    setNodesMenuBodyId((prev) => (prev === body.id ? null : body.id));
+                    setEditingJointLabelId(null);
+                  }}
+                />
+              </div>
 
               {/* Selection control */}
               {isOutlineMode ? (
@@ -275,6 +286,25 @@ export function BodyPanel() {
                 </button>
               )}
             </div>
+
+            {nodesMenuBodyId === body.id && (
+              <BodyNodesInlineList
+                body={body}
+                bodyMenuId={body.id}
+                bodies={bodies}
+                baseBodyId={baseBodyId}
+                joints={joints}
+                onClose={() => {
+                  setNodesMenuBodyId(null);
+                  setEditingJointLabelId(null);
+                }}
+                removeJoint={removeJoint}
+                setJointLabel={setJointLabel}
+                select={select}
+                editingJointLabelId={editingJointLabelId}
+                setEditingJointLabelId={setEditingJointLabelId}
+              />
+            )}
 
             {/* Collapsible children: outlines + images */}
             {hasChildren && !isCollapsed && (
@@ -488,6 +518,7 @@ export function BodyPanel() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

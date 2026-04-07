@@ -24,9 +24,23 @@ export function generateBodyLinks(
   const linkMap = new Map<string, Link>();
   const bracingJoints: Joint[] = [];
 
+  // Slider midpoint B must not get distance links to A or C — those would fully
+  // constrain B to two circles when A and C are fixed, preventing sliding along
+  // AC. The A–C rail link + slider projection is the correct model (see test-slider.ts).
+  const skipSliderPairs = new Set<string>();
+  if (sliders) {
+    for (const s of Object.values(sliders)) {
+      const [abLo, abHi] = s.jointIdA < s.jointIdB ? [s.jointIdA, s.jointIdB] : [s.jointIdB, s.jointIdA];
+      const [bcLo, bcHi] = s.jointIdB < s.jointIdC ? [s.jointIdB, s.jointIdC] : [s.jointIdC, s.jointIdB];
+      skipSliderPairs.add(`${abLo}_${abHi}`);
+      skipSliderPairs.add(`${bcLo}_${bcHi}`);
+    }
+  }
+
   function addPair(idA: string, idB: string) {
     const [lo, hi] = idA < idB ? [idA, idB] : [idB, idA];
     const linkId = `link_${lo}_${hi}`;
+    if (skipSliderPairs.has(`${lo}_${hi}`)) return;
     if (linkMap.has(linkId)) return;
     const jA = joints[lo];
     const jB = joints[hi];

@@ -1,4 +1,4 @@
-import type { Vec2, CameraState, SimDragState, ForceVector } from '../types';
+import type { Vec2, CameraState, SimDragState, ForceVector, GridLevel, SelectionGesture } from '../types';
 import { GRID_COLOR, GRID_MAJOR_COLOR, BACKGROUND_COLOR } from '../utils/constants';
 
 export function drawGrid(
@@ -7,6 +7,7 @@ export function drawGrid(
   canvasWidth: number,
   canvasHeight: number,
   gridSize: number,
+  gridLevel: GridLevel,
 ) {
   const { pan, zoom } = camera;
 
@@ -16,10 +17,19 @@ export function drawGrid(
   const right = (canvasWidth - pan.x) / zoom;
   const bottom = (canvasHeight - pan.y) / zoom;
 
-  // Adaptive grid: scale grid spacing with zoom
-  // Use gridSize as the base unit; only collapse when too dense on screen
+  // Adaptive grid: scale spacing with zoom, but preserve a visual distinction
+  // between normal/fine/ultrafine levels.
+  const minScreenStepByLevel: Record<GridLevel, number> = {
+    normal: 8,
+    fine: 5,
+    ultrafine: 2,
+    off: 8,
+  };
+  const minScreenStep = minScreenStepByLevel[gridLevel] ?? 8;
+
+  // Use gridSize as base unit; only collapse when too dense on screen.
   let step = gridSize;
-  while (step * zoom < 8) step *= 2;
+  while (step * zoom < minScreenStep) step *= 2;
 
   const startX = Math.floor(left / step) * step;
   const startY = Math.floor(top / step) * step;
@@ -52,6 +62,36 @@ export function drawGrid(
   ctx.moveTo(0, -crossSize);
   ctx.lineTo(0, crossSize);
   ctx.stroke();
+}
+
+export function drawMirrorAxisGuide(
+  ctx: CanvasRenderingContext2D,
+  camera: CameraState,
+  canvasWidth: number,
+  canvasHeight: number,
+  preview: { axis: 'vertical' | 'horizontal'; value: number } | null,
+) {
+  if (!preview) return;
+  const { pan, zoom } = camera;
+  const left = -pan.x / zoom;
+  const top = -pan.y / zoom;
+  const right = (canvasWidth - pan.x) / zoom;
+  const bottom = (canvasHeight - pan.y) / zoom;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(64, 173, 255, 0.95)';
+  ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([8 / zoom, 5 / zoom]);
+  ctx.beginPath();
+  if (preview.axis === 'vertical') {
+    ctx.moveTo(preview.value, top);
+    ctx.lineTo(preview.value, bottom);
+  } else {
+    ctx.moveTo(left, preview.value);
+    ctx.lineTo(right, preview.value);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**
@@ -234,6 +274,71 @@ export function drawLinkGhost(
   ctx.setLineDash([]);
 }
 
+const HUD_DOF_FONT = '12px monospace';
+/** Space after the DOF value before the help icon (circle extends left of the “?” glyph). */
+const HUD_GAP_AFTER_DOF = 10;
+/** Horizontal padding around the “?” for the HTML tooltip hitbox (matches visual). */
+const HUD_DOF_HELP_PAD = 4;
+/** Slightly larger than the glyph for even clearance; pairs with 1px stroke. */
+const HUD_DOF_HELP_RADIUS = 8;
+
+function measureDofHudParts(ctx: CanvasRenderingContext2D, dof: number) {
+  ctx.font = HUD_DOF_FONT;
+  const dofText = `DOF: ${dof}`;
+  const textW = ctx.measureText(dofText).width;
+  if (dof >= 0) {
+    return {
+      dofText,
+      badgeW: textW + 12,
+      showHelp: false as const,
+      helpX: 0,
+      circleCx: 0,
+    };
+  }
+  const qm = ctx.measureText('?');
+  const qW = qm.width;
+  const helpX = 14 + textW + HUD_GAP_AFTER_DOF;
+  const circleCx = helpX + qW / 2;
+  const badgeRight = circleCx + HUD_DOF_HELP_RADIUS + 3;
+  const badgeW = badgeRight - 8;
+  return {
+    dofText,
+    badgeW,
+    showHelp: true as const,
+    helpX,
+    circleCx,
+    qW,
+  };
+}
+
+/** Help icon only when DOF is negative (over-constrained). Screen-space hitbox aligned with `drawHUD`. */
+export function getDofHudHelpTooltipRect(
+  canvasWidth: number,
+  canvasHeight: number,
+  dof: number,
+): { left: number; top: number; width: number; height: number } | null {
+  if (canvasWidth <= 0 || canvasHeight <= 0 || dof >= 0) return null;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.font = HUD_DOF_FONT;
+  ctx.textBaseline = 'bottom';
+  const parts = measureDofHudParts(ctx, dof);
+  if (!parts.showHelp) return null;
+  const baselineY = canvasHeight - 10;
+  const m = ctx.measureText('?');
+  const ascent = m.actualBoundingBoxAscent ?? 8;
+  const descent = m.actualBoundingBoxDescent ?? 2;
+  const circleCy = baselineY + (descent - ascent) / 2;
+  const { circleCx } = parts;
+  return {
+    left: circleCx - HUD_DOF_HELP_RADIUS - HUD_DOF_HELP_PAD,
+    top: circleCy - HUD_DOF_HELP_RADIUS - HUD_DOF_HELP_PAD,
+    width: (HUD_DOF_HELP_RADIUS + HUD_DOF_HELP_PAD) * 2,
+    height: (HUD_DOF_HELP_RADIUS + HUD_DOF_HELP_PAD) * 2,
+  };
+}
+
 export function drawHUD(
   ctx: CanvasRenderingContext2D,
   canvasWidth: number,
@@ -241,21 +346,37 @@ export function drawHUD(
   dof: number,
   cursorWorld: Vec2 | null,
 ) {
-  ctx.font = '12px monospace';
+  ctx.font = HUD_DOF_FONT;
   ctx.textBaseline = 'bottom';
 
-  // DOF badge
-  const dofText = `DOF: ${dof}`;
+  // DOF badge; circled “?” only when DOF is negative (HTML tooltip hitbox in MechanismCanvas)
+  const parts = measureDofHudParts(ctx, dof);
+  const { dofText, badgeW } = parts;
   ctx.fillStyle = dof === 1 ? '#4CAF50' : dof === 0 ? '#FF9800' : dof < 0 ? '#E53935' : '#2196F3';
-  ctx.fillRect(8, canvasHeight - 28, ctx.measureText(dofText).width + 12, 22);
+  ctx.fillRect(8, canvasHeight - 28, badgeW, 22);
   ctx.fillStyle = '#fff';
-  ctx.fillText(dofText, 14, canvasHeight - 10);
+  const baselineY = canvasHeight - 10;
+  ctx.fillText(dofText, 14, baselineY);
+  if (parts.showHelp) {
+    const { helpX, circleCx } = parts;
+    const m = ctx.measureText('?');
+    const ascent = m.actualBoundingBoxAscent ?? 8;
+    const descent = m.actualBoundingBoxDescent ?? 2;
+    const circleCy = baselineY + (descent - ascent) / 2;
+    ctx.beginPath();
+    ctx.arc(circleCx, circleCy, HUD_DOF_HELP_RADIUS, 0, Math.PI * 2);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillText('?', helpX, baselineY);
+  }
 
-  // Cursor coords
+  // Cursor coords (stay clear of widened DOF badge)
   if (cursorWorld) {
     const coordText = `(${cursorWorld.x.toFixed(1)}, ${cursorWorld.y.toFixed(1)})`;
+    const coordX = Math.max(90, 8 + badgeW + 8);
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(coordText, 90, canvasHeight - 10);
+    ctx.fillText(coordText, coordX, canvasHeight - 10);
   }
 
 }
@@ -595,6 +716,45 @@ export function drawArcSelector(
   }
 
   ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/** Box / lasso marquee while dragging (screen space; call after resetCamera). */
+export function drawSelectionGesture(
+  ctx: CanvasRenderingContext2D,
+  gesture: SelectionGesture | null,
+) {
+  if (!gesture) return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.95)';
+  ctx.fillStyle = 'rgba(74, 158, 255, 0.14)';
+  ctx.lineWidth = 1.25;
+  ctx.setLineDash([]);
+  if (gesture.type === 'box') {
+    const x0 = gesture.screenStart.x;
+    const y0 = gesture.screenStart.y;
+    const x1 = gesture.screenEnd.x;
+    const y1 = gesture.screenEnd.y;
+    const left = Math.min(x0, x1);
+    const top = Math.min(y0, y1);
+    const rw = Math.abs(x1 - x0);
+    const rh = Math.abs(y1 - y0);
+    ctx.fillRect(left, top, rw, rh);
+    ctx.strokeRect(left, top, rw, rh);
+  } else {
+    const pts = gesture.screenPoints;
+    if (pts.length < 2) {
+      ctx.restore();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+  }
   ctx.restore();
 }
 

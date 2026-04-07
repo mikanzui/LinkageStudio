@@ -138,7 +138,13 @@ export function solve(
 
 // --- Position-Based Dynamics simulation ---
 
-export interface ForceInfo { linkId: string; grabT: number; target: Vec2; }
+export interface ForceInfo {
+  linkId: string | null;
+  grabT: number;
+  target: Vec2;
+  /** Spring on this joint only (slider midpoint B when rail endpoints are fixed). */
+  directJointId?: string | null;
+}
 export interface GravityInfo { enabled: boolean; strength: number; }
 
 // Velocity-based state for semi-implicit Euler (replaces Verlet prev-positions)
@@ -151,6 +157,21 @@ export function resetVelocities() {
 const PULL_STRENGTH = 6;
 const NUM_SUBSTEPS = 10;
 const CONSTRAINT_PASSES = 6;
+
+/** Closest point on segment A–C to P (for slider drag target — matches segment clamp, avoids spring vs clamp fight). */
+function closestPointOnSegment(
+  px: number, py: number,
+  ax: number, ay: number,
+  cx: number, cy: number,
+): { x: number; y: number } {
+  const acx = cx - ax;
+  const acy = cy - ay;
+  const acLenSq = acx * acx + acy * acy;
+  if (acLenSq < 1e-12) return { x: ax, y: ay };
+  let t = ((px - ax) * acx + (py - ay) * acy) / acLenSq;
+  t = Math.max(0, Math.min(1, t));
+  return { x: ax + t * acx, y: ay + t * acy };
+}
 
 /**
  * Physics simulation using substep PBD with explicit velocity tracking.
@@ -224,6 +245,10 @@ export function solveWithForce(
         if (idxA !== undefined) gravAccY[idxA / 2] += g;
         if (idxB !== undefined) gravAccY[idxB / 2] += g;
       }
+      // Slider midpoint B and other free joints not on any link still need gravity
+      for (let i = 0; i < freeJoints.length; i++) {
+        if (gravAccY[i] === 0) gravAccY[i] += g;
+      }
     }
   }
 
@@ -233,7 +258,7 @@ export function solveWithForce(
   let dragIdxB: number | undefined;
   let dragFixedPosA: Vec2 | null = null;
   let dragFixedPosB: Vec2 | null = null;
-  if (pullForce) {
+  if (pullForce && pullForce.linkId && !pullForce.directJointId) {
     for (const link of linkArray) {
       if (link.id === pullForce.linkId) {
         dragLink = link;
@@ -247,6 +272,19 @@ export function solveWithForce(
       }
     }
   }
+
+  /** Slider whose midpoint B is pulled with directJointId — use rail tangent only (no normal spring vs constraint fight). */
+  let directPullSlider: SliderConstraint | null = null;
+  if (pullForce?.directJointId && sliders) {
+    for (const s of Object.values(sliders)) {
+      if (s.jointIdB === pullForce.directJointId) {
+        directPullSlider = s;
+        break;
+      }
+    }
+  }
+
+  const sliderArray = sliders ? Object.values(sliders) : [];
 
   // --- Current positions into working array ---
   const q = new Float64Array(n);
@@ -274,7 +312,55 @@ export function solveWithForce(
 
       // Critically damped spring drag: F = k * displacement - c * velocity
       // c = 2 * sqrt(k) * dampingRatio gives critical damping at ratio=1
-      if (pullForce && dragLink) {
+      if (pullForce?.directJointId) {
+        const djIdx = jointIndex.get(pullForce.directJointId);
+        if (djIdx !== undefined && djIdx === i * 2) {
+          const grabX = q[djIdx];
+          const grabY = q[djIdx + 1];
+          const grabVx = v[djIdx];
+          const grabVy = v[djIdx + 1];
+          const dampCoeff = 2 * Math.sqrt(effectiveStrength) * (dragDamping * 2);
+
+          if (directPullSlider) {
+            const jA = joints[directPullSlider.jointIdA];
+            const jC = joints[directPullSlider.jointIdC];
+            if (jA && jC) {
+              const idxA = jointIndex.get(directPullSlider.jointIdA);
+              const idxC = jointIndex.get(directPullSlider.jointIdC);
+              const ax = idxA !== undefined ? q[idxA] : jA.position.x;
+              const aY = idxA !== undefined ? q[idxA + 1] : jA.position.y;
+              const cx = idxC !== undefined ? q[idxC] : jC.position.x;
+              const cY = idxC !== undefined ? q[idxC + 1] : jC.position.y;
+              const acx = cx - ax;
+              const acy = cY - aY;
+              const acLen = Math.hypot(acx, acy);
+              if (acLen > 1e-8) {
+                const ux = acx / acLen;
+                const uy = acy / acLen;
+                const P = closestPointOnSegment(
+                  pullForce.target.x, pullForce.target.y,
+                  ax, aY, cx, cY,
+                );
+                const dx = P.x - grabX;
+                const dy = P.y - grabY;
+                const along = dx * ux + dy * uy;
+                const valong = grabVx * ux + grabVy * uy;
+                const springFx = along * ux * effectiveStrength;
+                const springFy = along * uy * effectiveStrength;
+                const dampFx = -valong * ux * dampCoeff;
+                const dampFy = -valong * uy * dampCoeff;
+                axi += springFx + dampFx;
+                ayi += springFy + dampFy;
+              }
+            }
+          } else {
+            const springFx = (pullForce.target.x - grabX) * effectiveStrength;
+            const springFy = (pullForce.target.y - grabY) * effectiveStrength;
+            axi += springFx - grabVx * dampCoeff;
+            ayi += springFy - grabVy * dampCoeff;
+          }
+        }
+      } else if (pullForce && dragLink) {
         const t = pullForce.grabT;
         const ax1 = dragIdxA !== undefined ? q[dragIdxA] : dragFixedPosA!.x;
         const ay1 = dragIdxA !== undefined ? q[dragIdxA + 1] : dragFixedPosA!.y;
@@ -323,7 +409,6 @@ export function solveWithForce(
     }
 
     // 3. Project distance constraints + slider constraints
-    const sliderArray = sliders ? Object.values(sliders) : [];
     for (let pass = 0; pass < CONSTRAINT_PASSES; pass++) {
       for (const link of linkArray) {
         const idxI = jointIndex.get(link.jointIds[0]);
@@ -647,6 +732,57 @@ export function solveWithForce(
       // Show spring component of force (the damping part is velocity-dependent and hard to display statically)
       const dax = (pullForce.target.x - grabX) * effectiveStrength;
       const day = (pullForce.target.y - grabY) * effectiveStrength;
+      forceVectors.push({
+        origin: { x: grabX, y: grabY },
+        force: { x: dax * 0.015, y: day * 0.015 },
+        color: '#FF9800',
+      });
+    }
+  }
+
+  if (pullForce?.directJointId) {
+    const j = joints[pullForce.directJointId];
+    if (j) {
+      const djIdx = jointIndex.get(j.id);
+      const grabX = djIdx !== undefined ? q[djIdx] : j.position.x;
+      const grabY = djIdx !== undefined ? q[djIdx + 1] : j.position.y;
+      let dax: number;
+      let day: number;
+      if (directPullSlider) {
+        const jA = joints[directPullSlider.jointIdA];
+        const jC = joints[directPullSlider.jointIdC];
+        if (jA && jC) {
+          const idxA = jointIndex.get(directPullSlider.jointIdA);
+          const idxC = jointIndex.get(directPullSlider.jointIdC);
+          const ax = idxA !== undefined ? q[idxA] : jA.position.x;
+          const aY = idxA !== undefined ? q[idxA + 1] : jA.position.y;
+          const cx = idxC !== undefined ? q[idxC] : jC.position.x;
+          const cY = idxC !== undefined ? q[idxC + 1] : jC.position.y;
+          const acx = cx - ax;
+          const acy = cY - aY;
+          const acLen = Math.hypot(acx, acy);
+          if (acLen > 1e-8) {
+            const ux = acx / acLen;
+            const uy = acy / acLen;
+            const P = closestPointOnSegment(
+              pullForce.target.x, pullForce.target.y,
+              ax, aY, cx, cY,
+            );
+            const along = (P.x - grabX) * ux + (P.y - grabY) * uy;
+            dax = along * ux * effectiveStrength;
+            day = along * uy * effectiveStrength;
+          } else {
+            dax = (pullForce.target.x - grabX) * effectiveStrength;
+            day = (pullForce.target.y - grabY) * effectiveStrength;
+          }
+        } else {
+          dax = (pullForce.target.x - grabX) * effectiveStrength;
+          day = (pullForce.target.y - grabY) * effectiveStrength;
+        }
+      } else {
+        dax = (pullForce.target.x - grabX) * effectiveStrength;
+        day = (pullForce.target.y - grabY) * effectiveStrength;
+      }
       forceVectors.push({
         origin: { x: grabX, y: grabY },
         force: { x: dax * 0.015, y: day * 0.015 },

@@ -27,19 +27,20 @@ function App() {
       const fixedJointIds = new Set<string>(baseBody?.jointIds ?? []);
 
       // Always compute DOF
-      const dof = computeDOF(mech.joints, mech.links, !!sim.driverJointId, fixedJointIds);
+      const dof = computeDOF(mech.joints, mech.links, !!sim.driverJointId, fixedJointIds, mech.sliders);
       if (dof !== sim.dof) sim.setDof(dof);
 
       // --- SIMULATE MODE ---
       if (editor.mode === 'simulate') {
         sim.advanceTime(SIM_DT * sim.speed);
 
-        // Build pull force from sim drag
-        const pullForce = editor.simDrag?.active && editor.simDrag.linkId
+        // Build pull force from sim drag (link-based, or direct on slider B when A/C are fixed)
+        const pullForce = editor.simDrag?.active && (editor.simDrag.linkId || editor.simDrag.directJointId)
           ? {
               linkId: editor.simDrag.linkId,
               grabT: editor.simDrag.grabT,
               target: editor.simDrag.cursorPoint,
+              directJointId: editor.simDrag.directJointId ?? undefined,
             }
           : null;
 

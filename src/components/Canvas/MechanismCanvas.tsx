@@ -1,16 +1,20 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState, useLayoutEffect, useMemo } from 'react';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { useEditorStore } from '../../store/editor-store';
 import { useSimulationStore } from '../../store/simulation-store';
 import { render } from '../../renderer/canvas-renderer';
 import { screenToWorld } from '../../renderer/camera';
 import {
-  handleMouseDown, handleMouseMove, handleMouseUp, handleDoubleClick, handleWheel, handleKeyDown,
+  handleMouseDown, handleMouseMove, handleMouseUp, handleDoubleClick, handleWheel, handleKeyDown, handleKeyUp,
 } from '../../interaction/tool-manager';
-import { hitTestAny, hitTestOutlineFilled } from '../../interaction/hit-test';
+import { hitTestAny, hitTestJoint, hitTestOutlineFilled } from '../../interaction/hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../../renderer/draw-images';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import type { Vec2 } from '../../types';
+import { distance, distToSegment } from '../../core/math/vec2';
+import { HIT_RADIUS, LINK_HIT_THRESHOLD } from '../../utils/constants';
+import { getDofHudHelpTooltipRect } from '../../renderer/draw-overlays';
+import { DOF_TOOLTIP } from '../../core/solver/dof';
 
 // --- Touch gesture state (module-level, survives re-renders) ---
 const activePointers: Map<number, Vec2> = new Map();
@@ -31,8 +35,34 @@ const PAN_THRESHOLD = 8; // px movement before a touch becomes a pan drag
 
 export function MechanismCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const cursorWorldRef = useRef<Vec2 | null>(null);
   const rafRef = useRef<number>(0);
+  const dof = useSimulationStore((s) => s.dof);
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+  const [showDofHelp, setShowDofHelp] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setCanvasSize({ w: Math.round(r.width), h: Math.round(r.height) });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const dofHelpRect = useMemo(
+    () => getDofHudHelpTooltipRect(canvasSize.w, canvasSize.h, dof),
+    [canvasSize.w, canvasSize.h, dof],
+  );
+
+  useEffect(() => {
+    if (dof >= 0) setShowDofHelp(false);
+  }, [dof]);
 
   const renderLoop = useCallback(() => {
     const canvas = canvasRef.current;
@@ -67,6 +97,7 @@ export function MechanismCanvas() {
         camera: editor.camera,
         gridEnabled: editor.gridEnabled,
         gridSize: editor.gridSize,
+        gridLevel: editor.gridLevel,
         dof: sim.dof,
         cursorWorld: cursorWorldRef.current,
         pathTraces: sim.pathTraces,
@@ -110,6 +141,8 @@ export function MechanismCanvas() {
         editingOutlineId: editor.editingOutlineId,
         editingVertexIndex: editor.editingVertexIndex,
         arcSelector: editor.arcSelector ? { jointId: editor.arcSelector.jointId, colliderId: editor.arcSelector.colliderId, tracerId: editor.arcSelector.tracerId, position: editor.arcSelector.position, showTime: editor.arcSelector.showTime, collapseTime: editor.arcSelector.collapseTime, createdBodyId: editor.arcSelector.createdBodyId } : null,
+        mirrorPreview: editor.mirrorPreview,
+        selectionGesture: editor.selectionGesture,
       });
     } catch (e) {
       console.error('Render error:', e);
@@ -147,9 +180,19 @@ export function MechanismCanvas() {
   }, []);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => handleKeyDown(e);
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const onKeyDown = (e: KeyboardEvent) => handleKeyDown(e);
+    const onKeyUp = (e: KeyboardEvent) => handleKeyUp(e);
+    const onWindowBlur = () => useEditorStore.getState().setSpacePanHeld(false);
+    // Capture so Space is handled before focused buttons (otherwise Space toggles controls and keyup can be lost).
+    const useCapture = true;
+    window.addEventListener('keydown', onKeyDown, useCapture);
+    window.addEventListener('keyup', onKeyUp, useCapture);
+    window.addEventListener('blur', onWindowBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, useCapture);
+      window.removeEventListener('keyup', onKeyUp, useCapture);
+      window.removeEventListener('blur', onWindowBlur);
+    };
   }, []);
 
   // Prevent Safari/iOS gesture zoom on the canvas.
@@ -173,6 +216,8 @@ export function MechanismCanvas() {
   }, []);
 
   const mode = useEditorStore((s) => s.mode);
+  const activeTool = useEditorStore((s) => s.activeTool);
+  const spacePanHeld = useEditorStore((s) => s.spacePanHeld);
   const simDrag = useEditorStore((s) => s.simDrag);
   const hoveredId = useEditorStore((s) => s.hoveredId);
 
@@ -180,9 +225,16 @@ export function MechanismCanvas() {
   // renders white/invisible on some OS/browser combinations.
   const CROSSHAIR_CURSOR = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='12' y1='2' x2='12' y2='22' stroke='%23333' stroke-width='1.5'/%3E%3Cline x1='2' y1='12' x2='22' y2='12' stroke='%23333' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='%23333' stroke-width='1'/%3E%3C/svg%3E") 12 12, crosshair`;
 
-  const cursor = mode === 'simulate'
-    ? (simDrag?.active ? 'grabbing' : 'grab')
-    : (hoveredId ? 'pointer' : CROSSHAIR_CURSOR);
+  const cursor =
+    mode === 'simulate' && simDrag?.active
+      ? 'grabbing'
+      : activeTool === 'pan' || spacePanHeld
+        ? 'grab'
+        : mode === 'simulate'
+          ? 'grab'
+          : hoveredId
+            ? 'pointer'
+            : CROSSHAIR_CURSOR;
 
   const handlePinchMove = useCallback(() => {
     if (activePointers.size < 2) return;
@@ -220,7 +272,9 @@ export function MechanismCanvas() {
   }, []);
 
   return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%' }}>
     <canvas
+      id="linkage-canvas"
       ref={canvasRef}
       style={{ width: '100%', height: '100%', cursor, userSelect: 'none', touchAction: 'none' }}
       onPointerDown={(e) => {
@@ -298,6 +352,16 @@ export function MechanismCanvas() {
 
         if (componentHit) {
           // Finger landed on a component → forward to tool-manager immediately for drag interaction
+          gestureState = 'interact';
+          touchStartPointerId = e.pointerId;
+          handleMouseDown(e.nativeEvent as PointerEvent, canvas);
+        } else if (
+          editor.mode === 'create' &&
+          editor.createTool === 'joints' &&
+          editor.activeTool === 'select' &&
+          editor.selectMode !== 'single'
+        ) {
+          // Empty canvas + box/lasso: start marquee immediately (same as mouse)
           gestureState = 'interact';
           touchStartPointerId = e.pointerId;
           handleMouseDown(e.nativeEvent as PointerEvent, canvas);
@@ -458,7 +522,112 @@ export function MechanismCanvas() {
         }
       }}
       onWheel={(e) => handleWheel(e.nativeEvent, canvasRef.current!)}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        const canvas = canvasRef.current!;
+        const editor = useEditorStore.getState();
+        const mechanism = useMechanismStore.getState();
+
+        if (editor.mode !== 'create') {
+          editor.setWorldContextMenu(null);
+          return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const screenPos: Vec2 = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const worldPos = screenToWorld(screenPos, editor.camera);
+        const joint = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
+        if (joint) {
+          editor.select(joint.id);
+          editor.setWorldContextMenu({
+            targetType: 'joint',
+            targetId: joint.id,
+            screenPosition: screenPos,
+            openMode: 'context',
+          });
+          return;
+        }
+
+        // Tracer hit
+        const tracerHitRadius = HIT_RADIUS / editor.camera.zoom;
+        for (const tracer of Object.values(mechanism.tracers)) {
+          const body = mechanism.bodies[tracer.bodyId];
+          if (!body) continue;
+          const transform = computeBodyTransform(body, mechanism.joints);
+          const worldPt = localToWorld(tracer.localPosition, transform);
+          if (distance(worldPos, worldPt) < tracerHitRadius) {
+            editor.select(tracer.id);
+            editor.setWorldContextMenu({
+              targetType: 'tracer',
+              targetId: tracer.id,
+              screenPosition: screenPos,
+              openMode: 'context',
+            });
+            return;
+          }
+        }
+
+        // Collider barrier hit
+        const colliderThreshold = LINK_HIT_THRESHOLD / editor.camera.zoom;
+        for (const collider of Object.values(mechanism.colliders)) {
+          const jA = mechanism.joints[collider.jointIdA];
+          const jC = mechanism.joints[collider.jointIdC];
+          if (!jA || !jC) continue;
+          const d = distToSegment(worldPos, jA.position, jC.position);
+          if (d < colliderThreshold) {
+            editor.select(collider.id);
+            editor.setWorldContextMenu({
+              targetType: 'collider',
+              targetId: collider.id,
+              screenPosition: screenPos,
+              openMode: 'context',
+            });
+            return;
+          }
+        }
+
+        editor.setWorldContextMenu(null);
+      }}
     />
+    {dofHelpRect && (
+      <div
+        aria-label="Degrees of freedom help"
+        onMouseEnter={() => setShowDofHelp(true)}
+        onMouseLeave={() => setShowDofHelp(false)}
+        style={{
+          position: 'absolute',
+          left: dofHelpRect.left,
+          top: dofHelpRect.top,
+          width: dofHelpRect.width,
+          height: dofHelpRect.height,
+          cursor: 'help',
+        }}
+      />
+    )}
+    {dofHelpRect && showDofHelp && (
+      <div
+        style={{
+          position: 'absolute',
+          left: dofHelpRect.left + dofHelpRect.width / 2,
+          top: dofHelpRect.top - 8,
+          transform: 'translate(-50%, -100%)',
+          pointerEvents: 'none',
+          background: 'rgba(20,20,20,0.96)',
+          color: '#fff',
+          border: '1px solid #666',
+          borderRadius: 6,
+          padding: '6px 8px',
+          maxWidth: 340,
+          fontSize: 11,
+          lineHeight: 1.35,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+          zIndex: 10,
+          whiteSpace: 'normal',
+        }}
+      >
+        {DOF_TOOLTIP}
+      </div>
+    )}
+    </div>
   );
 }

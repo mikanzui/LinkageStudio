@@ -6,7 +6,15 @@ import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../render
 import { screenToWorld } from '../renderer/camera';
 import { snapToGrid, distance, sub, dot, lengthSq } from '../core/math/vec2';
 import { computeBodyTransform, worldToLocal, localToWorld } from '../core/body-transform';
-import { HIT_RADIUS } from '../utils/constants';
+import { DEFAULT_GRID_SIZE, HIT_RADIUS } from '../utils/constants';
+import { deleteSelectedEntities } from '../utils/delete-selection';
+import {
+  hitTestJointsToolBlock,
+  worldAxisBoxFromScreenRect,
+  worldPolygonFromScreenLasso,
+  collectIdsInWorldBox,
+  collectIdsInWorldLasso,
+} from './selection-marquee';
 
 /** Start the long-press arc selector timer for a given joint. No-op for touch input. */
 function startArcTimer(jointId: string, screenX: number, screenY: number) {
@@ -18,13 +26,11 @@ function startArcTimer(jointId: string, screenX: number, screenY: number) {
     if (longPressJointId) {
       const j = useMechanismStore.getState().joints[longPressJointId];
       if (j && !j.hidden) {
-        useEditorStore.getState().setArcSelector({
-          jointId: longPressJointId,
-          colliderId: null, tracerId: null,
-          position: { ...j.position },
-          showTime: Date.now(),
-          collapseTime: null,
-          readyToToggle: new Set([...Object.keys(useMechanismStore.getState().bodies), '__add_body__']), createdBodyId: null, lastToggleTime: 0, lastToggle: null,
+        useEditorStore.getState().setWorldContextMenu({
+          targetType: 'joint',
+          targetId: longPressJointId,
+          screenPosition: { x: screenX, y: screenY },
+          openMode: 'hold',
         });
         isDragging = false;
         dragJointId = null;
@@ -44,13 +50,11 @@ function startColliderArcTimer(colliderId: string, worldPos: Vec2, screenX: numb
     const mech = useMechanismStore.getState();
     const collider = mech.colliders[colliderId];
     if (collider) {
-      useEditorStore.getState().setArcSelector({
-        jointId: null,
-        colliderId,
-        position: { ...worldPos },
-        showTime: Date.now(),
-        collapseTime: null,
-        readyToToggle: new Set([...Object.keys(mech.bodies), '__add_body__']), createdBodyId: null, lastToggleTime: 0, lastToggle: null,
+      useEditorStore.getState().setWorldContextMenu({
+        targetType: 'collider',
+        targetId: colliderId,
+        screenPosition: { x: screenX, y: screenY },
+        openMode: 'hold',
       });
     }
     longPressTimer = null;
@@ -67,20 +71,12 @@ function startTracerArcTimer(tracerId: string, screenX: number, screenY: number)
     const mech = useMechanismStore.getState();
     const tracer = mech.tracers[tracerId];
     if (tracer) {
-      const body = mech.bodies[tracer.bodyId];
-      if (body) {
-        const transform = computeBodyTransform(body, mech.joints);
-        const worldPt = localToWorld(tracer.localPosition, transform);
-        useEditorStore.getState().setArcSelector({
-          jointId: null,
-          colliderId: null, tracerId: null,
-          tracerId,
-          position: { ...worldPt },
-          showTime: Date.now(),
-          collapseTime: null,
-          readyToToggle: new Set([...Object.keys(mech.bodies), '__add_body__']), createdBodyId: null, lastToggleTime: 0, lastToggle: null,
-        });
-      }
+      useEditorStore.getState().setWorldContextMenu({
+        targetType: 'tracer',
+        targetId: tracerId,
+        screenPosition: { x: screenX, y: screenY },
+        openMode: 'hold',
+      });
     }
     longPressTimer = null;
   }, LONG_PRESS_MS);
@@ -281,6 +277,9 @@ let lastMouse: Vec2 = { x: 0, y: 0 };
 let sliderLineDragId: string | null = null;
 let sliderLineDragStart: Vec2 = { x: 0, y: 0 };
 let sliderLineDragStartPositions: { a: Vec2; b: Vec2; c: Vec2 } | null = null;
+/** Mouse: hold still on rail → long-press menu on B; move past threshold → translate rail. Touch: unused (immediate drag). */
+let pendingSliderRailDrag: { sliderId: string; worldStart: Vec2; positions: { a: Vec2; b: Vec2; c: Vec2 } } | null = null;
+const SLIDER_RAIL_HOLD_JOINT_ID = '__slider_rail__';
 
 // Outline vertex drag state
 let outlineVertexDragIndex: number | null = null;
@@ -304,9 +303,58 @@ let lastPointerType: string = 'mouse';
 let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressJointId: string | null = null;
 let longPressStartScreen: Vec2 | null = null;
-const LONG_PRESS_MS = 300;
+const LONG_PRESS_MS = 340;
 const LONG_PRESS_MOVE_THRESHOLD_BASE = 8; // px screen movement to cancel (minimum)
 let imageStartPos: Vec2 = { x: 0, y: 0 };
+
+/** Box or lasso marquee drag (screen space, canvas-relative). */
+let marqueeDrag: {
+  kind: 'box' | 'lasso';
+  startScreen: Vec2;
+  shift: boolean;
+  lastScreen: Vec2;
+  lassoPoints?: Vec2[];
+} | null = null;
+
+const MARQUEE_MIN_PX = 4;
+
+function getMirrorPreview(worldPos: Vec2, gridSize: number, zoom: number): { axis: 'vertical' | 'horizontal'; value: number } {
+  const step = gridSize > 0 ? gridSize : DEFAULT_GRID_SIZE;
+  const nearestX = Math.round(worldPos.x / step) * step;
+  const nearestY = Math.round(worldPos.y / step) * step;
+  const dxPx = Math.abs(worldPos.x - nearestX) * zoom;
+  const dyPx = Math.abs(worldPos.y - nearestY) * zoom;
+  if (dxPx <= dyPx) return { axis: 'vertical', value: nearestX };
+  return { axis: 'horizontal', value: nearestY };
+}
+
+/** After mousedown on slider rail (mouse): opens body menu on midpoint B if still held; cancelled by movement in handleMouseMove. */
+function scheduleSliderRailHoldMenu(clientX: number, clientY: number) {
+  if (longPressTimer) clearTimeout(longPressTimer);
+  const cx = clientX;
+  const cy = clientY;
+  longPressTimer = setTimeout(() => {
+    if (longPressJointId !== SLIDER_RAIL_HOLD_JOINT_ID || !pendingSliderRailDrag) {
+      longPressTimer = null;
+      return;
+    }
+    const p = pendingSliderRailDrag;
+    pendingSliderRailDrag = null;
+    longPressJointId = null;
+    longPressTimer = null;
+    const mech = useMechanismStore.getState();
+    const s = mech.sliders[p.sliderId];
+    if (!s) return;
+    const jMid = mech.joints[s.jointIdB];
+    if (!jMid || jMid.hidden) return;
+    useEditorStore.getState().setWorldContextMenu({
+      targetType: 'joint',
+      targetId: s.jointIdB,
+      screenPosition: { x: cx, y: cy },
+      openMode: 'hold',
+    });
+  }, LONG_PRESS_MS);
+}
 
 export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) {
   lastPointerType = 'pointerType' in e ? e.pointerType : 'mouse';
@@ -326,6 +374,11 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
 
   // --- SIMULATE MODE ---
   if (editor.mode === 'simulate') {
+    if (e.button === 0 && (editor.activeTool === 'pan' || editor.spacePanHeld)) {
+      isPanning = true;
+      e.preventDefault();
+      return;
+    }
     if (e.button !== 0) return;
 
     const hit = hitTest(worldPos, mechanism.joints, mechanism.links, editor.camera.zoom);
@@ -333,6 +386,24 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       if (hit.type === 'joint') {
         const joint = hit.item;
         if (isFixed(joint.id)) return;
+
+        // Slider midpoint B is not on any distance link; A–C rail pull only
+        // moves free endpoints — if A and C are fixed, force was zero. Apply
+        // spring directly to B; slider constraint keeps B on segment AC.
+        const slider = mechanism.getSliderForJoint(joint.id);
+        if (slider && joint.id === slider.jointIdB) {
+          editor.setSimDrag({
+            active: true,
+            grabPoint: joint.position,
+            cursorPoint: worldPos,
+            jointId: joint.id,
+            linkId: null,
+            grabT: 0,
+            directJointId: joint.id,
+          });
+          return;
+        }
+
         // Find a link connected to this joint
         const linkId = joint.connectedLinkIds[0] || null;
         let grabT = 0;
@@ -347,6 +418,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
           jointId: joint.id,
           linkId,
           grabT,
+          directJointId: null,
         });
       } else {
         // Link hit: compute parametric t along the link
@@ -376,6 +448,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
           jointId,
           linkId: link.id,
           grabT: t,
+          directJointId: null,
         });
       }
       return;
@@ -414,6 +487,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
           linkId,
           grabT,
           tempJointId: tempId,
+          directJointId: null,
         });
       }
     }
@@ -422,9 +496,22 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
 
   // --- CREATE MODE ---
   if (e.button !== 0) return;
+  if (editor.worldContextMenu) {
+    editor.setWorldContextMenu(null);
+  }
 
-  if (editor.activeTool === 'pan') {
+  if (editor.activeTool === 'pan' || editor.spacePanHeld) {
     isPanning = true;
+    return;
+  }
+
+  if (editor.createTool === 'mirror') {
+    const preview = editor.mirrorPreview ?? getMirrorPreview(worldPos, editor.gridSize, editor.camera.zoom);
+    useMechanismStore
+      .getState()
+      .mirrorAcrossAxis(preview.axis, preview.value, editor.mirrorScope, Array.from(editor.selectedIds));
+    editor.setMirrorPreview(null);
+    editor.setCreateTool('joints');
     return;
   }
 
@@ -480,14 +567,42 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
 
   // --- SLIDER TOOL ---
   if (editor.createTool === 'slider') {
-    // Check for existing joint hit first (select it)
-    const existingJoint = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
-    if (existingJoint && !editor.sliderPointA) {
-      editor.select(existingJoint.id);
-      isDragging = true;
-      dragJointId = existingJoint.id;
-      mechanism.pushHistory();
-      return;
+    if (!editor.sliderPointA) {
+      // Nearest joint in standard radius first (A/B/C); then expanded B grab for mid-rail only.
+      const existingJoint = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
+      if (existingJoint) {
+        editor.select(existingJoint.id);
+        isDragging = true;
+        dragJointId = existingJoint.id;
+        mechanism.pushHistory();
+        return;
+      }
+
+      const bHitThreshold = (HIT_RADIUS * 1.4) / editor.camera.zoom;
+      let closestBId: string | null = null;
+      let closestBDist = Infinity;
+      for (const slider of Object.values(mechanism.sliders)) {
+        const jA = mechanism.joints[slider.jointIdA];
+        const jB = mechanism.joints[slider.jointIdB];
+        const jC = mechanism.joints[slider.jointIdC];
+        if (!jB || jB.hidden) continue;
+        const dB = distance(worldPos, jB.position);
+        if (dB >= bHitThreshold) continue;
+        const dA = jA && !jA.hidden ? distance(worldPos, jA.position) : Infinity;
+        const dC = jC && !jC.hidden ? distance(worldPos, jC.position) : Infinity;
+        if (dB >= dA || dB >= dC) continue;
+        if (dB < closestBDist) {
+          closestBDist = dB;
+          closestBId = jB.id;
+        }
+      }
+      if (closestBId) {
+        editor.select(closestBId);
+        isDragging = true;
+        dragJointId = closestBId;
+        mechanism.pushHistory();
+        return;
+      }
     }
 
     // Check for slider rail line hit (select the slider)
@@ -505,16 +620,23 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
         const dist = distance(worldPos, closest);
         if (dist < HIT_RADIUS / editor.camera.zoom) {
           editor.select(slider.id);
-          // Also allow dragging the rail
-          sliderLineDragId = slider.id;
-          sliderLineDragStart = worldPos;
           const jB = mechanism.joints[slider.jointIdB];
-          sliderLineDragStartPositions = {
+          const positions = {
             a: { ...jA.position },
             b: jB ? { ...jB.position } : { x: 0, y: 0 },
             c: { ...jC.position },
           };
-          mechanism.pushHistory();
+          if (lastPointerType === 'touch') {
+            sliderLineDragId = slider.id;
+            sliderLineDragStart = worldPos;
+            sliderLineDragStartPositions = positions;
+            mechanism.pushHistory();
+            return;
+          }
+          pendingSliderRailDrag = { sliderId: slider.id, worldStart: worldPos, positions };
+          longPressStartScreen = { x: e.clientX, y: e.clientY };
+          longPressJointId = SLIDER_RAIL_HOLD_JOINT_ID;
+          scheduleSliderRailHoldMenu(e.clientX, e.clientY);
           return;
         }
       }
@@ -660,12 +782,14 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
             const tracer = useMechanismStore.getState().tracers[newTracerId];
             if (tracer) {
               const worldPt = localToWorld(tracer.localPosition, computeBodyTransform(useMechanismStore.getState().bodies[bodyId], useMechanismStore.getState().joints));
-              edState.setArcSelector({
-                jointId: null, colliderId: null, tracerId: newTracerId,
-                position: { ...worldPt },
-                showTime: Date.now(), collapseTime: null,
-                readyToToggle: new Set([...Object.keys(useMechanismStore.getState().bodies), '__add_body__']),
-                createdBodyId: null, lastToggleTime: 0, lastToggle: null,
+              edState.setWorldContextMenu({
+                targetType: 'tracer',
+                targetId: newTracerId,
+                screenPosition: {
+                  x: worldPt.x * edState.camera.zoom + edState.camera.pan.x,
+                  y: worldPt.y * edState.camera.zoom + edState.camera.pan.y,
+                },
+                openMode: 'hold',
               });
             }
           }
@@ -796,39 +920,32 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
-  // --- JOINTS TOOL ---
-  // Check slider rail line hit first (before joint hit, so joints take priority via the joint check below)
-  const joint = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
-  if (!joint) {
-    // Check if clicking on a slider rail line
-    for (const slider of Object.values(mechanism.sliders)) {
-      const jA = mechanism.joints[slider.jointIdA];
-      const jC = mechanism.joints[slider.jointIdC];
-      if (!jA || !jC) continue;
-      // Point-to-segment distance
-      const ab = sub(jC.position, jA.position);
-      const ap = sub(worldPos, jA.position);
-      const abLen = Math.sqrt(lengthSq(ab));
-      if (abLen < 1e-8) continue;
-      const t = Math.max(0, Math.min(1, dot(ap, ab) / lengthSq(ab)));
-      const closest = { x: jA.position.x + ab.x * t, y: jA.position.y + ab.y * t };
-      const dist = distance(worldPos, closest);
-      if (dist < HIT_RADIUS / editor.camera.zoom) {
-        // Start dragging the slider rail
-        sliderLineDragId = slider.id;
-        sliderLineDragStart = worldPos;
-        const jB = mechanism.joints[slider.jointIdB];
-        sliderLineDragStartPositions = {
-          a: { ...jA.position },
-          b: jB ? { ...jB.position } : { x: 0, y: 0 },
-          c: { ...jC.position },
-        };
-        mechanism.pushHistory();
-        return;
-      }
-    }
+  // --- BOX / LASSO (Pivot tool, Select viewport mode) ---
+  if (
+    editor.createTool === 'joints' &&
+    editor.activeTool === 'select' &&
+    editor.selectMode !== 'single' &&
+    !hitTestJointsToolBlock(worldPos, editor.camera.zoom, mechanism)
+  ) {
+    const kind: 'box' | 'lasso' = editor.selectMode === 'box' ? 'box' : 'lasso';
+    marqueeDrag = {
+      kind,
+      startScreen: { ...screenPos },
+      shift: e.shiftKey,
+      lastScreen: { ...screenPos },
+      lassoPoints: kind === 'lasso' ? [{ ...screenPos }] : undefined,
+    };
+    editor.setSelectionGesture(
+      kind === 'box'
+        ? { type: 'box', screenStart: screenPos, screenEnd: screenPos }
+        : { type: 'lasso', screenPoints: [{ ...screenPos }] },
+    );
+    return;
   }
 
+  // --- JOINTS TOOL ---
+  // Standard joint hit first (closest); then expanded B; then rail. Order avoids B shortcut / hover cycling stealing C.
+  const joint = hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom);
   if (joint) {
     if (e.shiftKey) {
       editor.toggleSelect(joint.id);
@@ -839,7 +956,70 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     dragJointId = joint.id;
     mechanism.pushHistory();
     startArcTimer(joint.id, e.clientX, e.clientY);
-  } else if (editor.selectedIds.size > 0) {
+    return;
+  }
+
+  const bHitThreshold = (HIT_RADIUS * 1.4) / editor.camera.zoom;
+  let closestBId: string | null = null;
+  let closestBDist = Infinity;
+  for (const slider of Object.values(mechanism.sliders)) {
+    const jA = mechanism.joints[slider.jointIdA];
+    const jB = mechanism.joints[slider.jointIdB];
+    const jC = mechanism.joints[slider.jointIdC];
+    if (!jB || jB.hidden) continue;
+    const dB = distance(worldPos, jB.position);
+    if (dB >= bHitThreshold) continue;
+    const dA = jA && !jA.hidden ? distance(worldPos, jA.position) : Infinity;
+    const dC = jC && !jC.hidden ? distance(worldPos, jC.position) : Infinity;
+    if (dB >= dA || dB >= dC) continue;
+    if (dB < closestBDist) {
+      closestBDist = dB;
+      closestBId = jB.id;
+    }
+  }
+  if (closestBId) {
+    if (e.shiftKey) editor.toggleSelect(closestBId);
+    else editor.select(closestBId);
+    isDragging = true;
+    dragJointId = closestBId;
+    mechanism.pushHistory();
+    return;
+  }
+
+  for (const slider of Object.values(mechanism.sliders)) {
+    const jA = mechanism.joints[slider.jointIdA];
+    const jC = mechanism.joints[slider.jointIdC];
+    if (!jA || !jC) continue;
+    const ab = sub(jC.position, jA.position);
+    const ap = sub(worldPos, jA.position);
+    const abLen = Math.sqrt(lengthSq(ab));
+    if (abLen < 1e-8) continue;
+    const t = Math.max(0, Math.min(1, dot(ap, ab) / lengthSq(ab)));
+    const closest = { x: jA.position.x + ab.x * t, y: jA.position.y + ab.y * t };
+    const dist = distance(worldPos, closest);
+    if (dist < HIT_RADIUS / editor.camera.zoom) {
+      const jB = mechanism.joints[slider.jointIdB];
+      const positions = {
+        a: { ...jA.position },
+        b: jB ? { ...jB.position } : { x: 0, y: 0 },
+        c: { ...jC.position },
+      };
+      if (lastPointerType === 'touch') {
+        sliderLineDragId = slider.id;
+        sliderLineDragStart = worldPos;
+        sliderLineDragStartPositions = positions;
+        mechanism.pushHistory();
+        return;
+      }
+      pendingSliderRailDrag = { sliderId: slider.id, worldStart: worldPos, positions };
+      longPressStartScreen = { x: e.clientX, y: e.clientY };
+      longPressJointId = SLIDER_RAIL_HOLD_JOINT_ID;
+      scheduleSliderRailHoldMenu(e.clientX, e.clientY);
+      return;
+    }
+  }
+
+  if (editor.selectedIds.size > 0) {
     editor.clearSelection();
     if (lastPointerType === 'touch') return; // Touch: just deselect, no deferred place
     // Deselect + start timer — if held, place a new joint + arc selector
@@ -857,13 +1037,15 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
         longPressTimer = null;
         const j = useMechanismStore.getState().joints[newId];
         if (j && !j.hidden) {
-          useEditorStore.getState().setArcSelector({
-            jointId: newId,
-            colliderId: null, tracerId: null,
-            position: { ...j.position },
-            showTime: Date.now(),
-            collapseTime: null,
-            readyToToggle: new Set([...Object.keys(useMechanismStore.getState().bodies), '__add_body__']), createdBodyId: null, lastToggleTime: 0, lastToggle: null,
+          const ed = useEditorStore.getState();
+          ed.setWorldContextMenu({
+            targetType: 'joint',
+            targetId: newId,
+            screenPosition: {
+              x: j.position.x * ed.camera.zoom + ed.camera.pan.x,
+              y: j.position.y * ed.camera.zoom + ed.camera.pan.y,
+            },
+            openMode: 'hold',
           });
         }
       }
@@ -904,34 +1086,71 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
   const screenPos: Vec2 = { x: e.clientX - rect.left, y: e.clientY - rect.top };
   const worldPos = screenToWorld(screenPos, editor.camera);
 
-  // Cancel long-press if cursor moved too far (threshold scales with grid coarseness)
-  if (longPressTimer && longPressStartScreen) {
+  // Cancel long-press if cursor moved too far (threshold scales with grid coarseness).
+  // Pending slider rail: same threshold starts translating the rail instead of opening the hold menu.
+  if (longPressStartScreen) {
     const gridScreenPx = editor.gridEnabled ? editor.gridSize * editor.camera.zoom : 0;
     const threshold = Math.max(LONG_PRESS_MOVE_THRESHOLD_BASE, gridScreenPx * 0.4);
     const dx = e.clientX - longPressStartScreen.x;
     const dy = e.clientY - longPressStartScreen.y;
     if (Math.sqrt(dx * dx + dy * dy) > threshold) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-      longPressJointId = null;
-      // If a tracer was pending, start dragging it now
-      if (longPressPendingTracerId) {
-        tracerDragId = longPressPendingTracerId;
-        longPressPendingTracerId = null;
+      if (
+        pendingSliderRailDrag &&
+        longPressJointId === SLIDER_RAIL_HOLD_JOINT_ID &&
+        longPressTimer
+      ) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        longPressJointId = null;
+        const p = pendingSliderRailDrag;
+        pendingSliderRailDrag = null;
+        sliderLineDragId = p.sliderId;
+        sliderLineDragStart = p.worldStart;
+        sliderLineDragStartPositions = p.positions;
+        useMechanismStore.getState().pushHistory();
+      } else if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        longPressJointId = null;
+        if (longPressPendingTracerId) {
+          tracerDragId = longPressPendingTracerId;
+          longPressPendingTracerId = null;
+        }
       }
     }
-  }
-
-  // Arc selector hover toggle logic
-  if (editor.arcSelector) {
-    handleArcHover(worldPos, editor);
-    return; // block all other interactions while arc is shown
   }
 
   if (isPanning) {
     const dx = screenPos.x - lastMouse.x;
     const dy = screenPos.y - lastMouse.y;
     editor.panCamera({ x: dx, y: dy });
+    lastMouse = screenPos;
+    return;
+  }
+
+  if (marqueeDrag) {
+    marqueeDrag.lastScreen = { ...screenPos };
+    if (marqueeDrag.kind === 'box') {
+      editor.setSelectionGesture({
+        type: 'box',
+        screenStart: marqueeDrag.startScreen,
+        screenEnd: screenPos,
+      });
+    } else {
+      const pts = marqueeDrag.lassoPoints ?? [];
+      const last = pts[pts.length - 1];
+      if (!last) {
+        pts.push({ ...screenPos });
+      } else {
+        const dx = screenPos.x - last.x;
+        const dy = screenPos.y - last.y;
+        if (dx * dx + dy * dy > 9) pts.push({ ...screenPos });
+        else pts[pts.length - 1] = { ...screenPos };
+      }
+      marqueeDrag.lassoPoints = pts;
+      editor.setSelectionGesture({ type: 'lasso', screenPoints: [...pts] });
+    }
+    editor.setHovered(null);
     lastMouse = screenPos;
     return;
   }
@@ -951,6 +1170,13 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
   }
 
   // --- CREATE MODE ---
+
+  if (editor.mode === 'create' && editor.createTool === 'mirror') {
+    editor.setMirrorPreview(getMirrorPreview(worldPos, editor.gridSize, editor.camera.zoom));
+    editor.setHovered(null);
+    lastMouse = screenPos;
+    return;
+  }
 
   // Slider line dragging (translate all 3 joints)
   if (sliderLineDragId && sliderLineDragStartPositions) {
@@ -1084,40 +1310,37 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
   lastMouse = screenPos;
 }
 
-export function handleMouseUp(_e: PointerEvent | MouseEvent, canvas?: HTMLCanvasElement) {
+export function handleMouseUp(e: PointerEvent | MouseEvent, canvas?: HTMLCanvasElement) {
   const editor = useEditorStore.getState();
+
+  if (marqueeDrag) {
+    const m = marqueeDrag;
+    marqueeDrag = null;
+    editor.setSelectionGesture(null);
+    const mech = useMechanismStore.getState();
+    const dx = m.lastScreen.x - m.startScreen.x;
+    const dy = m.lastScreen.y - m.startScreen.y;
+    const dragLen = Math.sqrt(dx * dx + dy * dy);
+    const additive = e.shiftKey || m.shift;
+    if (dragLen >= MARQUEE_MIN_PX) {
+      let ids: string[] = [];
+      if (m.kind === 'box') {
+        const { min, max } = worldAxisBoxFromScreenRect(m.startScreen, m.lastScreen, editor.camera);
+        ids = collectIdsInWorldBox(min, max, mech, editor.marqueeExcludedBodyIds);
+      } else {
+        const poly = worldPolygonFromScreenLasso(m.lassoPoints ?? [], editor.camera);
+        ids = collectIdsInWorldLasso(poly, mech, editor.marqueeExcludedBodyIds);
+      }
+      editor.applyMarqueeSelection(ids, additive);
+    } else if (!additive && editor.selectedIds.size > 0) {
+      editor.clearSelection();
+    }
+  }
 
   // Cancel long-press timer
   if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
   longPressJointId = null;
   longPressStartScreen = null;
-
-  // Arc selector: revert last-moment accidental toggle, then collapse
-  if (editor.arcSelector && !editor.arcSelector.collapseTime) {
-    const arc = editor.arcSelector;
-    const mech = useMechanismStore.getState();
-
-    // Revert toggle if it happened within 150ms of release (accidental swipe)
-    const GRACE_MS = 150;
-    if (arc.lastToggle && (Date.now() - arc.lastToggleTime) < GRACE_MS) {
-      const { bodyId, wasAdded } = arc.lastToggle;
-      if (arc.colliderId) {
-        if (wasAdded) mech.removeBodyFromCollider(arc.colliderId, bodyId);
-        else mech.addBodyToCollider(arc.colliderId, bodyId);
-      } else if (arc.jointId) {
-        if (wasAdded) mech.removeJointFromBody(arc.jointId, bodyId);
-        else mech.addJointToBody(arc.jointId, bodyId);
-      }
-    }
-
-    const bodyCount = Object.keys(mech.bodies).length;
-    editor.setArcSelector({ ...arc, collapseTime: Date.now() });
-    const staggerPerCircle = bodyCount > 1 ? Math.min(50, 400 / (bodyCount - 1)) : 50;
-    const totalDuration = (bodyCount - 1) * staggerPerCircle + 250;
-    setTimeout(() => {
-      useEditorStore.getState().setArcSelector(null);
-    }, totalDuration);
-  }
 
   // Clean up temporary joint from shape dragging
   if (editor.simDrag?.tempJointId) {
@@ -1138,6 +1361,7 @@ export function handleMouseUp(_e: PointerEvent | MouseEvent, canvas?: HTMLCanvas
   sliderLineDragId = null;
   tracerDragId = null;
   longPressPendingTracerId = null;
+  pendingSliderRailDrag = null;
   sliderLineDragStartPositions = null;
   outlineVertexDragIndex = null;
   outlineVertexDragOutlineId = null;
@@ -1152,7 +1376,22 @@ export function handleWheel(e: WheelEvent, canvas: HTMLCanvasElement) {
   editor.zoomCamera(factor, center);
 }
 
+export function handleKeyUp(e: KeyboardEvent) {
+  if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
+    useEditorStore.getState().setSpacePanHeld(false);
+  }
+}
+
 export function handleKeyDown(e: KeyboardEvent) {
+  if (e.code === 'Space' || e.key === ' ') {
+    if (e.repeat) return;
+    const el = e.target as HTMLElement | null;
+    if (el?.closest?.('input, textarea, [contenteditable="true"]')) return;
+    useEditorStore.getState().setSpacePanHeld(true);
+    e.preventDefault();
+    return;
+  }
+
   const editor = useEditorStore.getState();
   const mechanism = useMechanismStore.getState();
 
@@ -1179,6 +1418,23 @@ export function handleKeyDown(e: KeyboardEvent) {
     switch (e.key) {
       case 'g': editor.cycleGrid(); return;
       case 'Escape':
+        if (marqueeDrag) {
+          marqueeDrag = null;
+          editor.setSelectionGesture(null);
+          e.preventDefault();
+          return;
+        }
+        if (editor.worldContextMenu) {
+          editor.setWorldContextMenu(null);
+          e.preventDefault();
+          return;
+        }
+        if (editor.createTool === 'mirror') {
+          editor.setMirrorPreview(null);
+          editor.setCreateTool('joints');
+          e.preventDefault();
+          return;
+        }
         if (editor.editingOutlineId) {
           exitOutlineEditMode();
         } else if (editor.sliderPointA) {
@@ -1199,21 +1455,10 @@ export function handleKeyDown(e: KeyboardEvent) {
   }
 
   if (e.key === 'Delete' || e.key === 'Backspace') {
-    // If editing outline and a vertex is selected, delete the vertex
-    if (editor.editingOutlineId && editor.editingVertexIndex !== null) {
-      const outline = mechanism.outlines[editor.editingOutlineId];
-      if (outline && outline.points.length > 3) {
-        mechanism.removeOutlineVertex(editor.editingOutlineId, editor.editingVertexIndex);
-        editor.setEditingVertexIndex(null);
-      }
-      return;
-    }
-    for (const id of editor.selectedIds) {
-      if (mechanism.joints[id]) mechanism.removeJoint(id);
-      else if (mechanism.outlines[id]) mechanism.removeOutline(id);
-      else if (mechanism.images[id]) mechanism.removeImage(id);
-    }
-    editor.clearSelection();
+    if (editor.mode !== 'create') return;
+    const el = e.target as HTMLElement | null;
+    if (el?.closest?.('input, textarea, [contenteditable="true"]')) return;
+    deleteSelectedEntities();
   }
 
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {

@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { AppMode, ToolType, JointSubType, CreateTool, JointMode, CameraState, SimDragState, GridLevel } from '../types';
+import type {
+  AppMode, ToolType, JointSubType, CreateTool, JointMode, CameraState, SimDragState, GridLevel,
+  SelectMode, SelectionGesture,
+} from '../types';
 import type { Vec2 } from '../types';
 import { DEFAULT_GRID_SIZE } from '../utils/constants';
 
@@ -15,6 +18,8 @@ function gridLevelToSize(level: GridLevel): number {
 }
 
 const GRID_CYCLE: GridLevel[] = ['normal', 'fine', 'ultrafine', 'off'];
+
+let transientHintTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface EditorStore {
   mode: AppMode;
@@ -43,9 +48,19 @@ interface EditorStore {
   frozenOutlineWorldPoints: Map<string, Vec2[]>;
   leftCollapsed: boolean;
   rightCollapsed: boolean;
+  /** While true (Space held), left-drag pans like the pan tool */
+  spacePanHeld: boolean;
   imageDragMode: 'move' | 'rotate' | 'scale' | null;
   sliderPointA: { position: Vec2; jointId: string } | null;
   colliderPointA: { position: Vec2; jointId: string } | null;
+  mirrorScope: 'selection' | 'all';
+  mirrorPreview: { axis: 'vertical' | 'horizontal'; value: number } | null;
+  /** Pivot tool: how drags on empty canvas select (viewport bar). */
+  selectMode: SelectMode;
+  /** Live box/lasso overlay while dragging (screen px). */
+  selectionGesture: SelectionGesture | null;
+  /** Bodies excluded from box/lasso selection (unchecked in Interact panel). */
+  marqueeExcludedBodyIds: Set<string>;
 
   setMode(mode: AppMode): void;
   setTool(tool: ToolType): void;
@@ -56,6 +71,9 @@ interface EditorStore {
   setHovered(id: string | null): void;
   panCamera(delta: Vec2): void;
   zoomCamera(factor: number, center: Vec2): void;
+  resetViewport(): void;
+  setCamera(camera: CameraState): void;
+  zoomViewportAtCenter(factor: number, canvasWidth: number, canvasHeight: number): void;
   setLinkStart(id: string | null): void;
   cycleGrid(): void;
   setGridLevel(level: GridLevel): void;
@@ -76,9 +94,16 @@ interface EditorStore {
   setLockOutlines(locked: boolean, frozenPoints?: Map<string, Vec2[]>): void;
   toggleLeftCollapsed(): void;
   toggleRightCollapsed(): void;
+  setSpacePanHeld(held: boolean): void;
   setImageDragMode(mode: 'move' | 'rotate' | 'scale' | null): void;
   setSliderPointA(point: { position: Vec2; jointId: string } | null): void;
   setColliderPointA(point: { position: Vec2; jointId: string } | null): void;
+  setMirrorScope(scope: 'selection' | 'all'): void;
+  setMirrorPreview(preview: { axis: 'vertical' | 'horizontal'; value: number } | null): void;
+  setSelectMode(mode: SelectMode): void;
+  setSelectionGesture(gesture: SelectionGesture | null): void;
+  toggleMarqueeBodyExcluded(bodyId: string): void;
+  applyMarqueeSelection(ids: string[], additive: boolean): void;
   editingOutlineId: string | null;
   editingVertexIndex: number | null;
 
@@ -100,9 +125,19 @@ interface EditorStore {
     /** Info to revert the last toggle if within grace period */
     lastToggle: { bodyId: string; wasAdded: boolean } | null;
   } | null;
+  worldContextMenu: {
+    screenPosition: Vec2;
+    targetType: 'joint' | 'collider' | 'tracer';
+    targetId: string;
+    openMode: 'hold' | 'context';
+  } | null;
+  /** Short-lived hint (e.g. slider body warning); auto-dismisses via showTransientHint */
+  transientHint: string | null;
+  dismissTransientHint(): void;
   setEditingOutline(outlineId: string | null): void;
   setEditingVertexIndex(index: number | null): void;
   setArcSelector(arc: EditorStore['arcSelector']): void;
+  setWorldContextMenu(menu: EditorStore['worldContextMenu']): void;
   updateFrozenOutline(outlineId: string, worldPoints: Vec2[]): void;
 }
 
@@ -133,15 +168,57 @@ export const useEditorStore = create<EditorStore>((set) => ({
   frozenOutlineWorldPoints: new Map(),
   leftCollapsed: false,
   rightCollapsed: false,
+  spacePanHeld: false,
   imageDragMode: null,
   sliderPointA: null,
   colliderPointA: null,
+  mirrorScope: 'selection',
+  mirrorPreview: null,
+  selectMode: 'single' as SelectMode,
+  selectionGesture: null,
+  marqueeExcludedBodyIds: new Set<string>(),
   editingOutlineId: null,
   editingVertexIndex: null,
   arcSelector: null,
+  worldContextMenu: null,
+  transientHint: null,
+
+  dismissTransientHint() {
+    if (transientHintTimer) {
+      clearTimeout(transientHintTimer);
+      transientHintTimer = null;
+    }
+    set({ transientHint: null });
+  },
 
   setMode(mode) {
-    set({ mode, simDrag: null, linkStartJointId: null, selectedIds: new Set(), outlinePoints: [], createTool: 'joints' as CreateTool, jointMode: 'manual' as JointMode, autoChainLastBodyId: null, lockOutlines: true, frozenOutlineWorldPoints: new Map(), sliderPointA: null, colliderPointA: null, editingOutlineId: null, editingVertexIndex: null });
+    if (transientHintTimer) {
+      clearTimeout(transientHintTimer);
+      transientHintTimer = null;
+    }
+    set({
+      mode,
+      simDrag: null,
+      linkStartJointId: null,
+      selectedIds: new Set(),
+      outlinePoints: [],
+      createTool: 'joints' as CreateTool,
+      jointMode: 'manual' as JointMode,
+      autoChainLastBodyId: null,
+      lockOutlines: true,
+      frozenOutlineWorldPoints: new Map(),
+      sliderPointA: null,
+      colliderPointA: null,
+      editingOutlineId: null,
+      editingVertexIndex: null,
+      transientHint: null,
+      arcSelector: null,
+      worldContextMenu: null,
+      spacePanHeld: false,
+      mirrorPreview: null,
+      selectMode: 'single' as SelectMode,
+      selectionGesture: null,
+    });
   },
 
   setTool(tool) {
@@ -184,6 +261,31 @@ export const useEditorStore = create<EditorStore>((set) => ({
 
   zoomCamera(factor, center) {
     set((s) => {
+      const newZoom = Math.max(0.1, Math.min(10, s.camera.zoom * factor));
+      const zoomRatio = newZoom / s.camera.zoom;
+      return {
+        camera: {
+          zoom: newZoom,
+          pan: {
+            x: center.x - (center.x - s.camera.pan.x) * zoomRatio,
+            y: center.y - (center.y - s.camera.pan.y) * zoomRatio,
+          },
+        },
+      };
+    });
+  },
+
+  resetViewport() {
+    set({ camera: { pan: { x: 0, y: 0 }, zoom: 1 } });
+  },
+
+  setCamera(camera) {
+    set({ camera });
+  },
+
+  zoomViewportAtCenter(factor, canvasWidth, canvasHeight) {
+    set((s) => {
+      const center = { x: canvasWidth / 2, y: canvasHeight / 2 };
       const newZoom = Math.max(0.1, Math.min(10, s.camera.zoom * factor));
       const zoomRatio = newZoom / s.camera.zoom;
       return {
@@ -256,7 +358,20 @@ export const useEditorStore = create<EditorStore>((set) => ({
   },
 
   setCreateTool(tool) {
-    set({ createTool: tool, outlinePoints: [], jointMode: 'manual' as JointMode, autoChainLastBodyId: null, sliderPointA: null, colliderPointA: null, editingOutlineId: null, editingVertexIndex: null });
+    set({
+      createTool: tool,
+      outlinePoints: [],
+      jointMode: 'manual' as JointMode,
+      autoChainLastBodyId: null,
+      sliderPointA: null,
+      colliderPointA: null,
+      editingOutlineId: null,
+      editingVertexIndex: null,
+      arcSelector: null,
+      worldContextMenu: null,
+      mirrorPreview: null,
+      selectionGesture: null,
+    });
   },
 
   setJointMode(mode) {
@@ -291,6 +406,10 @@ export const useEditorStore = create<EditorStore>((set) => ({
     set((s) => ({ rightCollapsed: !s.rightCollapsed }));
   },
 
+  setSpacePanHeld(held) {
+    set({ spacePanHeld: held });
+  },
+
   setImageDragMode(mode) {
     set({ imageDragMode: mode });
   },
@@ -301,6 +420,42 @@ export const useEditorStore = create<EditorStore>((set) => ({
 
   setColliderPointA(point) {
     set({ colliderPointA: point });
+  },
+
+  setMirrorScope(scope) {
+    set({ mirrorScope: scope });
+  },
+
+  setMirrorPreview(preview) {
+    set({ mirrorPreview: preview });
+  },
+
+  setSelectMode(mode) {
+    set({ selectMode: mode, selectionGesture: null });
+  },
+
+  setSelectionGesture(gesture) {
+    set({ selectionGesture: gesture });
+  },
+
+  toggleMarqueeBodyExcluded(bodyId) {
+    set((s) => {
+      const next = new Set(s.marqueeExcludedBodyIds);
+      if (next.has(bodyId)) next.delete(bodyId);
+      else next.add(bodyId);
+      return { marqueeExcludedBodyIds: next };
+    });
+  },
+
+  applyMarqueeSelection(ids, additive) {
+    set((s) => {
+      if (additive) {
+        const next = new Set(s.selectedIds);
+        for (const id of ids) next.add(id);
+        return { selectedIds: next };
+      }
+      return { selectedIds: new Set(ids) };
+    });
   },
 
   setEditingOutline(outlineId) {
@@ -319,6 +474,10 @@ export const useEditorStore = create<EditorStore>((set) => ({
     set({ arcSelector: arc });
   },
 
+  setWorldContextMenu(menu) {
+    set({ worldContextMenu: menu });
+  },
+
   updateFrozenOutline(outlineId, worldPoints) {
     set((s) => {
       const frozen = new Map(s.frozenOutlineWorldPoints);
@@ -327,3 +486,16 @@ export const useEditorStore = create<EditorStore>((set) => ({
     });
   },
 }));
+
+/** Non-blocking toast for warnings (e.g. slider midpoint body mix). */
+export function showTransientHint(message: string, durationMs = 8000) {
+  if (transientHintTimer) {
+    clearTimeout(transientHintTimer);
+    transientHintTimer = null;
+  }
+  useEditorStore.setState({ transientHint: message });
+  transientHintTimer = setTimeout(() => {
+    useEditorStore.setState({ transientHint: null });
+    transientHintTimer = null;
+  }, durationMs);
+}

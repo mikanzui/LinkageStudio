@@ -1,4 +1,6 @@
 import { MechanismCanvas } from './Canvas/MechanismCanvas';
+import { CanvasViewportBar } from './Canvas/CanvasViewportBar';
+import { WorldContextMenu } from './Canvas/WorldContextMenu';
 import { TopBar } from './TopBar/TopBar';
 import { Toolbar } from './Toolbar/Toolbar';
 import { BodyPanel } from './Panels/BodyPanel';
@@ -7,6 +9,7 @@ import { SimulationPanel } from './Panels/SimulationPanel';
 import { useEditorStore } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
 import { switchMode } from '../utils/mode-switch';
+import { deleteSelectedEntities } from '../utils/delete-selection';
 import { screenToWorld } from '../renderer/camera';
 import './Layout.css';
 
@@ -94,53 +97,41 @@ const IconImageSmall = () => (
   </svg>
 );
 
-/* ---- Delete button for collapsed toolbar ---- */
+/* ---- Delete button for collapsed toolbar (same action as top bar) ---- */
 function CollapsedDeleteButton() {
-  const joints = useMechanismStore((s) => s.joints);
   const outlines = useMechanismStore((s) => s.outlines);
-  const images = useMechanismStore((s) => s.images);
-  const removeJoint = useMechanismStore((s) => s.removeJoint);
-  const removeOutline = useMechanismStore((s) => s.removeOutline);
-  const removeImage = useMechanismStore((s) => s.removeImage);
-  const removeTracer = useMechanismStore((s) => s.removeTracer);
-  const removeOutlineVertex = useMechanismStore((s) => s.removeOutlineVertex);
-  const tracers = useMechanismStore((s) => s.tracers);
   const selectedIds = useEditorStore((s) => s.selectedIds);
-  const clearSelection = useEditorStore((s) => s.clearSelection);
+  const mode = useEditorStore((s) => s.mode);
   const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
-  const setEditingVertexIndex = useEditorStore((s) => s.setEditingVertexIndex);
 
+  const hasSelection = selectedIds.size > 0;
   const hasVertexSelection = editingOutlineId !== null && editingVertexIndex !== null;
-  const canDeleteVertex = hasVertexSelection && (() => {
-    const outline = outlines[editingOutlineId!];
-    return outline && outline.points.length > 3;
-  })();
-
-  const handleDelete = () => {
-    if (hasVertexSelection && canDeleteVertex) {
-      removeOutlineVertex(editingOutlineId!, editingVertexIndex!);
-      setEditingVertexIndex(null);
-      return;
-    }
-    for (const id of selectedIds) {
-      if (joints[id]) removeJoint(id);
-      else if (outlines[id]) removeOutline(id);
-      else if (images[id]) removeImage(id);
-      else if (tracers[id]) removeTracer(id);
-    }
-    clearSelection();
-  };
-
-  const isDisabled = hasVertexSelection && !canDeleteVertex;
-  const title = hasVertexSelection ? 'Delete vertex' : 'Delete selected';
+  const canDeleteVertex =
+    hasVertexSelection &&
+    (() => {
+      const outline = outlines[editingOutlineId!];
+      return Boolean(outline && outline.points.length > 3);
+    })();
+  const isDisabled =
+    mode !== 'create' ||
+    (!hasSelection && !hasVertexSelection) ||
+    (hasVertexSelection && !canDeleteVertex);
+  const title =
+    mode !== 'create'
+      ? 'Delete (Create mode only)'
+      : hasVertexSelection
+        ? 'Delete vertex (Backspace)'
+        : 'Delete selected (Backspace)';
 
   return (
     <button
-      className="collapsed-tool-btn delete"
-      onClick={handleDelete}
+      type="button"
+      className="collapsed-tool-btn"
+      onClick={() => deleteSelectedEntities()}
       disabled={isDisabled}
       title={title}
+      aria-label={title}
     >
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 5H15" />
@@ -256,6 +247,8 @@ export function Layout() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
+  const transientHint = useEditorStore((s) => s.transientHint);
+  const dismissTransientHint = useEditorStore((s) => s.dismissTransientHint);
 
   const handleImportImage = () => {
     const input = document.createElement('input');
@@ -409,6 +402,16 @@ export function Layout() {
         {/* ---- CANVAS ---- */}
         <div className="canvas-container">
           <MechanismCanvas />
+          <CanvasViewportBar />
+          <WorldContextMenu />
+          {transientHint && (
+            <div className="hint-toast" role="status" aria-live="polite">
+              <span className="hint-toast-msg">{transientHint}</span>
+              <button type="button" className="hint-toast-close" onClick={() => dismissTransientHint()} aria-label="Dismiss">
+                ×
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ---- RIGHT PANEL ---- */}

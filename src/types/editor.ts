@@ -2,8 +2,14 @@ import type { Vec2 } from './geometry';
 
 export type AppMode = 'create' | 'simulate';
 export type ToolType = 'select' | 'joint' | 'link' | 'pan';
+/** Pivot-tool selection: click, axis-aligned box, or freeform lasso (viewport bar). */
+export type SelectMode = 'single' | 'box' | 'lasso';
+
+export type SelectionGesture =
+  | { type: 'box'; screenStart: Vec2; screenEnd: Vec2 }
+  | { type: 'lasso'; screenPoints: Vec2[] };
 export type JointSubType = 'revolute' | 'fixed';
-export type CreateTool = 'joints' | 'slider' | 'collider' | 'outline' | 'image' | 'tracer';
+export type CreateTool = 'joints' | 'slider' | 'collider' | 'outline' | 'image' | 'tracer' | 'mirror';
 export type JointMode = 'manual' | 'autochain';
 export type GridLevel = 'normal' | 'fine' | 'ultrafine' | 'off';
 
@@ -15,6 +21,8 @@ export interface SimDragState {
   linkId: string | null;
   grabT: number;
   tempJointId?: string;  // temporary joint created for shape dragging
+  /** Simulate: pull this joint directly (slider B — not on any distance link; A/C may be fixed). */
+  directJointId?: string | null;
 }
 
 export interface CameraState {

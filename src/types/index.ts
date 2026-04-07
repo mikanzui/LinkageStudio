@@ -3,4 +3,5 @@ export type { JointType, Joint, Link, Body, Outline, CanvasImage, SliderConstrai
 export type { SolverConfig, SolverResult, ForceVector, SimulationState } from './solver';
 export type {
   AppMode, ToolType, JointSubType, CreateTool, JointMode, GridLevel, SimDragState, CameraState, EditorState,
+  SelectMode, SelectionGesture,
 } from './editor';

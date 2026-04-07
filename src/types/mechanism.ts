@@ -11,6 +11,10 @@ export interface Joint {
   externalForce?: Vec2;
   /** Hidden bracing joints are invisible to the user but participate in physics */
   hidden?: boolean;
+  /** User-defined name (Bodies panel node list). */
+  label?: string;
+  /** Created by mirror — shown with “m” in the bodies node menu. */
+  mirrored?: boolean;
 }
 
 export interface Link {
