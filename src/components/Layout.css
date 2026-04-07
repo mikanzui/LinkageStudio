@@ -158,6 +158,18 @@
   color: var(--text-primary);
 }
 
+.world-context-hub-btn.world-context-hub-btn--danger {
+  border-color: rgba(255, 100, 100, 0.35);
+  background: rgba(80, 28, 28, 0.35);
+  color: rgba(255, 190, 190, 0.95);
+}
+
+.world-context-hub-btn.world-context-hub-btn--danger:hover {
+  border-color: rgba(255, 140, 140, 0.55);
+  background: rgba(110, 36, 36, 0.5);
+  color: #fff;
+}
+
 .world-context-orbit {
   position: absolute;
   inset: 0;

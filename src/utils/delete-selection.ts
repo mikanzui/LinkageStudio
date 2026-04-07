@@ -21,6 +21,8 @@ export function deleteSelectedEntities(): void {
 
   for (const id of selectedIds) {
     if (mech.joints[id]) mech.removeJoint(id);
+    else if (mech.links[id]) mech.removeLink(id);
+    else if (mech.colliders[id]) mech.removeCollider(id);
     else if (mech.outlines[id]) mech.removeOutline(id);
     else if (mech.images[id]) mech.removeImage(id);
     else if (mech.tracers[id]) mech.removeTracer(id);

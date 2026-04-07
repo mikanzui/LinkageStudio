@@ -38,6 +38,7 @@ function getOrbitLayout(bodyCount: number) {
 export function WorldContextMenu() {
   const menu = useEditorStore((s) => s.worldContextMenu);
   const closeMenu = useEditorStore((s) => s.setWorldContextMenu);
+  const clearSelection = useEditorStore((s) => s.clearSelection);
   const setActiveBody = useEditorStore((s) => s.setActiveBody);
   const toggleActiveBody = useEditorStore((s) => s.toggleActiveBody);
   const activeBodyIds = useEditorStore((s) => s.activeBodyIds);
@@ -55,6 +56,10 @@ export function WorldContextMenu() {
   const updateTracerBody = useMechanismStore((s) => s.updateTracerBody);
   const joints = useMechanismStore((s) => s.joints);
   const links = useMechanismStore((s) => s.links);
+  const removeJoint = useMechanismStore((s) => s.removeJoint);
+  const removeLink = useMechanismStore((s) => s.removeLink);
+  const removeCollider = useMechanismStore((s) => s.removeCollider);
+  const removeTracer = useMechanismStore((s) => s.removeTracer);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
   const dragSnapLastBodyRef = useRef<string | null>(null);
@@ -64,6 +69,11 @@ export function WorldContextMenu() {
   const dragSessionKeyRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const dragMovedRef = useRef<boolean>(false);
+
+  const closeMenuAndClearSelection = () => {
+    closeMenu(null);
+    clearSelection();
+  };
 
   const requestClose = () => {
     if (!menu || isClosing) return;
@@ -403,6 +413,16 @@ export function WorldContextMenu() {
           <button className="world-context-hub-btn" onClick={() => createAndAssignBodyToJoint(jointId)}>
             + New Body
           </button>
+          <button
+            type="button"
+            className="world-context-hub-btn world-context-hub-btn--danger"
+            onClick={() => {
+              removeJoint(jointId);
+              closeMenuAndClearSelection();
+            }}
+          >
+            Delete joint
+          </button>
         </div>
         <div className="world-context-menu-hints radial">
           <span><kbd>Esc</kbd> close</span>
@@ -424,6 +444,16 @@ export function WorldContextMenu() {
           <button className="world-context-hub-btn" onClick={() => createAndAssignBodyToCollider(collider.id)}>
             + New Body
           </button>
+          <button
+            type="button"
+            className="world-context-hub-btn world-context-hub-btn--danger"
+            onClick={() => {
+              removeCollider(collider.id);
+              closeMenuAndClearSelection();
+            }}
+          >
+            Delete collider
+          </button>
         </div>
         <div className="world-context-menu-hints radial">
           <span><kbd>Esc</kbd> close</span>
@@ -440,6 +470,18 @@ export function WorldContextMenu() {
     return (
       <>
         <div className="world-context-hub-title">Link</div>
+        <div className="world-context-hub-tools">
+          <button
+            type="button"
+            className="world-context-hub-btn world-context-hub-btn--danger"
+            onClick={() => {
+              removeLink(link.id);
+              closeMenuAndClearSelection();
+            }}
+          >
+            Delete link
+          </button>
+        </div>
         <div className="world-context-menu-hints radial" style={{ paddingTop: 6 }}>
           <span><kbd>Esc</kbd> close</span>
           <span>Linear spring tool → Link ↔ link or Joint ↔ link</span>
@@ -457,6 +499,16 @@ export function WorldContextMenu() {
         <div className="world-context-hub-tools">
           <button className="world-context-hub-btn" onClick={() => toggleActiveBody(tracer.bodyId)}>
             Toggle Active Route Body
+          </button>
+          <button
+            type="button"
+            className="world-context-hub-btn world-context-hub-btn--danger"
+            onClick={() => {
+              removeTracer(tracer.id);
+              closeMenuAndClearSelection();
+            }}
+          >
+            Delete path plotter
           </button>
         </div>
         <div className="world-context-menu-hints radial">
