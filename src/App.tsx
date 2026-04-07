@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
+import { SplashScreen } from './components/SplashScreen';
 import { useMechanismStore } from './store/mechanism-store';
 import { useSimulationStore } from './store/simulation-store';
 import { useEditorStore } from './store/editor-store';
@@ -257,7 +258,12 @@ function App() {
     return unsub;
   }, []);
 
-  return <Layout />;
+  return (
+    <>
+      <SplashScreen />
+      <Layout />
+    </>
+  );
 }
 
 export default App;
