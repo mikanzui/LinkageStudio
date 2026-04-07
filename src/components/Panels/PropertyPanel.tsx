@@ -483,7 +483,7 @@ export function PropertyPanel() {
                 <ParamSliderRow
                   key={`${spring.id}-prestress`}
                   axisLabel="Δ"
-                  suffix={torsion ? 'prestress\u00a0rad' : 'prestress\u00a0m'}
+                  suffix={torsion ? 'rad' : 'm'}
                   value={spring.prestressDelta}
                   onChange={(v) => updateSpring(spring.id, { prestressDelta: v })}
                   defaultMin={torsion ? -6.29 : -100}
@@ -496,7 +496,7 @@ export function PropertyPanel() {
                 <ParamSliderRow
                   key="spring-link-snap-resolution"
                   axisLabel="#"
-                  suffix={'snap\u00a0steps'}
+                  suffix={'steps'}
                   value={springLinkResolution}
                   onChange={(v) => setSpringLinkResolution(v)}
                   defaultMin={2}

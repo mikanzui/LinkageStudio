@@ -539,24 +539,22 @@
 /* Spring card: select matches native list shape better (OS menus stay square; avoid ultra-pill clash) */
 .panel-spring-combined select.panel-spring-select {
   border-radius: 6px;
-  padding: 4px 8px;
-  min-height: 28px;
+  padding: 2px 6px;
+  min-height: 24px;
+  font-size: 11px;
 }
 
 .panel-spring-combined select.panel-spring-select option {
-  padding: 6px 10px;
+  padding: 4px 8px;
   border-radius: 6px;
+  font-size: 11px;
 }
 
 /* Spring property panel — single combined card (From / To + params) */
 .panel-spring-combined {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  border-radius: 8px;
-  border: 1px solid var(--border-subtle);
-  background: rgba(0, 0, 0, 0.1);
-  padding: 6px 8px 7px;
+  gap: 12px;
   overflow: visible;
   position: relative;
   z-index: 0;
@@ -569,13 +567,12 @@
 .panel-spring-attachment-segment {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 0 0 5px;
+  gap: 6px;
 }
 
 .panel-spring-attachment-segment + .panel-spring-attachment-segment {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 6px;
+  border-top: none;
+  padding-top: 0;
 }
 
 /* From / To: fixed label column so titles stay aligned; radios fill the rest */
@@ -606,22 +603,20 @@
 }
 
 .panel-spring-params {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 6px;
-  margin-top: 1px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 10px;
 }
 
 /*
- * Spring params: two-row stack — slider full width, then value + unit.
- * Avoids native range thumbs painting over number inputs (single-row grid was unreliable).
+ * Spring params: single row — slider, then value + unit.
  */
 .panel-param-slider-row {
   display: grid;
   grid-template-columns: 15px minmax(0, 1fr);
-  column-gap: 7px;
+  column-gap: 8px;
   align-items: center;
   width: 100%;
   min-width: 0;
@@ -632,20 +627,22 @@
   font-size: 11px;
   justify-self: end;
   text-align: right;
+  color: var(--text-secondary);
 }
 
 .panel-param-slider-body {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
   width: 100%;
 }
 
 .panel-param-range-cell {
-  width: 100%;
+  flex: 1;
   min-width: 0;
-  padding: 0 2px;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -654,7 +651,7 @@
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 18px;
+  height: 16px;
   margin: 0;
   box-sizing: border-box;
   vertical-align: middle;
@@ -665,8 +662,9 @@
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .panel-param-value-suffix--solo {
@@ -680,10 +678,12 @@
 }
 
 .panel-param-slider-num input[type='number'] {
-  width: 5.5rem;
-  min-width: 4.75rem;
-  max-width: 7rem;
+  width: 4.5rem;
+  min-width: 4rem;
+  max-width: 5.5rem;
   box-sizing: border-box;
+  padding: 2px 4px;
+  font-size: 11px;
 }
 
 .panel-param-suffix {
@@ -698,14 +698,14 @@
 .panel-spring-along-bar {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   align-items: stretch;
 }
 
 .panel-spring-along-slider-row {
   display: grid;
   grid-template-columns: 15px minmax(0, 1fr);
-  column-gap: 7px;
+  column-gap: 8px;
   align-items: center;
   width: 100%;
   min-width: 0;
@@ -732,7 +732,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
 }
 
@@ -749,7 +749,7 @@
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 2px 12px;
+  gap: 2px 10px;
   align-items: center;
   flex: 1;
   min-width: 0;
@@ -757,8 +757,8 @@
 
 .panel-spring-type-radio {
   margin: 0;
-  gap: 5px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 11px;
   color: var(--text-secondary);
 }
 
@@ -804,43 +804,6 @@
 .panel-spring-end-select-row select {
   width: 100%;
   min-width: 0;
-}
-
-/* Compact track + thumb so stacked rows stay short */
-.panel-spring-combined .panel-param-range-cell input[type='range'] {
-  width: 100%;
-  height: 3px;
-  min-height: 18px;
-  accent-color: rgba(0, 122, 255, 0.75);
-}
-
-.panel-spring-combined .panel-param-range-cell input[type='range']::-webkit-slider-runnable-track {
-  height: 3px;
-}
-
-.panel-spring-combined .panel-param-range-cell input[type='range']::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 11px;
-  height: 11px;
-  margin-top: -5px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #ffffff, #d8e5ff 58%, #b8caf0);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(0, 122, 255, 0.14);
-}
-
-.panel-spring-combined .panel-param-range-cell input[type='range']::-moz-range-track {
-  height: 3px;
-}
-
-.panel-spring-combined .panel-param-range-cell input[type='range']::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #ffffff, #d8e5ff 58%, #b8caf0);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(0, 122, 255, 0.14);
 }
 
 .panel-spring-combined .panel-param-slider-num input[type='number'] {
