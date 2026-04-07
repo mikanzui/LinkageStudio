@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
@@ -246,7 +246,7 @@ export function WorldContextMenu() {
       return hitPill?.dataset.bodyId ?? null;
     };
 
-    const applyBodySelection = (nearestBodyId: string, mech: ReturnType<typeof useMechanismStore.getState>, mode: 'hold' | 'context') => {
+    const applyBodySelection = (nearestBodyId: string, mech: ReturnType<typeof useMechanismStore.getState>, _mode: 'hold' | 'context') => {
       if (menu.targetType === 'joint') {
         const body = mech.bodies[nearestBodyId];
         if (!body) return;
@@ -380,7 +380,7 @@ export function WorldContextMenu() {
             '--pill-rot': `${radialDeg}deg`,
             '--inward-x': `${inwardX}`,
             '--inward-y': `${inwardY}`,
-          }}
+          } as React.CSSProperties}
           onClick={onToggle}
           title={`Toggle ${body.name}`}
         >
@@ -391,7 +391,7 @@ export function WorldContextMenu() {
     );
   };
 
-  const renderJointMenu = (): JSX.Element => {
+  const renderJointMenu = (): React.JSX.Element => {
     const jointId = menu.targetId;
     const inBase = bodies[baseBodyId]?.jointIds.includes(jointId) ?? false;
     return (
@@ -425,13 +425,13 @@ export function WorldContextMenu() {
           <span><kbd>Esc</kbd> close</span>
           <span>Bodies use accent highlight when enabled</span>
           <span>Use + New Body to append and attach</span>
-          <span>Linear spring tool — joint/link endpoints only</span>
+          <span>Linear spring tool â€” joint/link endpoints only</span>
         </div>
       </>
     );
   };
 
-  const renderColliderMenu = (): JSX.Element | null => {
+  const renderColliderMenu = (): React.JSX.Element | null => {
     const collider = colliders[menu.targetId];
     if (!collider) return null;
     return (
@@ -461,7 +461,7 @@ export function WorldContextMenu() {
     );
   };
 
-  const renderLinkMenu = (): JSX.Element | null => {
+  const renderLinkMenu = (): React.JSX.Element | null => {
     const link = links[menu.targetId];
     if (!link) return null;
     return (
@@ -481,13 +481,13 @@ export function WorldContextMenu() {
         </div>
         <div className="world-context-menu-hints radial" style={{ paddingTop: 6 }}>
           <span><kbd>Esc</kbd> close</span>
-          <span>Linear spring tool → Link ↔ link or Joint ↔ link</span>
+          <span>Linear spring tool â†’ Link â†” link or Joint â†” link</span>
         </div>
       </>
     );
   };
 
-  const renderTracerMenu = (): JSX.Element | null => {
+  const renderTracerMenu = (): React.JSX.Element | null => {
     const tracer = tracers[menu.targetId];
     if (!tracer) return null;
     return (
@@ -517,8 +517,8 @@ export function WorldContextMenu() {
     );
   };
 
-  let content: JSX.Element | null = null;
-  let orbitNodes: JSX.Element[] = [];
+  let content: React.JSX.Element | null = null;
+  let orbitNodes: React.JSX.Element[] = [];
   if (menu.targetType === 'joint') content = renderJointMenu();
   else if (menu.targetType === 'collider') content = renderColliderMenu();
   else if (menu.targetType === 'link') content = renderLinkMenu();
@@ -559,7 +559,7 @@ export function WorldContextMenu() {
         top: `calc(50% + ${orbit.addPos.y}px)`,
         '--orbit-x': `${orbit.addPos.x}px`,
         '--orbit-y': `${orbit.addPos.y}px`,
-      }}
+      } as React.CSSProperties}
       onClick={() => {
         if (menu.targetType === 'joint') createAndAssignBodyToJoint(menu.targetId);
         else if (menu.targetType === 'collider') createAndAssignBodyToCollider(menu.targetId);

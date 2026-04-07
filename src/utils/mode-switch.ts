@@ -66,7 +66,7 @@ export function switchMode(newMode: AppMode): void {
     // Restore saved positions
     if (editorFresh.savedPositions) {
       const currentJoints = useMechanismStore.getState().joints;
-      for (const [id, pos] of Object.entries(editor.savedPositions)) {
+      for (const [id, pos] of Object.entries(editorFresh.savedPositions)) {
         if (currentJoints[id]) {
           mech.moveJoint(id, pos);
         }

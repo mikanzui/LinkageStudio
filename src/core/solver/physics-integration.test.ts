@@ -16,7 +16,7 @@ function simulate(opts: {
   steps: number;
   gravity?: number;
   damping?: number;
-  pull?: { linkId: string; grabT: number; target: { x: number; y: number }; simGrabJointId?: string; directJointId?: string | null } | null;
+  pull?: { linkId: string | null; grabT: number; target: { x: number; y: number }; simGrabJointId?: string; directJointId?: string | null } | null;
   dragMultiplier?: number;
   dragDamping?: number;
   springs?: Record<string, MechanismSpring>;

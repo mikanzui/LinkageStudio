@@ -6,15 +6,11 @@ import { DOF_TOOLTIP } from '../../core/solver/dof';
 
 export function SimulationPanel() {
   const mode = useEditorStore((s) => s.mode);
-  const isPlaying = useSimulationStore((s) => s.isPlaying);
   const speed = useSimulationStore((s) => s.speed);
   const dof = useSimulationStore((s) => s.dof);
   const time = useSimulationStore((s) => s.time);
   const gravityEnabled = useSimulationStore((s) => s.gravityEnabled);
   const gravityStrength = useSimulationStore((s) => s.gravityStrength);
-  const play = useSimulationStore((s) => s.play);
-  const pause = useSimulationStore((s) => s.pause);
-  const reset = useSimulationStore((s) => s.reset);
   const setSpeed = useSimulationStore((s) => s.setSpeed);
   const clearTraces = useSimulationStore((s) => s.clearTraces);
   const toggleGravity = useSimulationStore((s) => s.toggleGravity);

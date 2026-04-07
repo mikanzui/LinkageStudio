@@ -2,18 +2,10 @@ import type { Joint, Link, Body, Outline, SliderConstraint, ColliderConstraint, 
 import { springEndpointsWorld, torsionSpringDrawArc } from '../core/springs/spring-solver';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import {
-  JOINT_RADIUS, JOINT_RADIUS_FIXED, LINK_WIDTH,
-  REVOLUTE_COLOR, FIXED_COLOR, LINK_COLOR,
+  JOINT_RADIUS, JOINT_RADIUS_FIXED,
+  REVOLUTE_COLOR, FIXED_COLOR,
   SELECTION_COLOR, HOVER_COLOR,
 } from '../utils/constants';
-
-/** Darken a hex color by a factor (0 = black, 1 = original) */
-function darken(hex: string, factor: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`;
-}
 
 export function drawLink(
   ctx: CanvasRenderingContext2D,
@@ -395,11 +387,6 @@ export function drawMechanism(
       jointBodies.set(jid, arr);
     }
   }
-
-  // Base body joint set for filtering base-only links
-  const baseJointIds = baseBodyId && bodies[baseBodyId]
-    ? new Set(bodies[baseBodyId].jointIds)
-    : new Set<string>();
 
   // Build link-to-body color map: find the non-base body that owns both endpoints
   const linkColors = new Map<string, string>();

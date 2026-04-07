@@ -33,6 +33,7 @@ interface HistorySnapshot {
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
   springs: Record<string, MechanismSpring>;
+  forceSensors: Record<string, ForceSensor>;
 }
 
 const BASE_BODY_ID = 'base';
@@ -139,6 +140,7 @@ interface MechanismStore {
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
   springs: Record<string, MechanismSpring>;
+  forceSensors: Record<string, ForceSensor>;
   angleConstraints: AngleConstraint[];
 
   past: HistorySnapshot[];
@@ -1609,7 +1611,7 @@ function regenConstraints(bodies: Record<string, Body>, joints: Record<string, J
   for (const id of Object.keys(joints)) {
     if (id.startsWith('__brace_')) delete joints[id];
   }
-  const { links, angleConstraints, bracingJoints } = generateBodyLinks(bodies, joints, sliders);
+  const { links, angleConstraints } = generateBodyLinks(bodies, joints, sliders);
   // bracingJoints are already added to the joints record by generateBodyLinks
   return { newLinks: buildLinksRecord(links), angleConstraints };
 }

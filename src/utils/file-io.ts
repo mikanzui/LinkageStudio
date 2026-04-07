@@ -1,5 +1,4 @@
 import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2, MechanismSpring, SpringAnchor } from '../types';
-import type { GridLevel, CameraState } from '../types';
 
 declare const __APP_VERSION__: string;
 

@@ -390,7 +390,7 @@ export function getDofHudHelpTooltipRect(
 
 export function drawHUD(
   ctx: CanvasRenderingContext2D,
-  canvasWidth: number,
+  _canvasWidth: number,
   canvasHeight: number,
   dof: number,
   cursorWorld: Vec2 | null,

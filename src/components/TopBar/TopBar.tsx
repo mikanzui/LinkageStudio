@@ -7,7 +7,7 @@ import { serializeMechanism, deserializeMechanism, saveFileAs, openFilePicker, d
 import { exportDXF } from '../../utils/export-dxf';
 import { exportSolidWorksMacro } from '../../utils/export-solidworks';
 import type { ExportUnit, ExportFormat } from '../../utils/export-manager';
-import { UNIT_LABELS, FORMAT_LABELS, FORMAT_EXTENSIONS } from '../../utils/export-manager';
+import { UNIT_LABELS, FORMAT_LABELS } from '../../utils/export-manager';
 import { deleteSelectedEntities } from '../../utils/delete-selection';
 import { showTransientHint } from '../../store/editor-store';
 import type { GridLevel } from '../../types';
