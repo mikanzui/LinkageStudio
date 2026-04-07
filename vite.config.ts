@@ -5,7 +5,8 @@ import pkg from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/linkage-studio/',
+  /** Must match the repo name for GitHub Pages project sites: /<repo>/ */
+  base: '/LinkageStudio/',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
