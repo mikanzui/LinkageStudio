@@ -275,3 +275,62 @@
     transform: none;
   }
 }
+
+/* Cloud sync status */
+.top-bar-cloud-status {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+.cloud-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.cloud-saving {
+  color: var(--accent);
+  animation: cloud-pulse 1s ease-in-out infinite;
+}
+
+.cloud-saved {
+  color: #4a4;
+  opacity: 0.7;
+}
+
+.cloud-error {
+  color: #e55;
+}
+
+.cloud-offline {
+  color: #a80;
+}
+
+.cloud-idle {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+@keyframes cloud-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* User display */
+.top-bar-user {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.top-bar-user-name {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -50,6 +50,10 @@ interface EditorStore {
   jointMode: JointMode;
   autoChainLastBodyId: string | null;
   outlinePoints: Vec2[];
+  /** Shape primitive drag start (rectangle, circle, ngon). */
+  shapeStartPoint: Vec2 | null;
+  /** N-gon side count (adjustable with scroll wheel). */
+  ngonSides: number;
   lockOutlines: boolean;
   frozenOutlineWorldPoints: Map<string, Vec2[]>;
   leftCollapsed: boolean;
@@ -107,6 +111,8 @@ interface EditorStore {
   setAutoChainLastBodyId(id: string | null): void;
   addOutlinePoint(pt: Vec2): void;
   clearOutlinePoints(): void;
+  setShapeStartPoint(pt: Vec2 | null): void;
+  setNgonSides(sides: number): void;
   setLockOutlines(locked: boolean, frozenPoints?: Map<string, Vec2[]>): void;
   toggleLeftCollapsed(): void;
   toggleRightCollapsed(): void;
@@ -155,12 +161,23 @@ interface EditorStore {
   } | null;
   /** Short-lived hint (e.g. slider body warning); auto-dismisses via showTransientHint */
   transientHint: string | null;
+
+  /** OneDrive integration */
+  oneDriveFileId: string | null;
+  oneDriveFileName: string | null;
+  autoSaveEnabled: boolean;
+  cloudSyncStatus: 'idle' | 'saving' | 'saved' | 'error' | 'offline';
+
   dismissTransientHint(): void;
   setEditingOutline(outlineId: string | null): void;
   setEditingVertexIndex(index: number | null): void;
   setArcSelector(arc: EditorStore['arcSelector']): void;
   setWorldContextMenu(menu: EditorStore['worldContextMenu']): void;
   updateFrozenOutline(outlineId: string, worldPoints: Vec2[]): void;
+  setOneDriveFileId(id: string | null): void;
+  setOneDriveFileName(name: string | null): void;
+  setAutoSaveEnabled(enabled: boolean): void;
+  setCloudSyncStatus(status: EditorStore['cloudSyncStatus']): void;
 }
 
 export const useEditorStore = create<EditorStore>((set, get) => ({
@@ -188,6 +205,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   jointMode: 'manual' as JointMode,
   autoChainLastBodyId: null as string | null,
   outlinePoints: [] as Vec2[],
+  shapeStartPoint: null as Vec2 | null,
+  ngonSides: 6,
   lockOutlines: true,
   frozenOutlineWorldPoints: new Map(),
   leftCollapsed: false,
@@ -210,6 +229,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   arcSelector: null,
   worldContextMenu: null,
   transientHint: null,
+  oneDriveFileId: null,
+  oneDriveFileName: null,
+  autoSaveEnabled: true,
+  cloudSyncStatus: 'idle',
 
   dismissTransientHint() {
     if (transientHintTimer) {
@@ -401,6 +424,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set((s) => ({
       createTool: tool,
       outlinePoints: [],
+      shapeStartPoint: null,
       jointMode: 'manual' as JointMode,
       autoChainLastBodyId: null,
       sliderPointA: null,
@@ -431,6 +455,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   clearOutlinePoints() {
     set({ outlinePoints: [] });
+  },
+
+  setShapeStartPoint(pt) {
+    set({ shapeStartPoint: pt });
+  },
+
+  setNgonSides(sides) {
+    set({ ngonSides: Math.max(3, Math.min(64, sides)) });
   },
 
   setLockOutlines(locked, frozenPoints) {
@@ -545,6 +577,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       return { frozenOutlineWorldPoints: frozen };
     });
   },
+  setOneDriveFileId(id) { set({ oneDriveFileId: id }); },
+  setOneDriveFileName(name) { set({ oneDriveFileName: name }); },
+  setAutoSaveEnabled(enabled) { set({ autoSaveEnabled: enabled }); },
+  setCloudSyncStatus(status) { set({ cloudSyncStatus: status }); },
 }));
 
 /** Non-blocking toast for warnings (e.g. slider midpoint body mix). */

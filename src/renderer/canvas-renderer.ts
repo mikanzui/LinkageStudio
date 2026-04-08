@@ -4,7 +4,8 @@ import type {
 } from '../types';
 import type { CameraState } from '../types';
 import { applyCamera, resetCamera } from './camera';
-import { drawMechanism, drawOutlineGhost, drawSliderGhost, drawColliderGhost, drawOutlineEditMode, drawTracers, drawTracerPaths } from './draw-mechanism';
+import { drawMechanism, drawOutlineGhost, drawSliderGhost, drawColliderGhost, drawOutlineEditMode, drawTracers, drawTracerPaths, drawShapePrimitiveGhost, drawTrimCursor, drawTrimStroke } from './draw-mechanism';
+import { getTrimPath } from '../interaction/tool-manager';
 import { drawImages } from './draw-images';
 import {
   drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInteraction, drawModeBadge, drawHUD, clearCanvas,
@@ -51,6 +52,10 @@ export interface RenderState {
   frozenOutlinePoints?: Map<string, Vec2[]>;
   sliderPointA?: Vec2 | null;
   colliderPointA?: Vec2 | null;
+  /** Shape primitive drag start point (rectangle/circle/ngon). */
+  shapeStartPoint?: Vec2 | null;
+  /** N-gon side count. */
+  ngonSides?: number;
   editingOutlineId?: string | null;
   editingVertexIndex?: number | null;
   arcSelector?: { jointId: string | null; colliderId: string | null; tracerId: string | null; position: Vec2; showTime: number; collapseTime: number | null; createdBodyId: string | null } | null;
@@ -126,6 +131,52 @@ export function render(
   // Outline ghost (in-progress drawing)
   if (state.mode === 'create' && state.createTool === 'outline' && state.outlinePoints.length > 0) {
     drawOutlineGhost(ctx, state.outlinePoints, state.cursorWorld, state.activeBodyColor, state.camera.zoom);
+  }
+
+  // Shape primitive ghost (rectangle, circle, ngon) while dragging
+  if (state.mode === 'create' && state.shapeStartPoint && state.cursorWorld &&
+      (state.createTool === 'rectangle' || state.createTool === 'circle' || state.createTool === 'ngon')) {
+    const start = state.shapeStartPoint;
+    const end = state.cursorWorld;
+    let ghostPoints: Vec2[] = [];
+    if (state.createTool === 'rectangle') {
+      ghostPoints = [
+        { x: start.x, y: start.y },
+        { x: end.x, y: start.y },
+        { x: end.x, y: end.y },
+        { x: start.x, y: end.y },
+      ];
+    } else if (state.createTool === 'circle') {
+      const dx = end.x - start.x, dy = end.y - start.y;
+      const radius = Math.sqrt(dx * dx + dy * dy);
+      if (radius > 1e-6) {
+        const segments = 48;
+        for (let i = 0; i < segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          ghostPoints.push({ x: start.x + radius * Math.cos(angle), y: start.y + radius * Math.sin(angle) });
+        }
+      }
+    } else if (state.createTool === 'ngon') {
+      const dx = end.x - start.x, dy = end.y - start.y;
+      const radius = Math.sqrt(dx * dx + dy * dy);
+      if (radius > 1e-6) {
+        const sides = state.ngonSides ?? 6;
+        const startAngle = Math.atan2(dy, dx);
+        for (let i = 0; i < sides; i++) {
+          const angle = startAngle + (i / sides) * Math.PI * 2;
+          ghostPoints.push({ x: start.x + radius * Math.cos(angle), y: start.y + radius * Math.sin(angle) });
+        }
+      }
+    }
+    if (ghostPoints.length >= 3) {
+      drawShapePrimitiveGhost(ctx, ghostPoints, state.activeBodyColor, state.camera.zoom);
+    }
+  }
+
+  // Power trim cursor + drag stroke
+  if (state.mode === 'create' && state.createTool === 'trim') {
+    drawTrimStroke(ctx, getTrimPath(), state.camera.zoom);
+    drawTrimCursor(ctx, state.cursorWorld, state.camera.zoom);
   }
 
   // Slider ghost (placing second point)

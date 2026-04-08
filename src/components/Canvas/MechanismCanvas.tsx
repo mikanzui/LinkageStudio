@@ -146,6 +146,8 @@ export function MechanismCanvas() {
         })() : undefined,
         sliderPointA: editor.sliderPointA?.position ?? null,
         colliderPointA: editor.colliderPointA?.position ?? null,
+        shapeStartPoint: editor.shapeStartPoint,
+        ngonSides: editor.ngonSides,
         editingOutlineId: editor.editingOutlineId,
         editingVertexIndex: editor.editingVertexIndex,
         arcSelector: editor.arcSelector ? { jointId: editor.arcSelector.jointId, colliderId: editor.arcSelector.colliderId, tracerId: editor.arcSelector.tracerId, position: editor.arcSelector.position, showTime: editor.arcSelector.showTime, collapseTime: editor.arcSelector.collapseTime, createdBodyId: editor.arcSelector.createdBodyId } : null,

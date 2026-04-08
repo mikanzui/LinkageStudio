@@ -104,6 +104,33 @@ const IconImage = () => (
   </svg>
 );
 
+const IconRectangle = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <rect x="2" y="3" width="12" height="10" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconCircle = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+  </svg>
+);
+
+const IconNgon = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <polygon points="8,1.5 14,5 13,12 3,12 2,5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconTrim = () => (
+  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
+    <line x1="2" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <line x1="14" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <circle cx="5" cy="8" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+    <circle cx="11" cy="8" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+  </svg>
+);
+
 export function Toolbar() {
   const mode = useEditorStore((s) => s.mode);
   const createTool = useEditorStore((s) => s.createTool);
@@ -114,6 +141,7 @@ export function Toolbar() {
   const setSpringToolSubmode = useEditorStore((s) => s.setSpringToolSubmode);
   const springPickPendingAnchor = useEditorStore((s) => s.springPickPendingAnchor);
   const torsionSpringPick = useEditorStore((s) => s.torsionSpringPick);
+  const ngonSides = useEditorStore((s) => s.ngonSides);
   const marqueeExcludedBodyIds = useEditorStore((s) => s.marqueeExcludedBodyIds);
   const toggleMarqueeBodyExcluded = useEditorStore((s) => s.toggleMarqueeBodyExcluded);
   const selectMode = useEditorStore((s) => s.selectMode);
@@ -330,6 +358,43 @@ export function Toolbar() {
         </>
       );
     }
+    if (createTool === 'rectangle') {
+      return (
+        <>
+          <div className="sim-hint">Click and drag to draw rectangle</div>
+          <div className="sim-hint">Hold Shift to constrain to square</div>
+          <div className="sim-hint">Escape to cancel</div>
+        </>
+      );
+    }
+    if (createTool === 'circle') {
+      return (
+        <>
+          <div className="sim-hint">Click center, drag to set radius</div>
+          <div className="sim-hint">Release to place circle</div>
+          <div className="sim-hint">Escape to cancel</div>
+        </>
+      );
+    }
+    if (createTool === 'ngon') {
+      return (
+        <>
+          <div className="sim-hint">Click center, drag to set radius</div>
+          <div className="sim-hint">Scroll wheel to change sides ({ngonSides})</div>
+          <div className="sim-hint">Drag rotates the polygon</div>
+          <div className="sim-hint">Escape to cancel</div>
+        </>
+      );
+    }
+    if (createTool === 'trim') {
+      return (
+        <>
+          <div className="sim-hint">Click and drag across outline edges</div>
+          <div className="sim-hint">Crossed edges will be trimmed</div>
+          <div className="sim-hint">Escape to switch back</div>
+        </>
+      );
+    }
     if (isMirrorTool) {
       return (
         <>
@@ -436,6 +501,38 @@ export function Toolbar() {
             >
               <IconOutline />
               <span className="tool-name">Outline</span>
+            </button>
+
+            <button
+              className={`tool-btn ${createTool === 'rectangle' ? 'active' : ''}`}
+              onClick={() => setCreateTool('rectangle')}
+            >
+              <IconRectangle />
+              <span className="tool-name">Rectangle</span>
+            </button>
+
+            <button
+              className={`tool-btn ${createTool === 'circle' ? 'active' : ''}`}
+              onClick={() => setCreateTool('circle')}
+            >
+              <IconCircle />
+              <span className="tool-name">Circle</span>
+            </button>
+
+            <button
+              className={`tool-btn ${createTool === 'ngon' ? 'active' : ''}`}
+              onClick={() => setCreateTool('ngon')}
+            >
+              <IconNgon />
+              <span className="tool-name">N-gon</span>
+            </button>
+
+            <button
+              className={`tool-btn ${createTool === 'trim' ? 'active' : ''}`}
+              onClick={() => setCreateTool('trim')}
+            >
+              <IconTrim />
+              <span className="tool-name">Power Trim</span>
             </button>
 
             <button

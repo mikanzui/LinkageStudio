@@ -199,7 +199,7 @@ function CollapsedBodyList() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const createTool = useEditorStore((s) => s.createTool);
 
-  const isOutlineMode = createTool === 'outline' || createTool === 'tracer';
+  const isOutlineMode = createTool === 'outline' || createTool === 'tracer' || createTool === 'rectangle' || createTool === 'circle' || createTool === 'ngon' || createTool === 'trim';
   const selectedJointId = [...selectedIds].find((id) => joints[id]);
   const selectedColliderId = [...selectedIds].find((id) => colliders[id]);
   const selectedCollider = selectedColliderId ? colliders[selectedColliderId] : null;

@@ -565,3 +565,68 @@ export function drawOutlineGhost(
     ctx.stroke();
   }
 }
+
+/** Draw a shape primitive ghost while dragging (rectangle, circle, ngon). */
+export function drawShapePrimitiveGhost(
+  ctx: CanvasRenderingContext2D,
+  points: Vec2[],
+  bodyColor: string,
+  zoom: number,
+) {
+  if (points.length < 2) return;
+
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.closePath();
+
+  ctx.fillStyle = bodyColor + '1A';
+  ctx.fill();
+
+  ctx.strokeStyle = bodyColor;
+  ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([6 / zoom, 4 / zoom]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** Draw a visual indicator for the power trim tool. */
+export function drawTrimStroke(
+  ctx: CanvasRenderingContext2D,
+  path: readonly Vec2[],
+  zoom: number,
+) {
+  if (path.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(path[0].x, path[0].y);
+  for (let i = 1; i < path.length; i++) {
+    ctx.lineTo(path[i].x, path[i].y);
+  }
+  ctx.strokeStyle = '#ff4444';
+  ctx.lineWidth = 2 / zoom;
+  ctx.setLineDash([6 / zoom, 4 / zoom]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+export function drawTrimCursor(
+  ctx: CanvasRenderingContext2D,
+  cursorWorld: Vec2 | null,
+  zoom: number,
+) {
+  if (!cursorWorld) return;
+  const r = 8 / zoom;
+  ctx.beginPath();
+  ctx.arc(cursorWorld.x, cursorWorld.y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#ff4444';
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cursorWorld.x - r * 0.6, cursorWorld.y - r * 0.6);
+  ctx.lineTo(cursorWorld.x + r * 0.6, cursorWorld.y + r * 0.6);
+  ctx.moveTo(cursorWorld.x + r * 0.6, cursorWorld.y - r * 0.6);
+  ctx.lineTo(cursorWorld.x - r * 0.6, cursorWorld.y + r * 0.6);
+  ctx.stroke();
+}

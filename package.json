@@ -1,7 +1,7 @@
 {
   "name": "linkage-studio",
   "private": true,
-  "version": "0.14.0",
+  "version": "0.15.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.6.3",
+    "@azure/msal-react": "^5.2.1",
     "nanoid": "^5.1.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -31,9 +33,9 @@
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
-    "vitest": "^3.2.4",
     "vite": "^8.0.1",
     "vite-plugin-pwa": "^1.2.0",
-    "vite-plugin-singlefile": "^2.3.2"
+    "vite-plugin-singlefile": "^2.3.2",
+    "vitest": "^3.2.4"
   }
 }

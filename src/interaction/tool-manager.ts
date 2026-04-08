@@ -38,6 +38,67 @@ function springLinkAnchorAtClick(
   return { type: 'link', linkId: link.id, t };
 }
 
+/** Generate world-space Vec2[] for a rectangle from two opposite corners. */
+function generateRectanglePoints(start: Vec2, end: Vec2, shiftKey: boolean): Vec2[] {
+  let x0 = start.x, y0 = start.y, x1 = end.x, y1 = end.y;
+  if (shiftKey) {
+    // Constrain to square
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const side = Math.max(Math.abs(dx), Math.abs(dy));
+    x1 = x0 + Math.sign(dx) * side;
+    y1 = y0 + Math.sign(dy) * side;
+  }
+  return [
+    { x: x0, y: y0 },
+    { x: x1, y: y0 },
+    { x: x1, y: y1 },
+    { x: x0, y: y1 },
+  ];
+}
+
+/** Generate world-space Vec2[] for a circle (polyline approximation) from center + edge point. */
+function generateCirclePoints(center: Vec2, edge: Vec2): Vec2[] {
+  const dx = edge.x - center.x;
+  const dy = edge.y - center.y;
+  const radius = Math.sqrt(dx * dx + dy * dy);
+  if (radius < 1e-6) return [];
+  const segments = 48;
+  const pts: Vec2[] = [];
+  for (let i = 0; i < segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    pts.push({ x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) });
+  }
+  return pts;
+}
+
+/** Generate world-space Vec2[] for a regular n-gon from center + edge point. */
+function generateNgonPoints(center: Vec2, edge: Vec2, sides: number): Vec2[] {
+  const dx = edge.x - center.x;
+  const dy = edge.y - center.y;
+  const radius = Math.sqrt(dx * dx + dy * dy);
+  if (radius < 1e-6) return [];
+  const startAngle = Math.atan2(dy, dx);
+  const pts: Vec2[] = [];
+  for (let i = 0; i < sides; i++) {
+    const angle = startAngle + (i / sides) * Math.PI * 2;
+    pts.push({ x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) });
+  }
+  return pts;
+}
+
+/** Find intersection point of segments p1→p2 and p3→p4, or null. */
+function segmentIntersection(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2): Vec2 | null {
+  const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
+  const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
+  const denom = d1x * d2y - d1y * d2x;
+  if (Math.abs(denom) < 1e-10) return null;
+  const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / denom;
+  const u = ((p3.x - p1.x) * d1y - (p3.y - p1.y) * d1x) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: p1.x + t * d1x, y: p1.y + t * d1y };
+}
+
 /** Start the long-press arc selector timer for a given joint. No-op for touch input. */
 function startArcTimer(jointId: string, screenX: number, screenY: number) {
   if (lastPointerType === 'touch') return; // Touch uses tap-on-release, not hold
@@ -202,6 +263,16 @@ const SLIDER_RAIL_HOLD_JOINT_ID = '__slider_rail__';
 // Outline vertex drag state
 let outlineVertexDragIndex: number | null = null;
 let outlineVertexDragOutlineId: string | null = null;
+
+// Shape primitive drag state (rectangle/circle/ngon are committed on mouseup)
+// (drag state tracked via editor.shapeStartPoint)
+
+// Power trim state
+let trimActive = false;
+let trimPath: Vec2[] = [];
+
+/** Get current trim drag path for rendering. */
+export function getTrimPath(): readonly Vec2[] { return trimPath; }
 
 // Image drag state
 let imageDragId: string | null = null;
@@ -1090,6 +1161,27 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
+  // --- RECTANGLE / CIRCLE / NGON TOOLS (drag to draw) ---
+  if (editor.createTool === 'rectangle' || editor.createTool === 'circle' || editor.createTool === 'ngon') {
+    // If not currently drawing, check if clicking on an existing outline to select it
+    const hitOutline = hitTestOutline(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, editor.camera.zoom);
+    if (hitOutline) {
+      editor.select(hitOutline.id);
+      return;
+    }
+    const pos = editor.gridEnabled ? snapToGrid(worldPos, editor.gridSize) : worldPos;
+    editor.setShapeStartPoint(pos);
+    return;
+  }
+
+  // --- POWER TRIM TOOL ---
+  if (editor.createTool === 'trim') {
+    // Trim starts on mousedown; segments under the cursor path will be deleted on mousemove
+    trimActive = true;
+    trimPath = [worldPos];
+    return;
+  }
+
   // --- BOX / LASSO (Pivot or Spring tool, Select viewport mode) ---
   if (
     (editor.createTool === 'joints' ||
@@ -1365,6 +1457,52 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
     return;
   }
 
+  // --- POWER TRIM: drag path cuts outline edges ---
+  if (trimActive && trimPath.length > 0 && editor.createTool === 'trim') {
+    const prev = trimPath[trimPath.length - 1];
+    trimPath.push(worldPos);
+
+    // Check each outline: does the trim stroke (prev→worldPos) cross any edge?
+    const outlines = Object.values(mechanism.outlines);
+    for (const outline of outlines) {
+      if (!outline.visible || outline.points.length < 3) continue;
+      const body = mechanism.bodies[outline.bodyId];
+      if (!body) continue;
+      const transform = computeBodyTransform(body, mechanism.joints);
+      const worldPts = outline.points.map((p) => localToWorld(p, transform));
+
+      for (let i = 0; i < worldPts.length; i++) {
+        const j = (i + 1) % worldPts.length;
+        const hit = segmentIntersection(prev, worldPos, worldPts[i], worldPts[j]);
+        if (hit) {
+          if (outline.points.length <= 3) {
+            mechanism.removeOutline(outline.id);
+            // Clean up frozen world points
+            if (editor.lockOutlines) {
+              const frozen = new Map(editor.frozenOutlineWorldPoints);
+              frozen.delete(outline.id);
+              editor.setLockOutlines(true, frozen);
+            }
+          } else {
+            const spliceIdx = (i + 1) % outline.points.length;
+            const newPoints = [...outline.points];
+            newPoints.splice(spliceIdx, 1);
+            mechanism.pushHistory();
+            mechanism.updateOutlinePoints(outline.id, newPoints);
+            // Update frozen world points so the visual reflects the change
+            if (editor.lockOutlines) {
+              const newWorldPts = newPoints.map((p) => localToWorld(p, transform));
+              editor.updateFrozenOutline(outline.id, newWorldPts);
+            }
+          }
+          break; // One cut per outline per stroke segment
+        }
+      }
+    }
+    lastMouse = screenPos;
+    return;
+  }
+
   // --- SIMULATE MODE ---
   if (editor.mode === 'simulate') {
     const simDrag = editor.simDrag;
@@ -1527,6 +1665,61 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
 
 export function handleMouseUp(e: PointerEvent | MouseEvent, _canvas?: HTMLCanvasElement) {
   const editor = useEditorStore.getState();
+  const mechanism = useMechanismStore.getState();
+
+  // --- Shape primitive: commit the shape on mouseup ---
+  if (editor.shapeStartPoint && (editor.createTool === 'rectangle' || editor.createTool === 'circle' || editor.createTool === 'ngon')) {
+    const canvas = _canvas ?? document.querySelector('canvas');
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const screenPos: Vec2 = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const worldEnd = screenToWorld(screenPos, editor.camera);
+      const endPos = editor.gridEnabled ? snapToGrid(worldEnd, editor.gridSize) : worldEnd;
+      const start = editor.shapeStartPoint;
+
+      // Only create if there was actual drag distance
+      const dx = endPos.x - start.x;
+      const dy = endPos.y - start.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 1e-3) {
+        let points: Vec2[] = [];
+        if (editor.createTool === 'rectangle') {
+          points = generateRectanglePoints(start, endPos, e.shiftKey);
+        } else if (editor.createTool === 'circle') {
+          points = generateCirclePoints(start, endPos);
+        } else if (editor.createTool === 'ngon') {
+          points = generateNgonPoints(start, endPos, editor.ngonSides);
+        }
+        if (points.length >= 3) {
+          let activeBodyId = [...editor.activeBodyIds][0];
+          if (!activeBodyId) {
+            // Auto-select first non-base body if none active
+            const nonBase = Object.values(mechanism.bodies).find((b) => b.id !== mechanism.baseBodyId);
+            if (nonBase) {
+              activeBodyId = nonBase.id;
+              editor.setActiveBody(nonBase.id);
+            }
+          }
+          const body = activeBodyId ? mechanism.bodies[activeBodyId] : undefined;
+          if (body) {
+            const transform = computeBodyTransform(body, mechanism.joints);
+            const localPoints = points.map((p) => worldToLocal(p, transform));
+            const outlineId = mechanism.addOutline(activeBodyId, localPoints);
+            if (editor.lockOutlines && outlineId) {
+              editor.updateFrozenOutline(outlineId, points);
+            }
+          }
+        }
+      }
+    }
+    editor.setShapeStartPoint(null);
+    return;
+  }
+
+  // --- Power trim: stop trimming ---
+  if (trimActive) {
+    trimActive = false;
+    trimPath = [];
+  }
 
   if (marqueeDrag) {
     const m = marqueeDrag;
@@ -1585,6 +1778,14 @@ export function handleMouseUp(e: PointerEvent | MouseEvent, _canvas?: HTMLCanvas
 export function handleWheel(e: WheelEvent, canvas: HTMLCanvasElement) {
   e.preventDefault();
   const editor = useEditorStore.getState();
+
+  // N-gon tool: scroll changes side count while drawing
+  if (editor.createTool === 'ngon' && editor.shapeStartPoint) {
+    const delta = e.deltaY < 0 ? 1 : -1;
+    editor.setNgonSides(editor.ngonSides + delta);
+    return;
+  }
+
   const rect = canvas.getBoundingClientRect();
   const center: Vec2 = { x: e.clientX - rect.left, y: e.clientY - rect.top };
   const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
@@ -1672,6 +1873,10 @@ export function handleKeyDown(e: KeyboardEvent) {
         }
         if (editor.editingOutlineId) {
           exitOutlineEditMode();
+        } else if (editor.shapeStartPoint) {
+          editor.setShapeStartPoint(null);
+        } else if (editor.createTool === 'rectangle' || editor.createTool === 'circle' || editor.createTool === 'ngon' || editor.createTool === 'trim') {
+          editor.setCreateTool('joints');
         } else if (editor.sliderPointA) {
           // Cancel slider placement — remove the already-placed A joint
           mechanism.undo();

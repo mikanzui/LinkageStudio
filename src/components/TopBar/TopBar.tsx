@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { useSimulationStore } from '../../store/simulation-store';
@@ -10,6 +11,8 @@ import type { ExportUnit, ExportFormat } from '../../utils/export-manager';
 import { UNIT_LABELS, FORMAT_LABELS } from '../../utils/export-manager';
 import { deleteSelectedEntities } from '../../utils/delete-selection';
 import { showTransientHint } from '../../store/editor-store';
+import { saveProject } from '../../services/onedrive';
+import { resetAutosaveHash } from '../../services/autosave';
 import type { GridLevel } from '../../types';
 import './TopBar.css';
 
@@ -111,6 +114,13 @@ export function TopBar() {
   const [exportUnit, setExportUnit] = useState<ExportUnit>('mm');
   const lastSavedFingerprintRef = useRef<string | null>(null);
 
+  const { instance, accounts } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
+  const account = accounts[0] ?? null;
+  const cloudSyncStatus = useEditorStore((s) => s.cloudSyncStatus);
+  const oneDriveFileId = useEditorStore((s) => s.oneDriveFileId);
+  const autoSaveEnabled = useEditorStore((s) => s.autoSaveEnabled);
+
   const undo = useMechanismStore((s) => s.undo);
   const redo = useMechanismStore((s) => s.redo);
   const clearAll = useMechanismStore((s) => s.clearAll);
@@ -162,6 +172,26 @@ export function TopBar() {
     }
 
     const json = serializeCurrentProject();
+
+    // If authenticated, save to OneDrive
+    if (isAuthenticated && account) {
+      try {
+        editor.setCloudSyncStatus('saving');
+        const fileName = editor.oneDriveFileName || `${name}.slinker`;
+        const itemId = await saveProject(instance, account, fileName, json);
+        editor.setOneDriveFileId(itemId);
+        if (!editor.oneDriveFileName) editor.setOneDriveFileName(`${name}.slinker`);
+        editor.setCloudSyncStatus('saved');
+        resetAutosaveHash();
+        lastSavedFingerprintRef.current = json;
+        return true;
+      } catch (err) {
+        console.error('Cloud save failed, falling back to local:', err);
+        editor.setCloudSyncStatus('error');
+      }
+    }
+
+    // Fallback: local file save
     await saveFileAs(json, `${name}.slinker`);
     lastSavedFingerprintRef.current = json;
     return true;
@@ -217,6 +247,20 @@ export function TopBar() {
 
   const handleOpenClick = () => {
     if (!isCreate) return;
+
+    // If authenticated, go back to projects page (cloud + local open available there)
+    if (isAuthenticated) {
+      if (lastSavedFingerprintRef.current === null) {
+        lastSavedFingerprintRef.current = serializeCurrentProject();
+      }
+      if (serializeCurrentProject() !== lastSavedFingerprintRef.current) {
+        setOpenUnsavedOpen(true);
+        return;
+      }
+      window.location.hash = '#/';
+      return;
+    }
+
     if (lastSavedFingerprintRef.current === null) {
       lastSavedFingerprintRef.current = serializeCurrentProject();
     }
@@ -279,12 +323,43 @@ export function TopBar() {
 
   const handleOpenWithoutSaving = () => {
     setOpenUnsavedOpen(false);
-    void performOpen();
+    if (isAuthenticated) {
+      window.location.hash = '#/';
+    } else {
+      void performOpen();
+    }
   };
 
   return (
     <div className="top-bar">
+      <button
+        className="top-bar-btn"
+        onClick={() => { window.location.hash = '#/'; }}
+        title="Back to projects"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+
       <ProjectNameInput />
+
+      {/* Cloud sync status */}
+      {isAuthenticated && oneDriveFileId && (
+        <span className="top-bar-cloud-status" title={
+          cloudSyncStatus === 'saving' ? 'Saving to OneDrive…' :
+          cloudSyncStatus === 'saved' ? 'Saved to OneDrive' :
+          cloudSyncStatus === 'error' ? 'Save failed — click Save to retry' :
+          cloudSyncStatus === 'offline' ? 'Offline — changes cached locally' :
+          autoSaveEnabled ? 'Autosave on' : 'Manual save'
+        }>
+          {cloudSyncStatus === 'saving' && <span className="cloud-icon cloud-saving">☁</span>}
+          {cloudSyncStatus === 'saved' && <span className="cloud-icon cloud-saved">☁</span>}
+          {cloudSyncStatus === 'error' && <span className="cloud-icon cloud-error">⚠</span>}
+          {cloudSyncStatus === 'offline' && <span className="cloud-icon cloud-offline">⚠</span>}
+          {cloudSyncStatus === 'idle' && autoSaveEnabled && <span className="cloud-icon cloud-idle">☁</span>}
+        </span>
+      )}
 
       <div className="top-bar-separator" />
 
@@ -412,6 +487,12 @@ export function TopBar() {
       <div className="top-bar-brand">
         <span>Slinker V{__APP_VERSION__}</span>
       </div>
+
+      {isAuthenticated && account && (
+        <div className="top-bar-user">
+          <span className="top-bar-user-name">{account.name || account.username}</span>
+        </div>
+      )}
 
       {clearAllOpen &&
         createPortal(

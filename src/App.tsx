@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { Layout } from './components/Layout';
 import { SplashScreen } from './components/SplashScreen';
+import { ProjectsPage } from './pages/ProjectsPage';
 import { useMechanismStore } from './store/mechanism-store';
 import { useSimulationStore } from './store/simulation-store';
 import { useEditorStore } from './store/editor-store';
@@ -10,8 +12,36 @@ import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
 import { SIM_DT } from './utils/constants';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from './core/body-transform';
+import { loadProject } from './services/onedrive';
+import { deserializeMechanism, openFilePicker } from './utils/file-io';
+import { startAutosave, stopAutosave, resetAutosaveHash } from './services/autosave';
+import type { GridLevel } from './types';
+
+type AppPage = 'projects' | 'editor';
+
+function useHashRoute(): [AppPage, (page: AppPage) => void] {
+  const getPage = (): AppPage => {
+    const hash = window.location.hash;
+    if (hash === '#/editor' || hash.startsWith('#/editor?')) return 'editor';
+    return 'projects';
+  };
+  const [page, setPage] = useState<AppPage>(getPage);
+  useEffect(() => {
+    const onHash = () => setPage(getPage());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const navigate = (p: AppPage) => {
+    window.location.hash = p === 'projects' ? '#/' : '#/editor';
+  };
+  return [page, navigate];
+}
 
 function App() {
+  const [page, navigate] = useHashRoute();
+  const { instance, accounts } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
+  const account = accounts[0] ?? null;
   const initialAngleRef = useRef<number | null>(null);
   const colliderSidesRef = useRef<Map<string, number> | null>(null);
   const lastModeRef = useRef<string>('create');
@@ -270,6 +300,93 @@ function App() {
     });
     return unsub;
   }, []);
+
+  // Start/stop autosave when authenticated + in editor
+  useEffect(() => {
+    if (page === 'editor' && isAuthenticated && account) {
+      const editor = useEditorStore.getState();
+      if (editor.oneDriveFileId && editor.autoSaveEnabled) {
+        startAutosave(instance, account);
+      }
+    }
+    return () => stopAutosave();
+  }, [page, isAuthenticated, account, instance]);
+
+  const applyLoadedState = useCallback((state: ReturnType<typeof deserializeMechanism>) => {
+    if (!state) return;
+    const loadState = useMechanismStore.getState().loadState;
+    loadState(state);
+    useEditorStore.getState().clearSelection();
+    if (state.projectName) useEditorStore.getState().setProjectName(state.projectName);
+    if (state.viewPreferences) {
+      const vp = state.viewPreferences;
+      const editor = useEditorStore.getState();
+      if (vp.showLinks !== undefined && vp.showLinks !== editor.showLinks) editor.toggleShowLinks();
+      if (vp.showVectors !== undefined && vp.showVectors !== editor.showVectors) editor.toggleShowVectors();
+      if (vp.showRulers !== undefined && vp.showRulers !== editor.showRulers) editor.toggleShowRulers();
+      if (vp.showForceUnits !== undefined && vp.showForceUnits !== editor.showForceUnits) editor.toggleShowForceUnits();
+      if (vp.outlineSimGrabInteriorWithJoints !== undefined) {
+        useEditorStore.setState({ outlineSimGrabInteriorWithJoints: vp.outlineSimGrabInteriorWithJoints });
+      }
+      if (vp.gridLevel) editor.setGridLevel(vp.gridLevel as GridLevel);
+      if (vp.camera) useEditorStore.setState({ camera: { pan: vp.camera.pan, zoom: vp.camera.zoom } });
+    }
+    if (state.simulationSettings) {
+      const ss = state.simulationSettings;
+      const sim = useSimulationStore.getState();
+      if (ss.gravityEnabled !== undefined && ss.gravityEnabled !== sim.gravityEnabled) sim.toggleGravity();
+      if (ss.gravityStrength !== undefined) sim.setGravityStrength(ss.gravityStrength);
+      if (ss.damping !== undefined) sim.setDamping(ss.damping);
+      if (ss.dragMultiplier !== undefined) sim.setDragMultiplier(ss.dragMultiplier);
+      if (ss.dragDamping !== undefined) sim.setDragDamping(ss.dragDamping);
+    }
+    resetAutosaveHash();
+  }, []);
+
+  const handleOpenProject = useCallback(async (fileId: string, fileName: string) => {
+    if (!account) return;
+    try {
+      const json = await loadProject(instance, account, fileId);
+      const state = deserializeMechanism(json);
+      if (!state) { alert('Invalid file format'); return; }
+      applyLoadedState(state);
+      useEditorStore.getState().setOneDriveFileId(fileId);
+      useEditorStore.getState().setOneDriveFileName(fileName);
+      navigate('editor');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to open project');
+    }
+  }, [instance, account, navigate, applyLoadedState]);
+
+  const handleNewProject = useCallback(() => {
+    useMechanismStore.getState().clearAll();
+    useEditorStore.getState().clearSelection();
+    useEditorStore.getState().setProjectName('Untitled');
+    useEditorStore.getState().setOneDriveFileId(null);
+    useEditorStore.getState().setOneDriveFileName(null);
+    navigate('editor');
+  }, [navigate]);
+
+  const handleOpenLocal = useCallback(async () => {
+    const json = await openFilePicker();
+    if (!json) return;
+    const state = deserializeMechanism(json);
+    if (!state) { alert('Invalid file format'); return; }
+    applyLoadedState(state);
+    useEditorStore.getState().setOneDriveFileId(null);
+    useEditorStore.getState().setOneDriveFileName(null);
+    navigate('editor');
+  }, [navigate, applyLoadedState]);
+
+  if (page === 'projects') {
+    return (
+      <ProjectsPage
+        onOpenProject={handleOpenProject}
+        onNewProject={handleNewProject}
+        onOpenLocal={handleOpenLocal}
+      />
+    );
+  }
 
   return (
     <>
