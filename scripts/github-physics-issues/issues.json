@@ -1,0 +1,78 @@
+[
+  {
+    "title": "[physics:P0] Surface simulate instability (metrics + gates in App)",
+    "body": "## Context\nTracked from `docs/physics-engine-release-review.md`.\n\n`solveWithForce` always returns `converged: true` / `residual: 0` (`src/core/solver/newton-raphson.ts`). The simulate tick cannot distinguish stable vs exploding states.\n\n## Goal\n- Compute a lightweight stability metric each frame (e.g. max |Δposition| per substep, max velocity, post-projection constraint violation).\n- Return it from `solveWithForce`; handle in `src/App.tsx` (warn UI, clamp, or auto-pause above thresholds).\n\n## Acceptance\nSimulate visibly fails safe (user feedback) under stiff springs + high sim speed rather than silently zooming joints off-screen."
+  },
+  {
+    "title": "[physics:P0] Motor playback: tie time/driver advance to kinematic convergence",
+    "body": "## Context\nFrom physics release review (`docs/physics-engine-release-review.md`).\n\nIn create mode with motor, when `solve` does not converge, `advanceTime` / driver angle may still advance while `moveJoint` commits are skipped (`src/App.tsx`). That desyncs the timeline UI from geometry.\n\n## Goal\nIf `solve` fails to converge:\n- either **do not advance** simulated time/driver angle that frame,\n- or pause + show explicit **kinematics not solved** state.\n\n## Acceptance\nNo silent playback where crank clock moves but mechanism pose does not.\nRefs: `newton-raphson.ts` `solve`, motor tick in `App.tsx`."
+  },
+  {
+    "title": "[physics:P0] Reject non-finite joint state after solver; optional rewind",
+    "body": "## Context\nFrom `docs/physics-engine-release-review.md`.\n\nThere is limited validation before `solveWithForce`; NaN/infinite coords can propagate into stores and corrupt rendering (`renderer/draw-mechanism.ts`).\n\n## Goal\n- After each solve / tick, validate joint positions.\n- If non-finite: skip commit **or** restore last-good snapshot + `resetVelocities()` (`newton-raphson.ts`).\n\n## Acceptance\nMalformed numeric state cannot persist across frames unchecked."
+  },
+  {
+    "title": "[physics:P1] Unify solver tuning (SolverConfig + constants vs literals)",
+    "body": "## Context\n`SOLVER_MAX_ITERATIONS`, `SOLVER_TOLERANCE` live in `src/utils/constants.ts`, but `solveWithForce` also hardcodes substep counts, constraint passes, friction, epsilons in `src/core/solver/newton-raphson.ts`. `SolverConfig` in `src/types/solver.ts` is not wired through the API.\n\n## Goal\nSingle configuration surface (typed) passed into `solve` / `solveWithForce`; remove magic numbers where practical.\n\n## Acceptance\nTuning knobs documented in one place; no duplicate conflicting defaults.\nTracked: `docs/physics-engine-release-review.md` §P1."
+  },
+  {
+    "title": "[physics:P1] Motor driver: validate topology and surface actionable errors",
+    "body": "## Context\nIf the driver link has no endpoint on the base/fixed body, driver IDs can be missing and the motor tick bails quietly (`src/App.tsx`).\n\n## Goal\nUser-visible diagnostics when driver setup is ambiguous (toast, inline panel, console is not enough for release).\n\n## Acceptance\nInvalid driver configs never silently no-op.\nRefs: physics review driver risk table.\nTracked: `docs/physics-engine-release-review.md`."
+  },
+  {
+    "title": "[physics:P1] Torsion: rename equilibrium helper + tighten property/help copy",
+    "body": "## Context\n`equilibriumRestLength` is overloaded for linear rest length vs torsion equilibrium angle semantics (`spring-solver.ts`, `spring-forces.ts`). Property/tooltips risk misleading users (`restLength` / `prestress` differ by spring kind).\n\n## Goal\n- Split naming (e.g. `equilibriumRestAngle`) or document clearly inline.\n- Update property panel / docs strings.\n\nTracked: `docs/physics-engine-release-review.md` §P1 items 6 + springs risk table."
+  },
+  {
+    "title": "[physics:P2] Stabilize stiff springs under large effective dt",
+    "body": "## Context\nExplicit substeps + PBD projection fights stiff SI springs especially when sim speed scales `dt` (`App.tsx`).\n\n## Goal\nEvaluate stiffness-aware substeps, caps on `sim.speed * dt`, and/or heavier implicit or XPBD-style handling for stiff segments.\n\nLong-horizon; link to instability metrics issue when implemented.\nTracked: physics review §P2 item 7."
+  },
+  {
+    "title": "[physics:P2] Regularize zero-length linear springs / anchors",
+    "body": "## Context\n`linearSpringAccelerationOnB` returns no force below length threshold (<1e–12)\u2014overlapping anchors never self-separate (`src/core/springs/spring-forces.ts`).\n\n## Goal\nSmall directional regularization or stable fallback behavior (document tradeoffs).\n\nTracked: `docs/physics-engine-release-review.md` springs table."
+  },
+  {
+    "title": "[physics:P2] Document joint mass vs spring acceleration model",
+    "body": "## Context\nTypes may expose link mass while springs accelerate joint DOFs under a heuristic unit-mass framing \u2014 mismatch confuses fidelity expectations and UI labels (`docs/physics-engine-release-review.md` §P2).\n\n## Goal\nEither document the effective model in-repo or align implementation with advertised mass semantics.\n\nTracked: physics review backlog item 9."
+  },
+  {
+    "title": "[ux:P3] Simulation tick errors: toast/banner + auto-pause path",
+    "body": "## Context\n`App.tsx` tick `try/catch` logs errors only (\u2260 user-visible).\n\n## Goal\nRecoverable UX: toast or banner + optional auto-pause of playback on thrown errors.\n\nTracked: physics review §P3 item 10 + integration risks."
+  },
+  {
+    "title": "[ux:P3] Force overlays and readouts: model units vs SI",
+    "body": "## Context\n`src/utils/units.ts` describes displayed \u0022N\u0022 as scaled internal PBD-derived values; users may over-trust numbers.\n\n## Goal\nUI copy overlays / property inspector matches actual scaling; link to solver/force-analysis behavior.\n\nTracked: physics review §P3 item 11 + integration table."
+  },
+  {
+    "title": "[ux:P3] Optional solver timing / FPS diagnostic overlay",
+    "body": "## Context\nHeavy mechanisms + fixed `dt` can drop wall-clock frame rate while still stepping simulation \u2014 hard to diagnose without timings.\n\n## Goal\nDev or optional overlay: solver ms / tick duration.\n\nTracked: physics review §P3 item 12."
+  },
+  {
+    "title": "[tests] Add regressions for `solve` motor + NR kinematic path",
+    "body": "## Context\nMost automated tests exercise `solveWithForce` (`physics-integration.test.ts`, `test-scenarios.ts`). The `solve()` path lacks parity coverage (singularities, max iterations, DOF).\n\n## Goal\nVitest fixtures for crank/motor setups; assert convergence + pose vs known geometry tolerances.\n\nRefs: `src/core/solver/newton-raphson.ts`, `dof.ts`, `driver.ts`\nTracked: physics review §Test gaps bullet 1."
+  },
+  {
+    "title": "[tests] Link-anchored springs + stiffness stress harness",
+    "body": "## Context\n`accumulateLinearSpringAccelerations` supports link midpoints (\u0027split\u0027 / resolveAnchor paths); Vitest suites skew joint\u2013joint.\nStress: high stiffness \u00d7 `sim.speed` \u00d7 `dt`, bounded displacement.\n\n## Goal\n- Tests for springs anchored via link + `t`\n- Regression with extreme parameters + motion bounds\n\nRefs: `spring-solver.ts`; physics review §Test gaps."
+  },
+  {
+    "title": "[tests] Torsion angles: wrap near +/- pi, torsion SI mappers",
+    "body": "## Context\nTorsion skips torque on collapsed legs; wrap/prestress edge cases untested. `siTorsionStiffnessToSim` / `siTorsionDampingToSim` lacking tests vs linear mappers (`spring-forces.test.ts`).\n\n## Goal\nTargeted Vitest modules for equilibrium angle + wrap + mapper round-trips.\n\nRefs: `spring-solver.ts`, `spring-forces.ts`\nTracked: physics review §Test gaps."
+  },
+  {
+    "title": "[tests] Integration: switchMode / regenerateLinks / colliderSides / SOLVER_MAX_ITERS motor",
+    "body": "## Context\nMode transitions mutate topology/rest lengths; colliderSidesRef rebuild semantics; NR max-iter failure during motor lacks automated coverage (`App.tsx`, `mechanism-store.ts`, `mode-switch.ts`).\n\n## Goal\nIntegration-style tests capturing ordering invariants.\nAcceptance: regression PRs touching mode switch or collide init stay safe.\n\nTracked: physics review §Test gaps final bullet.\nTracked: physics review Recommended hardening (integration regressions)."
+  },
+  {
+    "title": "[maint] Constraint cleanup: audit `onAxisConstraint` vs sliders",
+    "body": "## Context\n`onAxisConstraint` in `constraints.ts` may be unused by `solve`/`solveWithForce` (sliders projected ad hoc elsewhere). Maintainability risk.\n\n## Goal\nRepo-wide usages; wire in, deprecate/remove, or document why kept.\n\nTracked: physics review solver risk table (\u0060onAxisConstraint\u0060).\nTracked: appendix D in prior solver agent notes (`docs/physics-engine-release-review.md` cites dead helper risk)."
+  },
+  {
+    "title": "[physics] Dual damping UX: clarify global vs spring damper knobs",
+    "body": "## Context\n`solveWithForce` applies global retention damping per substep *and* per-spring damping coefficients mapped from SI (\u0060spring-solver.ts\u0060 / \u0060newton-raphson.ts\u0060). Easy to confuse in UI/copy.\n\n## Goal\nProperty panel docs + sane defaults naming \u2248 \u0022global damping\u0022 vs \u0022element damping.\u0022\n\nTracked: physics review springs table (dual damping).\nTracked: springs agent summary."
+  },
+  {
+    "title": "[physics:P1-b] Pre-solve sanity checks before `solveWithForce`",
+    "body": "## Context\nNo guard for degenerate/zero-length links, NaN poses, dangling slider/collider refs entering the timestep (`physics-engine-release-review.md` Integration table).\n\n## Goal\nEarly validation with structured skip or warning (ties into finite-position guard).\n\nMay merge with `[physics:P0] Reject non-finite`\u0020\u2014 coordinate during implementation.\nTracked: physics-engine-release-review §Integration failures."
+  }
+]
