@@ -14,9 +14,37 @@ function linkRowLabel(link: Link, joints: Record<string, Joint>): string {
   return `${getJointDisplayName(ja)} ↔ ${getJointDisplayName(jb)}`;
 }
 
+/** When switching a spring end from link → joint, pick an endpoint of the current link (by t) and avoid duplicating the other end if it is already a joint. */
+function defaultJointIdWhenLeavingLink(
+  linkAnchor: SpringAnchor & { type: 'link' },
+  links: Record<string, Link>,
+  siblingAnchor: SpringAnchor | undefined,
+  visibleJointIds: string[],
+): string | undefined {
+  const lk = links[linkAnchor.linkId];
+  if (!lk) return visibleJointIds[0];
+  const ja = lk.jointIds[0];
+  const jb = lk.jointIds[1];
+  const sib = siblingAnchor?.type === 'joint' ? siblingAnchor.jointId : undefined;
+  const preferFirstAlong = linkAnchor.t < 0.5;
+  const primary = preferFirstAlong ? ja : jb;
+  const secondary = preferFirstAlong ? jb : ja;
+  if (linkAnchor.t === 0.5) {
+    const tryOrder = [ja, jb] as const;
+    const pick = tryOrder.find((j) => j !== sib);
+    if (pick) return pick;
+  } else {
+    if (primary !== sib) return primary;
+    if (secondary !== sib) return secondary;
+  }
+  return visibleJointIds.find((id) => id !== sib) ?? visibleJointIds[0];
+}
+
 function SpringEndEditor(props: {
   title: string;
   anchor: SpringAnchor;
+  /** The spring's other endpoint (avoid picking the same joint when switching link → joint). */
+  siblingAnchor: SpringAnchor;
   springId: string;
   patchKey: 'anchorA' | 'anchorB';
   joints: Record<string, Joint>;
@@ -34,6 +62,7 @@ function SpringEndEditor(props: {
   const {
     title,
     anchor,
+    siblingAnchor,
     springId,
     patchKey,
     joints,
@@ -52,7 +81,10 @@ function SpringEndEditor(props: {
 
   const onTypeChange = (type: 'joint' | 'link') => {
     if (type === 'joint') {
-      const jid = anchor.type === 'joint' ? anchor.jointId : visibleJointIds[0];
+      const jid =
+        anchor.type === 'joint'
+          ? anchor.jointId
+          : defaultJointIdWhenLeavingLink(anchor, allLinks, siblingAnchor, visibleJointIds);
       if (!jid) return;
       patch({ type: 'joint', jointId: jid });
     } else {
@@ -449,6 +481,7 @@ export function PropertyPanel() {
             <SpringEndEditor
               title={torsion ? 'Link A (at pivot)' : 'From'}
               anchor={spring.anchorA}
+              siblingAnchor={spring.anchorB}
               springId={spring.id}
               patchKey="anchorA"
               joints={joints}
@@ -462,6 +495,7 @@ export function PropertyPanel() {
             <SpringEndEditor
               title={torsion ? 'Link B (at pivot)' : 'To'}
               anchor={spring.anchorB}
+              siblingAnchor={spring.anchorA}
               springId={spring.id}
               patchKey="anchorB"
               joints={joints}

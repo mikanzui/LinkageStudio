@@ -4,6 +4,12 @@ Use this with [`phased-issue-fix-plan.md`](./phased-issue-fix-plan.md) and [`val
 
 ---
 
+## Terminology
+
+- **Driver / playback (create mode):** The app ties animation to a **driver link** on the **base (red) body** — the UI may not say “motor”; tests and errors refer to **driver** or **kinematics**.
+
+---
+
 ## Part A — What you do (human / process)
 
 ### Before any coding session
