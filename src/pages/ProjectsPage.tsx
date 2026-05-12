@@ -4,8 +4,7 @@ import { loginScopes } from '../auth/msal-config';
 import { listProjects, deleteProject, renameProject } from '../services/onedrive';
 import type { OneDriveFile } from '../services/onedrive';
 import './ProjectsPage.css';
-
-declare const __APP_VERSION__: string;
+import { APP_VERSION } from '../app-version';
 
 interface Props {
   onOpenProject: (fileId: string, fileName: string) => void;
@@ -105,7 +104,7 @@ export function ProjectsPage({ onOpenProject, onNewProject, onOpenLocal }: Props
           <img className="projects-logo" src={logoSrc} alt="" width={48} height={48} />
           <div className="projects-header-text">
             <h1 className="projects-title">Slinker</h1>
-            <span className="projects-version">V{__APP_VERSION__}</span>
+            <span className="projects-version">V{APP_VERSION}</span>
           </div>
           {isAuthenticated && account && (
             <div className="projects-user">

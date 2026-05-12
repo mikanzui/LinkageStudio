@@ -5,9 +5,9 @@ import { MsalProvider } from '@azure/msal-react'
 import { msalConfig } from './auth/msal-config'
 import './index.css'
 import App from './App.tsx'
+import { APP_VERSION } from './app-version'
 
-declare const __APP_VERSION__: string
-document.title = `Slinker V${__APP_VERSION__}`
+document.title = `Slinker V${APP_VERSION}`
 
 const msalInstance = new PublicClientApplication(msalConfig)
 

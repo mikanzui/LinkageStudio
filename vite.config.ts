@@ -8,6 +8,7 @@ export default defineConfig({
   /** Must match the repo name for GitHub Pages project sites: /<repo>/ */
   base: '/LinkageStudio/',
   define: {
+    /** Injected into `src/app-version.ts` — keep in sync with `vitest.config.ts`. */
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   plugins: [

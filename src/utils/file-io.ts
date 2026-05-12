@@ -1,6 +1,5 @@
 import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2, MechanismSpring, SpringAnchor } from '../types';
-
-declare const __APP_VERSION__: string;
+import { APP_VERSION } from '../app-version';
 
 function parseSpringAnchor(raw: unknown): SpringAnchor | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -85,7 +84,7 @@ export function serializeMechanism(
   simulationSettings?: SimulationSettings,
 ): string {
   const data: SlinkerFile = {
-    version: __APP_VERSION__,
+    version: APP_VERSION,
     joints: {},
     links: {},
     bodies: {},

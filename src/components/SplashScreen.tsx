@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import './SplashScreen.css';
-
-declare const __APP_VERSION__: string;
+import { APP_VERSION } from '../app-version';
 
 /** Bar fill + hold, then fade out (matches CSS transition duration). */
 const SPLASH_MS = 1000;
@@ -34,7 +33,7 @@ export function SplashScreen() {
         <img className="splash-screen__logo" src={logoSrc} alt="" width={72} height={72} />
         <div className="splash-screen__meta">
           <h1 className="splash-screen__title">Slinker</h1>
-          <span className="splash-screen__version">V{__APP_VERSION__}</span>
+          <span className="splash-screen__version">V{APP_VERSION}</span>
         </div>
         <div className="splash-screen__bar-wrap">
           <div className="splash-screen__bar-track" aria-hidden>

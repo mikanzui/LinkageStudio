@@ -14,9 +14,8 @@ import { showTransientHint } from '../../store/editor-store';
 import { saveProject } from '../../services/onedrive';
 import { resetAutosaveHash } from '../../services/autosave';
 import type { GridLevel } from '../../types';
+import { APP_VERSION } from '../../app-version';
 import './TopBar.css';
-
-declare const __APP_VERSION__: string;
 
 /** Same bytes as a saved .slinker file — used for unsaved-change detection (Open / etc.). */
 function serializeCurrentProject(): string {
@@ -485,7 +484,7 @@ export function TopBar() {
       </div>
 
       <div className="top-bar-brand">
-        <span>Slinker V{__APP_VERSION__}</span>
+        <span>Slinker V{APP_VERSION}</span>
       </div>
 
       {isAuthenticated && account && (
