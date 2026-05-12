@@ -104,33 +104,6 @@ const IconImage = () => (
   </svg>
 );
 
-const IconRectangle = () => (
-  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
-    <rect x="2" y="3" width="12" height="10" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-  </svg>
-);
-
-const IconCircle = () => (
-  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
-    <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.3" />
-  </svg>
-);
-
-const IconNgon = () => (
-  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
-    <polygon points="8,1.5 14,5 13,12 3,12 2,5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-  </svg>
-);
-
-const IconTrim = () => (
-  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
-    <line x1="2" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    <line x1="14" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    <circle cx="5" cy="8" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-    <circle cx="11" cy="8" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-  </svg>
-);
-
 export function Toolbar() {
   const mode = useEditorStore((s) => s.mode);
   const createTool = useEditorStore((s) => s.createTool);
@@ -214,6 +187,7 @@ export function Toolbar() {
   const isTracerTool = createTool === 'tracer';
   const isForceSensorTool = createTool === 'forceSensor';
   const isMirrorTool = createTool === 'mirror';
+  const isShapesTool = createTool === 'shapes';
 
   const renderHints = () => {
     if (isPivotTool) {
@@ -350,6 +324,15 @@ export function Toolbar() {
         </>
       );
     }
+    if (isShapesTool) {
+      return (
+        <>
+          <div className="sim-hint">Click a shape edge or image on the canvas</div>
+          <div className="sim-hint">Shift+click to add to selection</div>
+          <div className="sim-hint">Flat list + body reassignment in Bodies panel</div>
+        </>
+      );
+    }
     if (createTool === 'outline') {
       return (
         <>
@@ -436,9 +419,6 @@ export function Toolbar() {
 
       {mode === 'create' ? (
         <>
-          <div className="panel-section-header">
-            <div className="panel-title">Tools</div>
-          </div>
           <div className="toolbar-section">
             {/* Joints group */}
             <div className="toolbar-group-label">Joints</div>
@@ -475,7 +455,7 @@ export function Toolbar() {
               onClick={() => setCreateTool('spring')}
             >
               <IconSpring />
-              <span className="tool-name">Linear spring</span>
+              <span className="tool-name">Spring</span>
             </button>
 
             <button
@@ -483,7 +463,7 @@ export function Toolbar() {
               onClick={() => setCreateTool('damper')}
             >
               <IconDamper />
-              <span className="tool-name">Linear damper</span>
+              <span className="tool-name">Damper</span>
             </button>
 
             <button
@@ -494,47 +474,16 @@ export function Toolbar() {
               <span className="tool-name">Torsion spring</span>
             </button>
 
-            {/* Shapes group */}
-            <div className="toolbar-group-label">Shapes</div>
+            {/* Overlays group */}
+            <div className="toolbar-group-label">Overlays</div>
 
             <button
-              className={`tool-btn ${createTool === 'outline' ? 'active' : ''}`}
+              className={`tool-btn ${['outline', 'rectangle', 'circle', 'ngon', 'trim'].includes(createTool) ? 'active' : ''}`}
               onClick={() => setCreateTool('outline')}
+              title="Draw overlays. Choose Outline / Rectangle / Circle / N-gon / Trim from the canvas palette."
             >
               <IconOutline />
-              <span className="tool-name">Outline</span>
-            </button>
-
-            <button
-              className={`tool-btn ${createTool === 'rectangle' ? 'active' : ''}`}
-              onClick={() => setCreateTool('rectangle')}
-            >
-              <IconRectangle />
-              <span className="tool-name">Rectangle</span>
-            </button>
-
-            <button
-              className={`tool-btn ${createTool === 'circle' ? 'active' : ''}`}
-              onClick={() => setCreateTool('circle')}
-            >
-              <IconCircle />
-              <span className="tool-name">Circle</span>
-            </button>
-
-            <button
-              className={`tool-btn ${createTool === 'ngon' ? 'active' : ''}`}
-              onClick={() => setCreateTool('ngon')}
-            >
-              <IconNgon />
-              <span className="tool-name">N-gon</span>
-            </button>
-
-            <button
-              className={`tool-btn ${createTool === 'trim' ? 'active' : ''}`}
-              onClick={() => setCreateTool('trim')}
-            >
-              <IconTrim />
-              <span className="tool-name">Power Trim</span>
+              <span className="tool-name">Draw</span>
             </button>
 
             <button
@@ -573,15 +522,15 @@ export function Toolbar() {
             </button>
           </div>
 
-          <div className="panel-section-header">
-            <div className="panel-title">Interact</div>
-          </div>
+          <hr className="toolbar-divider" aria-hidden />
+
           <div className="toolbar-section interact-hints-fieldset">
             {renderHints()}
           </div>
 
           {isMirrorTool && (
             <>
+              <hr className="toolbar-divider" aria-hidden />
               <div className="panel-section-header">
                 <div className="panel-title">Options</div>
               </div>
@@ -612,10 +561,12 @@ export function Toolbar() {
           )}
 
           {isLinearAxialTool && (
-            <fieldset
-              className="toolbar-section panel-content interact-fieldset mirror-options-fieldset toolbar-spring-submodes"
-              aria-label="Linear spring or damper: how endpoints attach"
-            >
+            <>
+              <hr className="toolbar-divider" aria-hidden />
+              <fieldset
+                className="toolbar-section panel-content interact-fieldset mirror-options-fieldset toolbar-spring-submodes"
+                aria-label="Spring or damper: how endpoints attach"
+              >
               <div className="mirror-options mirror-options-stack">
                 <label className="panel-toggle-row">
                   <input
@@ -646,10 +597,12 @@ export function Toolbar() {
                 </label>
               </div>
             </fieldset>
+            </>
           )}
 
           {showMarqueeBodiesPanel && (
             <>
+              <hr className="toolbar-divider" aria-hidden />
               <div className="panel-section-header">
                 <div className="panel-title">Selection</div>
               </div>
@@ -680,9 +633,7 @@ export function Toolbar() {
         </>
       ) : (
         <>
-          <div className="panel-section-header">
-            <div className="panel-title">Interact</div>
-          </div>
+          <hr className="toolbar-divider" aria-hidden />
           <div className="toolbar-section">
             <div className="sim-hint">Click & drag joints, links, or shapes to apply force</div>
             <div className="sim-hint">Middle-click to pan</div>

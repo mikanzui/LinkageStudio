@@ -3,7 +3,7 @@ import { useMechanismStore } from '../../store/mechanism-store';
 import { useEditorStore } from '../../store/editor-store';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import { DOF_TOOLTIP } from '../../core/solver/dof';
-import { FORCE_READOUT_LABEL_HINT } from '../../utils/units';
+import { FORCE_UNITS_TOGGLE_HELP } from '../../utils/units';
 import { isDevSolverTimingOverlayEnabled } from '../../utils/dev-solver-overlay';
 
 export function SimulationPanel() {
@@ -55,19 +55,7 @@ export function SimulationPanel() {
     ) : null;
 
   const stepErrorBanner = stepError ? (
-    <div
-      className="panel-surface panel-section"
-      style={{
-        border: '1px solid #c62828',
-        background: '#3e2723',
-        color: '#ffccbc',
-        fontSize: 12,
-        padding: '8px 10px',
-        display: 'flex',
-        gap: 8,
-        alignItems: 'flex-start',
-      }}
-    >
+    <div className="panel-step-error-banner">
       <span style={{ flex: 1 }}>{stepError}</span>
       <button
         type="button"
@@ -80,7 +68,7 @@ export function SimulationPanel() {
     </div>
   ) : null;
 
-  // Physics controls - visible in both modes (title rendered above box)
+  // Physics controls - visible in both modes (section header above flat block)
   const physicsSection = (
     <>
       <label className="panel-toggle-row">
@@ -173,16 +161,27 @@ export function SimulationPanel() {
         />
         Show rulers
       </label>
-      <label className="panel-toggle-row" title={FORCE_READOUT_LABEL_HINT}>
-        <input
-          type="checkbox"
-          checked={showForceUnits}
-          onChange={() => useEditorStore.getState().toggleShowForceUnits()}
-        />
-        Force units on links (scaled model)
-      </label>
-      <div className="panel-info" style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2, marginBottom: 2 }}>
-        To hide on-canvas force readouts, uncheck the option above. To remove a force sensor, select it and press Delete, or open its body in the Body panel and remove the sensor there.
+      <div className="panel-toggle-with-hint">
+        <label className="panel-toggle-with-hint-label">
+          <input
+            type="checkbox"
+            checked={showForceUnits}
+            onChange={() => useEditorStore.getState().toggleShowForceUnits()}
+          />
+          Force units on links (scaled model)
+        </label>
+        <button
+          type="button"
+          className="panel-hint-btn"
+          aria-label="About force readouts on links"
+          title={FORCE_UNITS_TOGGLE_HELP}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" aria-hidden>
+            <circle cx="8" cy="8" r="6.35" />
+            <line x1="8" y1="11.4" x2="8" y2="7.15" />
+            <circle cx="8" cy="5.1" r="0.85" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
       </div>
       <label className="panel-toggle-row">
         <input
@@ -266,7 +265,7 @@ export function SimulationPanel() {
         </div>
         {stepErrorBanner}
         {devSolverTimingHud}
-        <div className="panel-surface panel-section">
+        <div className="panel-section-flat">
           <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
           <div className="panel-info">Time: {time.toFixed(2)}s</div>
           <div className="sim-controls">
@@ -286,17 +285,19 @@ export function SimulationPanel() {
           </label>
         </div>
 
+        <hr className="panel-section-divider" aria-hidden />
         <div className="panel-section-header">
           <div className="panel-title">Physics</div>
         </div>
-        <div className="panel-surface panel-section">
+        <div className="panel-section-flat">
           {physicsSection}
         </div>
 
+        <hr className="panel-section-divider" aria-hidden />
         <div className="panel-section-header">
           <div className="panel-title">View</div>
         </div>
-        <div className="panel-surface panel-section">
+        <div className="panel-section-flat">
           {viewSection}
         </div>
       </div>
@@ -311,21 +312,23 @@ export function SimulationPanel() {
       </div>
       {stepErrorBanner}
       {devSolverTimingHud}
-      <div className="panel-surface panel-section">
+      <div className="panel-section-flat">
         <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
       </div>
 
+      <hr className="panel-section-divider" aria-hidden />
       <div className="panel-section-header">
         <div className="panel-title">Physics</div>
       </div>
-      <div className="panel-surface panel-section">
+      <div className="panel-section-flat">
         {physicsSection}
       </div>
 
+      <hr className="panel-section-divider" aria-hidden />
       <div className="panel-section-header">
         <div className="panel-title">View</div>
       </div>
-      <div className="panel-surface panel-section">
+      <div className="panel-section-flat">
         {viewSection}
       </div>
     </div>

@@ -2,6 +2,9 @@
 export const FORCE_READOUT_LABEL_HINT =
   'Displayed “N / kN” values are solver model units scaled for readability, not strict SI calibrated to masses in the file.';
 
+/** Native tooltip for the View → force-units toggle (model scaling + hide/remove workflow). */
+export const FORCE_UNITS_TOGGLE_HELP = `${FORCE_READOUT_LABEL_HINT} Uncheck this option to hide on-canvas readouts. To remove a force sensor, select it and press Delete, or open its body in the Body panel and remove the sensor there.`;
+
 /** Short line for on-canvas force labels (see `draw-overlays.ts`). */
 export const FORCE_READOUT_LABEL_HINT_SHORT = 'Model-scaled readout';
 

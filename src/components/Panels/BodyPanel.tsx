@@ -3,7 +3,7 @@ import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { BODY_COLORS } from '../../utils/constants';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
-import { BodyNodesInlineList, BodyNodesTrigger } from './BodyNodesMenu';
+import { BodyNodesInlineList, bodyHasFeatureNodes } from './BodyNodesMenu';
 
 /** Eye open SVG icon */
 function EyeIcon() {
@@ -74,7 +74,6 @@ export function BodyPanel() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [collapsedBodies, setCollapsedBodies] = useState<Set<string>>(new Set());
-  const [featuresMenuBodyId, setFeaturesMenuBodyId] = useState<string | null>(null);
   const [editingJointLabelId, setEditingJointLabelId] = useState<string | null>(null);
 
   const tracers = useMechanismStore((s) => s.tracers);
@@ -88,7 +87,8 @@ export function BodyPanel() {
   const removeBodyFromCollider = useMechanismStore((s) => s.removeBodyFromCollider);
 
   const usedColors = new Set(Object.values(bodies).map((b) => b.color));
-  const isOutlineMode = createTool === 'outline' || createTool === 'tracer' || createTool === 'rectangle' || createTool === 'circle' || createTool === 'ngon' || createTool === 'trim';
+  const isOutlineMode = createTool === 'outline' || createTool === 'tracer' || createTool === 'rectangle' || createTool === 'circle' || createTool === 'ngon' || createTool === 'trim' || createTool === 'image';
+  const isShapesBrowser = [...selectedIds].some((id) => outlines[id] || images[id]);
 
   const selectedJointId = [...selectedIds].find((id) => joints[id]);
   const selectedColliderId = [...selectedIds].find((id) => colliders[id]);
@@ -137,11 +137,14 @@ export function BodyPanel() {
           if (!link) return false;
           return link.jointIds.some((jid) => body.jointIds.includes(jid));
         });
-        const hasChildren = bodyOutlines.length > 0 || bodyImages.length > 0 || bodyTracers.length > 0 || bodyForceSensors.length > 0;
+        const hasTreeOutlinesOrImages = !isShapesBrowser && (bodyOutlines.length > 0 || bodyImages.length > 0);
+        const hasChildren = hasTreeOutlinesOrImages || bodyTracers.length > 0 || bodyForceSensors.length > 0;
+        const hasFeatures = bodyHasFeatureNodes(body, joints, links, springs);
+        const hasExpandable = hasChildren || hasFeatures;
         const isCollapsed = collapsedBodies.has(body.id);
 
         return (
-          <div key={body.id} className="body-node-group" data-body-node-menu={body.id}>
+          <div key={body.id} className="body-node-group">
             {/* Body row */}
             <div
               className={`body-row ${isActive ? 'active' : ''}`}
@@ -156,27 +159,18 @@ export function BodyPanel() {
                 } else toggleActiveBody(body.id);
               }}
             >
-              {/* Collapse chevron */}
-              {hasChildren ? (
+              {/* Single chevron: expands joints/springs + overlays. */}
+              {hasExpandable ? (
                 <span
                   onClick={(e) => { e.stopPropagation(); toggleCollapsed(body.id); }}
                   style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#777' }}
+                  title={isCollapsed ? 'Show body contents' : 'Hide body contents'}
                 >
                   <ChevronIcon expanded={!isCollapsed} />
                 </span>
               ) : (
                 <span style={{ width: 10, flexShrink: 0 }} />
               )}
-
-              <div className="body-nodes-wrap">
-                <BodyNodesTrigger
-                  isOpen={featuresMenuBodyId === body.id}
-                  onToggle={() => {
-                    setFeaturesMenuBodyId((prev) => (prev === body.id ? null : body.id));
-                    setEditingJointLabelId(null);
-                  }}
-                />
-              </div>
 
               {/* Selection control */}
               {isOutlineMode ? (
@@ -298,34 +292,27 @@ export function BodyPanel() {
               )}
             </div>
 
-            {featuresMenuBodyId === body.id && (
-              <BodyNodesInlineList
-                body={body}
-                bodyMenuId={body.id}
-                bodies={bodies}
-                baseBodyId={baseBodyId}
-                joints={joints}
-                links={links}
-                springs={springs}
-                onClose={() => {
-                  setFeaturesMenuBodyId(null);
-                  setEditingJointLabelId(null);
-                }}
-                removeJoint={removeJoint}
-                removeSpring={removeSpring}
-                setJointLabel={setJointLabel}
-                select={select}
-                selectedIds={selectedIds}
-                editingJointLabelId={editingJointLabelId}
-                setEditingJointLabelId={setEditingJointLabelId}
-              />
-            )}
-
-            {/* Collapsible children: outlines + images */}
-            {hasChildren && !isCollapsed && (
+            {!isCollapsed && hasExpandable && (
               <div style={{ marginLeft: 14 }}>
-                {/* Outlines */}
-                {bodyOutlines.map((outline) => {
+                {hasFeatures && (
+                  <BodyNodesInlineList
+                    body={body}
+                    bodies={bodies}
+                    baseBodyId={baseBodyId}
+                    joints={joints}
+                    links={links}
+                    springs={springs}
+                    removeJoint={removeJoint}
+                    removeSpring={removeSpring}
+                    setJointLabel={setJointLabel}
+                    select={select}
+                    selectedIds={selectedIds}
+                    editingJointLabelId={editingJointLabelId}
+                    setEditingJointLabelId={setEditingJointLabelId}
+                  />
+                )}
+                {/* Outlines (hidden here while a shape/image is selected; use the property panel/context menu). */}
+                {!isShapesBrowser && bodyOutlines.map((outline) => {
                   const isOutlineEditing = editingId === outline.id;
                   const isSelected = selectedIds.has(outline.id);
                   return (
@@ -437,7 +424,7 @@ export function BodyPanel() {
                 })}
 
                 {/* Images */}
-                {bodyImages.map((img) => (
+                {!isShapesBrowser && bodyImages.map((img) => (
                   <div
                     key={img.id}
                     style={{

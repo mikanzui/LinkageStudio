@@ -5,31 +5,43 @@
   padding: 8px;
   background: var(--bg-elevated);
   border-right: 1px solid var(--border-subtle);
-  width: 140px;
+  width: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
 
-/* Inset blocks — aligned with right-panel .panel-surface */
+/* Sections — flat layout; separators via .toolbar-divider */
 .toolbar-section {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  transition:
-    background var(--transition-tactile),
-    border-color var(--transition-tactile),
-    box-shadow var(--transition-tactile);
+  padding: 4px 2px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
-.toolbar-section:hover {
-  background: var(--surface-hover-mid);
-  border-color: rgba(255, 255, 255, 0.11);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+.toolbar-divider {
+  border: none;
+  height: 0;
+  margin: 6px 4px 4px;
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* Fieldsets use global .panel-content (boxed); keep toolbar visually flat */
+.toolbar fieldset.toolbar-section.panel-content {
+  padding: 4px 2px 6px;
+  border: none;
+  border-bottom: none;
+  background: transparent;
+  backdrop-filter: none;
+  gap: 4px;
+}
+
+.toolbar fieldset.toolbar-section.panel-content legend {
+  padding-left: 2px;
 }
 
 .toolbar-label {
@@ -134,12 +146,12 @@
 }
 
 .mode-btn:first-child {
-  border-radius: 4px 0 0 4px;
+  border-radius: 12px 0 0 12px;
   border-right: none;
 }
 
 .mode-btn:last-child {
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 12px 12px 0;
 }
 
 .mode-btn.active {

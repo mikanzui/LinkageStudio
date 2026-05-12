@@ -1,3 +1,4 @@
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MechanismCanvas } from './Canvas/MechanismCanvas';
 import { CanvasViewportBar } from './Canvas/CanvasViewportBar';
 import { WorldContextMenu } from './Canvas/WorldContextMenu';
@@ -6,23 +7,253 @@ import { Toolbar } from './Toolbar/Toolbar';
 import { BodyPanel } from './Panels/BodyPanel';
 import { PropertyPanel } from './Panels/PropertyPanel';
 import { SimulationPanel } from './Panels/SimulationPanel';
-import { useEditorStore } from '../store/editor-store';
+import { useEditorStore, DEFAULT_LEFT_SIDEBAR_WIDTH_PX, DEFAULT_RIGHT_SIDEBAR_WIDTH_PX } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
 import { switchMode } from '../utils/mode-switch';
 import { deleteSelectedEntities } from '../utils/delete-selection';
 import { screenToWorld } from '../renderer/camera';
 import './Layout.css';
 
-/* ---- Shared chevron icon ---- */
-const ChevronIcon = ({ direction }: { direction: 'left' | 'right' }) => (
-  <svg width="12" height="12" viewBox="0 0 12 12">
-    {direction === 'left' ? (
-      <path d="M8 1L3 6L8 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    ) : (
-      <path d="M4 1L9 6L4 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    )}
-  </svg>
-);
+/** Snap grid + auto-collapse when dragged narrower than threshold (preview can go lower during drag). */
+const SIDEBAR_SNAP_PX = 16;
+const LEFT_SIDEBAR_MIN_COMMIT_PX = 140;
+const RIGHT_SIDEBAR_MIN_COMMIT_PX = 220;
+const LEFT_SIDEBAR_COLLAPSE_BELOW_PX = 96;
+const RIGHT_SIDEBAR_COLLAPSE_BELOW_PX = 168;
+const LEFT_DRAG_PREVIEW_FLOOR_PX = 48;
+const RIGHT_DRAG_PREVIEW_FLOOR_PX = 72;
+
+function sidebarResizeClampMax(side: 'left' | 'right'): number {
+  if (typeof globalThis.window === 'undefined') return 560;
+  const min = side === 'left' ? LEFT_SIDEBAR_MIN_COMMIT_PX : RIGHT_SIDEBAR_MIN_COMMIT_PX;
+  return Math.max(min + 40, Math.floor(globalThis.window.innerWidth * 0.46));
+}
+
+function SidebarEdgeRail({
+  side,
+  collapsed,
+  previewWidth,
+  onPreviewWidth,
+}: {
+  side: 'left' | 'right';
+  collapsed: boolean;
+  previewWidth: number | null;
+  onPreviewWidth: (w: number | null) => void;
+}) {
+  const committedWidth = useEditorStore((s) => (side === 'left' ? s.leftSidebarWidthPx : s.rightSidebarWidthPx));
+  const setCommittedWidth = useEditorStore((s) => (side === 'left' ? s.setLeftSidebarWidthPx : s.setRightSidebarWidthPx));
+  const toggleCollapsed = useEditorStore((s) => (side === 'left' ? s.toggleLeftCollapsed : s.toggleRightCollapsed));
+
+  const dragRef = useRef<{
+    pid: number;
+    startX: number;
+    startW: number;
+    captureEl: HTMLElement;
+    pointerType: string;
+  } | null>(null);
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const latestRawRef = useRef(committedWidth);
+  const previewCbRef = useRef(onPreviewWidth);
+  const collapsedGestureStartRef = useRef({ x: 0, y: 0 });
+  previewCbRef.current = onPreviewWidth;
+
+  useEffect(() => {
+    latestRawRef.current = committedWidth;
+  }, [committedWidth]);
+
+  useLayoutEffect(() => {
+    if (collapsed) return;
+
+    const applySnapCommit = () => {
+      const raw = latestRawRef.current;
+      previewCbRef.current(null);
+
+      const max = sidebarResizeClampMax(side);
+      const st = useEditorStore.getState();
+      if (side === 'left') {
+        if (raw < LEFT_SIDEBAR_COLLAPSE_BELOW_PX) {
+          st.toggleLeftCollapsed();
+          return;
+        }
+        const snapped = Math.round(Math.min(raw, max) / SIDEBAR_SNAP_PX) * SIDEBAR_SNAP_PX;
+        st.setLeftSidebarWidthPx(Math.max(snapped, LEFT_SIDEBAR_MIN_COMMIT_PX));
+      } else {
+        if (raw < RIGHT_SIDEBAR_COLLAPSE_BELOW_PX) {
+          st.toggleRightCollapsed();
+          return;
+        }
+        const snapped = Math.round(Math.min(raw, max) / SIDEBAR_SNAP_PX) * SIDEBAR_SNAP_PX;
+        st.setRightSidebarWidthPx(Math.max(snapped, RIGHT_SIDEBAR_MIN_COMMIT_PX));
+      }
+    };
+
+    const finishResize = (expectedPid: number | 'any') => {
+      const d = dragRef.current;
+      if (!d) return;
+      if (expectedPid !== 'any' && d.pid !== expectedPid) return;
+      dragRef.current = null;
+      try {
+        if (d.captureEl.hasPointerCapture(d.pid)) {
+          d.captureEl.releasePointerCapture(d.pid);
+        }
+      } catch {
+        /* already released */
+      }
+      applySnapCommit();
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d || e.pointerId !== d.pid) return;
+      // If the button was released off-window, some browsers omit pointerup until later;
+      // the next pointermove often arrives with buttons === 0 — commit snap then.
+      if (e.pointerType === 'mouse' && e.buttons === 0) {
+        finishResize(e.pointerId);
+        return;
+      }
+      e.preventDefault();
+      const max = sidebarResizeClampMax(side);
+      let raw: number;
+      if (side === 'left') {
+        raw = d.startW + (e.clientX - d.startX);
+        raw = Math.min(Math.max(raw, LEFT_DRAG_PREVIEW_FLOOR_PX), max);
+      } else {
+        raw = d.startW - (e.clientX - d.startX);
+        raw = Math.min(Math.max(raw, RIGHT_DRAG_PREVIEW_FLOOR_PX), max);
+      }
+      latestRawRef.current = raw;
+      previewCbRef.current(raw);
+    };
+
+    const onWindowBlur = () => finishResize('any');
+    const onDocMouseLeave = () => {
+      const d = dragRef.current;
+      if (d?.pointerType === 'mouse') finishResize('any');
+    };
+
+    const onLostPointerCapture = (e: PointerEvent) => {
+      if (dragRef.current?.pid === e.pointerId) finishResize(e.pointerId);
+    };
+
+    const onPointerUp = (e: PointerEvent) => finishResize(e.pointerId);
+    const onPointerCancel = (e: PointerEvent) => finishResize(e.pointerId);
+
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerCancel);
+    window.addEventListener('blur', onWindowBlur);
+    document.documentElement.addEventListener('mouseleave', onDocMouseLeave);
+
+    const rail = railRef.current;
+    if (rail) {
+      rail.addEventListener('lostpointercapture', onLostPointerCapture);
+    }
+
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
+      window.removeEventListener('blur', onWindowBlur);
+      document.documentElement.removeEventListener('mouseleave', onDocMouseLeave);
+      if (rail) {
+        rail.removeEventListener('lostpointercapture', onLostPointerCapture);
+      }
+      const dangling = dragRef.current;
+      if (dangling) {
+        dragRef.current = null;
+        try {
+          if (dangling.captureEl.hasPointerCapture(dangling.pid)) {
+            dangling.captureEl.releasePointerCapture(dangling.pid);
+          }
+        } catch {
+          /* ignore */
+        }
+        previewCbRef.current(null);
+      }
+    };
+  }, [side, collapsed]);
+
+  const onRailPointerDown = (e: React.PointerEvent) => {
+    if (collapsed) return;
+    const captureEl = e.currentTarget as HTMLElement;
+    dragRef.current = {
+      pid: e.pointerId,
+      startX: e.clientX,
+      startW: committedWidth,
+      captureEl,
+      pointerType: e.pointerType,
+    };
+    latestRawRef.current = committedWidth;
+    previewCbRef.current(committedWidth);
+    try {
+      captureEl.setPointerCapture(e.pointerId);
+    } catch {
+      /* passive target */
+    }
+    e.preventDefault();
+  };
+
+  const onRailDoubleClick = () => {
+    if (collapsed) return;
+    setCommittedWidth(side === 'left' ? DEFAULT_LEFT_SIDEBAR_WIDTH_PX : DEFAULT_RIGHT_SIDEBAR_WIDTH_PX);
+  };
+
+  const expandLabel = side === 'left' ? 'Expand toolbar' : 'Expand panel';
+  const resizeTitle =
+    'Drag to resize (snaps when you release). Drag very narrow to collapse. Double-click for default width.';
+
+  if (collapsed) {
+    const releaseCaptureSafe = (el: HTMLButtonElement, pid: number) => {
+      if (el.hasPointerCapture(pid)) el.releasePointerCapture(pid);
+    };
+
+    return (
+      <button
+        type="button"
+        className={`sidebar-edge-rail sidebar-edge-rail-${side} collapsed`}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          collapsedGestureStartRef.current = { x: e.clientX, y: e.clientY };
+          (e.currentTarget as HTMLButtonElement).setPointerCapture(e.pointerId);
+        }}
+        onPointerUp={(e) => {
+          const { x, y } = collapsedGestureStartRef.current;
+          const dx = e.clientX - x;
+          const dy = e.clientY - y;
+          const tapLike = Math.abs(dx) < 12 && Math.abs(dy) < 16;
+          const dragExpand =
+            side === 'left'
+              ? dx > 14
+              : dx < -14;
+          if (tapLike || dragExpand) {
+            toggleCollapsed();
+          }
+          releaseCaptureSafe(e.currentTarget as HTMLButtonElement, e.pointerId);
+        }}
+        onPointerCancel={(e) => {
+          releaseCaptureSafe(e.currentTarget as HTMLButtonElement, e.pointerId);
+        }}
+        aria-label={expandLabel}
+        title={`${expandLabel} — tap or drag toward canvas`}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={railRef}
+      className={`sidebar-edge-rail sidebar-edge-rail-${side}`}
+      onPointerDown={onRailPointerDown}
+      onDoubleClick={onRailDoubleClick}
+      role="separator"
+      aria-orientation="vertical"
+      aria-valuemin={side === 'left' ? LEFT_SIDEBAR_MIN_COMMIT_PX : RIGHT_SIDEBAR_MIN_COMMIT_PX}
+      aria-valuemax={Math.round(sidebarResizeClampMax(side))}
+      aria-valuenow={Math.round(previewWidth ?? committedWidth)}
+      title={resizeTitle}
+    />
+  );
+}
 
 /* ---- Mode icons ---- */
 
@@ -127,11 +358,50 @@ const IconTracerSmall = () => (
   </svg>
 );
 
+const IconForceSensorSmall = () => (
+  <svg width="18" height="18" viewBox="0 0 16 16">
+    <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.25" />
+    <polyline points="3,12 5,8 7,10 9,4 11,9 13,6" fill="none" stroke="currentColor" strokeWidth="1.05" strokeLinejoin="round" />
+    <circle cx="2" cy="8" r="1.35" fill="currentColor" />
+    <circle cx="14" cy="8" r="1.35" fill="currentColor" />
+  </svg>
+);
+
 const IconImageSmall = () => (
   <svg width="18" height="18" viewBox="0 0 16 16">
     <rect x="2" y="3" width="12" height="10" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.2" />
     <circle cx="5.5" cy="6.5" r="1.3" fill="currentColor" />
     <polyline points="2,11 5,8.5 7.5,10 10.5,6.5 14,9.5" fill="none" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+  </svg>
+);
+
+/** Icons for top canvas draw palette (match Toolbar overlay tools). */
+const DrawPaletteIconOutline = () => (
+  <svg className="shape-draw-palette-icon" width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <line x1="2.5" y1="11.5" x2="13.5" y2="4.5" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+  </svg>
+);
+const DrawPaletteIconRectangle = () => (
+  <svg className="shape-draw-palette-icon" width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <rect x="2" y="3" width="12" height="10" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+  </svg>
+);
+const DrawPaletteIconCircle = () => (
+  <svg className="shape-draw-palette-icon" width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" />
+  </svg>
+);
+const DrawPaletteIconNgon = () => (
+  <svg className="shape-draw-palette-icon" width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <polygon points="8,1.5 14,5 13,12 3,12 2,5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+  </svg>
+);
+const DrawPaletteIconTrim = () => (
+  <svg className="shape-draw-palette-icon" width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <line x1="2" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <line x1="14" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <circle cx="5" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+    <circle cx="11" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2" />
   </svg>
 );
 
@@ -275,8 +545,8 @@ function CollapsedBodyList() {
 export function Layout() {
   const leftCollapsed = useEditorStore((s) => s.leftCollapsed);
   const rightCollapsed = useEditorStore((s) => s.rightCollapsed);
-  const toggleLeft = useEditorStore((s) => s.toggleLeftCollapsed);
-  const toggleRight = useEditorStore((s) => s.toggleRightCollapsed);
+  const leftSidebarWidthPx = useEditorStore((s) => s.leftSidebarWidthPx);
+  const rightSidebarWidthPx = useEditorStore((s) => s.rightSidebarWidthPx);
   const mode = useEditorStore((s) => s.mode);
   const createTool = useEditorStore((s) => s.createTool);
   const setCreateTool = useEditorStore((s) => s.setCreateTool);
@@ -287,6 +557,9 @@ export function Layout() {
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
   const transientHint = useEditorStore((s) => s.transientHint);
   const dismissTransientHint = useEditorStore((s) => s.dismissTransientHint);
+
+  const [leftRailPreview, setLeftRailPreview] = useState<number | null>(null);
+  const [rightRailPreview, setRightRailPreview] = useState<number | null>(null);
 
   const handleImportImage = () => {
     const input = document.createElement('input');
@@ -326,26 +599,26 @@ export function Layout() {
     input.click();
   };
 
+  const drawTools = ['outline', 'rectangle', 'circle', 'ngon', 'trim'] as const;
+  const isDrawTool = drawTools.some((tool) => createTool === tool);
+
   return (
     <div className="app-layout">
       <TopBar />
       <div className="app-main">
 
         {/* ---- LEFT TOOLBAR ---- */}
-        {leftCollapsed ? (
-          <div className="toolbar-collapsed">
-            <button className="collapse-btn" onClick={toggleLeft} title="Expand toolbar">
-              <ChevronIcon direction="right" />
-            </button>
-
-            <div className="collapsed-mode-group">
-              <button
-                className={`collapsed-mode-btn top ${mode === 'create' ? 'active' : ''}`}
-                onClick={() => switchMode('create')}
-                title="Create mode"
-              >
-                <IconCreateMode />
-              </button>
+        <div className="left-sidebar-host">
+          {leftCollapsed ? (
+            <div className="toolbar-collapsed">
+              <div className="collapsed-mode-group">
+                <button
+                  className={`collapsed-mode-btn top ${mode === 'create' ? 'active' : ''}`}
+                  onClick={() => switchMode('create')}
+                  title="Create mode"
+                >
+                  <IconCreateMode />
+                </button>
               <button
                 className={`collapsed-mode-btn bottom simulate ${mode === 'simulate' ? 'active' : ''}`}
                 onClick={() => switchMode('simulate')}
@@ -358,7 +631,6 @@ export function Layout() {
             {mode === 'create' && (
               <>
                 <div className="collapsed-divider" />
-                <div className="collapsed-group-label">Joints</div>
                 <button
                   className={`collapsed-tool-btn ${createTool === 'joints' ? 'active' : ''}`}
                   onClick={() => setCreateTool('joints')}
@@ -382,18 +654,17 @@ export function Layout() {
                 </button>
 
                 <div className="collapsed-divider" />
-                <div className="collapsed-group-label">Springs</div>
                 <button
                   className={`collapsed-tool-btn ${createTool === 'spring' ? 'active' : ''}`}
                   onClick={() => setCreateTool('spring')}
-                  title="Linear spring — joint or link endpoints"
+                  title="Spring — joint or link endpoints"
                 >
                   <IconSpringSmall />
                 </button>
                 <button
                   className={`collapsed-tool-btn ${createTool === 'damper' ? 'active' : ''}`}
                   onClick={() => setCreateTool('damper')}
-                  title="Linear damper (dashpot)"
+                  title="Damper (dashpot)"
                 >
                   <IconDamperSmall />
                 </button>
@@ -406,11 +677,10 @@ export function Layout() {
                 </button>
 
                 <div className="collapsed-divider" />
-                <div className="collapsed-group-label">Shapes</div>
                 <button
-                  className={`collapsed-tool-btn ${createTool === 'outline' ? 'active' : ''}`}
+                  className={`collapsed-tool-btn ${isDrawTool ? 'active' : ''}`}
                   onClick={() => setCreateTool('outline')}
-                  title="Outline"
+                  title="Draw overlays"
                 >
                   <IconOutlineSmall />
                 </button>
@@ -425,19 +695,26 @@ export function Layout() {
                       if (!hasImages) handleImportImage();
                     }
                   }}
-                  title="Image"
+                  title="Image overlay"
                 >
                   <IconImageSmall />
                 </button>
 
                 <div className="collapsed-divider" />
-                <div className="collapsed-group-label">Sensors</div>
                 <button
                   className={`collapsed-tool-btn ${createTool === 'tracer' ? 'active' : ''}`}
                   onClick={() => setCreateTool('tracer')}
                   title="Path Plotter"
                 >
                   <IconTracerSmall />
+                </button>
+                <button
+                  className={`collapsed-tool-btn ${createTool === 'forceSensor' ? 'active' : ''}`}
+                  onClick={() => setCreateTool('forceSensor')}
+                  title="Force Sensor"
+                  aria-label="Force Sensor"
+                >
+                  <IconForceSensorSmall />
                 </button>
 
                 {/* Delete button — shown when a joint/outline/image or vertex is selected */}
@@ -450,21 +727,72 @@ export function Layout() {
               </>
             )}
           </div>
-        ) : (
-          <div className="toolbar-wrapper">
-            <div className="collapse-header">
-              <button className="collapse-btn" onClick={toggleLeft} title="Collapse toolbar">
-                <ChevronIcon direction="left" />
-              </button>
+          ) : (
+            <div className="left-sidebar-pane" style={{ width: leftRailPreview ?? leftSidebarWidthPx }}>
+              <Toolbar />
             </div>
-            <Toolbar />
-          </div>
-        )}
+          )}
+          <SidebarEdgeRail
+            side="left"
+            collapsed={leftCollapsed}
+            previewWidth={leftRailPreview}
+            onPreviewWidth={setLeftRailPreview}
+          />
+        </div>
 
         {/* ---- CANVAS ---- */}
         <div className="canvas-container">
           <MechanismCanvas />
           <CanvasViewportBar />
+          {mode === 'create' && isDrawTool && (
+            <div className="shape-draw-palette" role="toolbar" aria-label="Draw overlay tools">
+              <button
+                type="button"
+                className={`shape-draw-palette-btn ${createTool === 'outline' ? 'active' : ''}`}
+                onClick={() => setCreateTool('outline')}
+                title="Freeform outline"
+                aria-label="Freeform outline"
+              >
+                <DrawPaletteIconOutline />
+              </button>
+              <button
+                type="button"
+                className={`shape-draw-palette-btn ${createTool === 'rectangle' ? 'active' : ''}`}
+                onClick={() => setCreateTool('rectangle')}
+                title="Rectangle"
+                aria-label="Rectangle"
+              >
+                <DrawPaletteIconRectangle />
+              </button>
+              <button
+                type="button"
+                className={`shape-draw-palette-btn ${createTool === 'circle' ? 'active' : ''}`}
+                onClick={() => setCreateTool('circle')}
+                title="Circle"
+                aria-label="Circle"
+              >
+                <DrawPaletteIconCircle />
+              </button>
+              <button
+                type="button"
+                className={`shape-draw-palette-btn ${createTool === 'ngon' ? 'active' : ''}`}
+                onClick={() => setCreateTool('ngon')}
+                title="N-gon"
+                aria-label="N-gon polygon"
+              >
+                <DrawPaletteIconNgon />
+              </button>
+              <button
+                type="button"
+                className={`shape-draw-palette-btn ${createTool === 'trim' ? 'active' : ''}`}
+                onClick={() => setCreateTool('trim')}
+                title="Power trim"
+                aria-label="Power trim"
+              >
+                <DrawPaletteIconTrim />
+              </button>
+            </div>
+          )}
           <WorldContextMenu />
           {transientHint && (
             <div className="hint-toast" role="status" aria-live="polite">
@@ -477,25 +805,25 @@ export function Layout() {
         </div>
 
         {/* ---- RIGHT PANEL ---- */}
-        {rightCollapsed ? (
-          <div className="panel-collapsed">
-            <button className="collapse-btn" onClick={toggleRight} title="Expand panel">
-              <ChevronIcon direction="left" />
-            </button>
-            {mode === 'create' && <CollapsedBodyList />}
-          </div>
-        ) : (
-          <div className="right-panel">
-            <div className="collapse-header right">
-              <button className="collapse-btn" onClick={toggleRight} title="Collapse panel">
-                <ChevronIcon direction="right" />
-              </button>
+        <div className="right-sidebar-host">
+          <SidebarEdgeRail
+            side="right"
+            collapsed={rightCollapsed}
+            previewWidth={rightRailPreview}
+            onPreviewWidth={setRightRailPreview}
+          />
+          {rightCollapsed ? (
+            <div className="panel-collapsed">{mode === 'create' && <CollapsedBodyList />}</div>
+          ) : (
+            <div className="right-panel" style={{ width: rightRailPreview ?? rightSidebarWidthPx }}>
+              <div className="right-panel-scroll">
+                <BodyPanel />
+                <PropertyPanel />
+                <SimulationPanel />
+              </div>
             </div>
-            <BodyPanel />
-            <PropertyPanel />
-            <SimulationPanel />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

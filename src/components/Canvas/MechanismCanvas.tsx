@@ -10,6 +10,7 @@ import {
 import {
   hitTestAny,
   hitTestJoint,
+  hitTestOutline,
   hitTestOutlineFilled,
   hitTestLink,
   hitTestSpring,
@@ -241,6 +242,7 @@ export function MechanismCanvas() {
   }, []);
 
   const mode = useEditorStore((s) => s.mode);
+  const createTool = useEditorStore((s) => s.createTool);
   const activeTool = useEditorStore((s) => s.activeTool);
   const spacePanHeld = useEditorStore((s) => s.spacePanHeld);
   const simDrag = useEditorStore((s) => s.simDrag);
@@ -257,6 +259,8 @@ export function MechanismCanvas() {
         ? 'grab'
         : mode === 'simulate'
           ? 'grab'
+          : mode === 'create' && createTool === 'shapes'
+            ? 'pointer'
           : hoveredId
             ? 'pointer'
             : CROSSHAIR_CURSOR;
@@ -395,7 +399,7 @@ export function MechanismCanvas() {
           );
         }
 
-        if (!componentHit && editor.createTool === 'image') {
+        if (!componentHit && (editor.createTool === 'image' || editor.createTool === 'shapes')) {
           const selectedImageId = [...editor.selectedIds].find((id) => mechanism.images[id]);
           if (selectedImageId) {
             const img = mechanism.images[selectedImageId];
@@ -613,6 +617,39 @@ export function MechanismCanvas() {
             openMode: 'context',
           });
           return;
+        }
+
+        const outlineHit = hitTestOutline(
+          worldPos,
+          mechanism.outlines,
+          mechanism.bodies,
+          mechanism.joints,
+          editor.camera.zoom,
+        );
+        if (outlineHit) {
+          editor.select(outlineHit.id);
+          editor.setWorldContextMenu({
+            targetType: 'outline',
+            targetId: outlineHit.id,
+            screenPosition: screenPos,
+            openMode: 'context',
+          });
+          return;
+        }
+
+        const allImages = Object.values(mechanism.images);
+        for (let i = allImages.length - 1; i >= 0; i--) {
+          const img = allImages[i];
+          if (hitTestImage(worldPos, img)) {
+            editor.select(img.id);
+            editor.setWorldContextMenu({
+              targetType: 'image',
+              targetId: img.id,
+              screenPosition: screenPos,
+              openMode: 'context',
+            });
+            return;
+          }
         }
 
         // Collider barrier before link: A–C uses a rigid link; link hit-test would steal the segment.

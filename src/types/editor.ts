@@ -17,6 +17,8 @@ export type CreateTool =
   | 'damper'
   | 'torsionSpring'
   | 'outline'
+  /** Select outlines & images; compact list in Bodies panel */
+  | 'shapes'
   | 'rectangle'
   | 'circle'
   | 'ngon'

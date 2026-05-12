@@ -1192,6 +1192,40 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
+  // --- SHAPES PICKER (outlines + images only) ---
+  if (editor.createTool === 'shapes') {
+    const hitOutline = hitTestOutline(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, editor.camera.zoom);
+    if (hitOutline) {
+      if (e.shiftKey) editor.toggleSelect(hitOutline.id);
+      else editor.select(hitOutline.id);
+      editor.setWorldContextMenu({
+        targetType: 'outline',
+        targetId: hitOutline.id,
+        screenPosition: screenPos,
+        openMode: 'context',
+      });
+      return;
+    }
+    const allImages = Object.values(mechanism.images);
+    for (let i = allImages.length - 1; i >= 0; i--) {
+      const img = allImages[i];
+      if (hitTestImage(worldPos, img)) {
+        if (e.shiftKey) editor.toggleSelect(img.id);
+        else editor.select(img.id);
+        editor.setWorldContextMenu({
+          targetType: 'image',
+          targetId: img.id,
+          screenPosition: screenPos,
+          openMode: 'context',
+        });
+        return;
+      }
+    }
+    editor.clearSelection();
+    editor.setWorldContextMenu(null);
+    return;
+  }
+
   // --- BOX / LASSO (Pivot or Spring tool, Select viewport mode) ---
   if (
     (editor.createTool === 'joints' ||
@@ -1328,6 +1362,38 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       longPressJointId = SLIDER_RAIL_HOLD_JOINT_ID;
       scheduleSliderRailHoldMenu(e.clientX, e.clientY);
       return;
+    }
+  }
+
+  // Shape selection is available from the default create tool so clicking a drawn
+  // shape opens the compact shape menu/properties without a separate picker tool.
+  {
+    const hitOutline = hitTestOutline(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, editor.camera.zoom);
+    if (hitOutline) {
+      if (e.shiftKey) editor.toggleSelect(hitOutline.id);
+      else editor.select(hitOutline.id);
+      editor.setWorldContextMenu({
+        targetType: 'outline',
+        targetId: hitOutline.id,
+        screenPosition: screenPos,
+        openMode: 'context',
+      });
+      return;
+    }
+    const allImages = Object.values(mechanism.images);
+    for (let i = allImages.length - 1; i >= 0; i--) {
+      const img = allImages[i];
+      if (hitTestImage(worldPos, img)) {
+        if (e.shiftKey) editor.toggleSelect(img.id);
+        else editor.select(img.id);
+        editor.setWorldContextMenu({
+          targetType: 'image',
+          targetId: img.id,
+          screenPosition: screenPos,
+          openMode: 'context',
+        });
+        return;
+      }
     }
   }
 

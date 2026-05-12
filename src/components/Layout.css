@@ -30,6 +30,57 @@
   overflow: hidden;
 }
 
+.shape-draw-palette {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: min(430px, calc(100% - 28px));
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: rgba(22, 22, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.shape-draw-palette-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(230, 230, 235, 0.85);
+  line-height: 0;
+  cursor: pointer;
+}
+
+.shape-draw-palette-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.shape-draw-palette-btn:hover {
+  color: #fff;
+  background: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.shape-draw-palette-btn.active {
+  color: #b8d9ff;
+  background: rgba(74, 158, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(74, 158, 255, 0.35);
+}
+
 .hint-toast {
   position: absolute;
   bottom: max(56px, calc(40px + env(safe-area-inset-bottom, 0px)));
@@ -212,7 +263,8 @@
   background: rgba(10, 10, 10, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  padding: 3px 8px;
+  min-height: 20px;
+  padding: 3px 8px 3px 5px;
   opacity: 0;
   pointer-events: auto;
   cursor: pointer;
@@ -227,6 +279,7 @@
 
 .world-context-orbit-pill.dot-right {
   flex-direction: row-reverse;
+  padding: 3px 5px 3px 8px;
 }
 
 .world-context-orbit-pill:hover {
@@ -268,12 +321,48 @@
   animation: orbit-radial-in 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+.world-context-action-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+  opacity: 0;
+  animation: orbit-radial-in 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.world-context-action-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.world-context-action-btn--danger {
+  color: rgba(255, 200, 200, 0.95);
+  background: rgba(95, 24, 24, 0.78);
+  border: 1px solid rgba(255, 115, 115, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 74, 74, 0.16), 0 8px 20px rgba(0, 0, 0, 0.38);
+}
+
+.world-context-action-btn--danger:hover {
+  color: #fff;
+  background: rgba(142, 32, 32, 0.86);
+  border-color: rgba(255, 145, 145, 0.72);
+}
+
 .world-context-menu.closing .world-context-orbit-line {
   animation: orbit-line-in 180ms cubic-bezier(0.4, 0, 0.2, 1) reverse forwards !important;
 }
 
 .world-context-menu.closing .world-context-orbit-pill,
-.world-context-menu.closing .world-context-add-body-dot {
+.world-context-menu.closing .world-context-add-body-dot,
+.world-context-menu.closing .world-context-action-btn {
   animation: orbit-radial-in 220ms cubic-bezier(0.4, 0, 0.2, 1) reverse forwards !important;
 }
 
@@ -390,7 +479,7 @@
   backdrop-filter: blur(10px);
 }
 
-/* Inset rounded surface — matches Bodies list box; use with .panel-section */
+/* Inset rounded surface — Bodies list only on the right rail */
 .panel-surface {
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
@@ -401,7 +490,7 @@
     box-shadow var(--transition-tactile);
 }
 
-.panel-surface:hover {
+.panel-surface.body-list-group:hover {
   background: var(--surface-hover-mid);
   border-color: rgba(255, 255, 255, 0.11);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
@@ -412,6 +501,34 @@
   flex-direction: column;
   gap: 8px;
   padding: 8px 10px;
+}
+
+/* Flat blocks under section headers — divider lines separate groups */
+.panel-section-flat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px 12px;
+}
+
+.panel-section-divider {
+  border: none;
+  height: 0;
+  margin: 0 0 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.panel-step-error-banner {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  border: 1px solid #c62828;
+  background: #3e2723;
+  color: #ffccbc;
+  font-size: 12px;
 }
 
 .panel-section > .panel-subtitle:first-child {
@@ -1077,6 +1194,54 @@
   padding: 1px 0;
 }
 
+.panel-toggle-with-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  padding: 1px 0;
+}
+
+.panel-toggle-with-hint-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.panel-hint-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: help;
+  transition:
+    color var(--transition-tactile),
+    background var(--transition-tactile);
+}
+
+.panel-hint-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.panel-hint-btn:focus-visible {
+  outline: 2px solid var(--accent, #4a9eff);
+  outline-offset: 1px;
+}
+
 .panel-slider-row {
   display: grid;
   grid-template-columns: 72px 1fr 34px;
@@ -1197,57 +1362,100 @@
   color: #f66;
 }
 
-/* --- Collapsible panels --- */
+/* ---- Sidebars: embedded resize rails + collapse ---- */
 
-/* Shared collapse/expand header bar */
-.collapse-header {
+.left-sidebar-host,
+.right-sidebar-host {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--surface-1);
-  backdrop-filter: blur(10px);
+  flex-direction: row;
+  align-items: stretch;
+  flex-shrink: 0;
+  overflow: visible;
+  z-index: 5;
 }
 
-.collapse-header.right {
-  justify-content: flex-start;
-}
-
-.collapse-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  border-radius: 3px;
-  padding: 0;
-  transition: all 0.15s;
-}
-
-.collapse-btn:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
-}
-
-/* Expanded toolbar wrapper */
-.toolbar-wrapper {
+.left-sidebar-pane {
+  flex-shrink: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-/* Right panel (expanded) */
+.left-sidebar-pane > .toolbar {
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-edge-rail {
+  flex-shrink: 0;
+  width: 12px;
+  position: relative;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.03);
+  touch-action: none;
+}
+
+.sidebar-edge-rail:not(.collapsed) {
+  cursor: col-resize;
+}
+
+.sidebar-edge-rail.collapsed {
+  cursor: ew-resize;
+  touch-action: none;
+  width: 18px;
+  min-width: 18px;
+}
+
+.sidebar-edge-rail.collapsed:focus-visible {
+  cursor: pointer;
+}
+
+button.sidebar-edge-rail {
+  display: block;
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  font: inherit;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+button.sidebar-edge-rail:focus-visible {
+  outline: 2px solid rgba(74, 158, 255, 0.55);
+  outline-offset: -1px;
+}
+
+/* Right panel (expanded): inner region scrolls; width set inline */
 .right-panel {
-  width: 260px;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
   background: var(--bg-elevated);
   border-left: 1px solid var(--border-subtle);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  overflow: visible;
+}
+
+.right-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  position: relative;
+}
+
+/* Right column grows vertically with app-main; fixed width from inline style */
+.right-sidebar-host > .right-panel {
+  min-height: 0;
+}
+
+.right-sidebar-host > .panel-collapsed {
+  min-height: 0;
 }
 
 /* Right panel (collapsed) */
@@ -1257,9 +1465,15 @@
   align-items: center;
   padding: 4px;
   gap: 3px;
+  padding-top: 8px;
   background: var(--bg-elevated);
   border-left: 1px solid var(--border-subtle);
   overflow-y: auto;
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 /* Mini body list in collapsed right panel */
@@ -1330,21 +1544,24 @@
 /* ---- LEFT TOOLBAR COLLAPSED ---- */
 
 .toolbar-collapsed {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 4px;
+  padding-top: 8px;
   gap: 2px;
   background: var(--bg-elevated);
   border-right: 1px solid var(--border-subtle);
   width: 36px;
+  flex-shrink: 0;
 }
 
 /* Joined mode toggle group */
 .collapsed-mode-group {
   display: flex;
   flex-direction: column;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .collapsed-mode-btn {
@@ -1392,15 +1609,6 @@
   height: 0;
   border-top: 1px solid var(--border-subtle);
   margin: 4px 0 2px;
-}
-
-/* Tiny group label */
-.collapsed-group-label {
-  font-size: 7px;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  letter-spacing: 0.4px;
-  margin-bottom: 1px;
 }
 
 /* Tool buttons in collapsed state */
@@ -1459,34 +1667,8 @@
   gap: 0;
 }
 
-.body-nodes-wrap {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  width: 18px;
-}
-
-.body-nodes-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 20px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: #888;
-  cursor: pointer;
-}
-
-.body-nodes-trigger:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ccc;
-}
-
 .body-nodes-inline {
-  margin: 2px 6px 6px 22px;
+  margin: 4px 0 8px 0;
   padding: 6px 8px 8px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1628,7 +1810,7 @@
 /* ---- Touch / iPad: momentum scroll & safe use of vertical pan in side panels ---- */
 /* .toolbar scroll/touch-action: see Toolbar.css */
 
-.right-panel,
+.right-panel-scroll,
 .panel-collapsed {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
@@ -1641,25 +1823,13 @@
 
 /* ~44px minimum tap targets where controls are small (finger / Apple Pencil as touch) */
 @media (hover: none) and (pointer: coarse) {
-  .body-nodes-wrap {
-    width: auto;
-    min-width: 44px;
-    min-height: 44px;
-    align-items: center;
-    justify-content: center;
+  .sidebar-edge-rail {
+    width: 16px;
   }
 
-  .body-nodes-trigger {
-    min-width: 44px;
-    min-height: 44px;
-    width: auto;
-    height: auto;
-    padding: 10px 12px;
-  }
-
-  .body-nodes-trigger:active {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ddd;
+  .sidebar-edge-rail.collapsed {
+    width: 22px;
+    min-width: 22px;
   }
 
   .body-nodes-row {

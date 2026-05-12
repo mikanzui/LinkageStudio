@@ -36,24 +36,6 @@ function SpringListIcon() {
   );
 }
 
-function ChevronDownIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ transition: 'transform 0.15s ease', transform: open ? 'rotate(180deg)' : 'none' }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-
 function bodiesContainingJoint(jointId: string, bodies: Record<string, Body>, baseBodyId: string): Body[] {
   const list = Object.values(bodies).filter((b) => b.jointIds.includes(jointId));
   list.sort((a, b) => {
@@ -62,6 +44,20 @@ function bodiesContainingJoint(jointId: string, bodies: Record<string, Body>, ba
     return a.name.localeCompare(b.name);
   });
   return list;
+}
+
+/** True if the body has at least one visible joint or a spring that references this body. */
+export function bodyHasFeatureNodes(
+  body: Body,
+  joints: Record<string, Joint>,
+  links: Record<string, Link>,
+  springs: Record<string, MechanismSpring>,
+): boolean {
+  const visibleJoints = body.jointIds
+    .map((id) => joints[id])
+    .filter((j): j is Joint => Boolean(j) && !j.hidden);
+  if (visibleJoints.length > 0) return true;
+  return Object.values(springs).some((sp) => springTouchesBody(sp, body, links));
 }
 
 function JointLabelEditor({
@@ -101,13 +97,11 @@ function JointLabelEditor({
 
 type ListProps = {
   body: Body;
-  bodyMenuId: string;
   bodies: Record<string, Body>;
   baseBodyId: string;
   joints: Record<string, Joint>;
   links: Record<string, Link>;
   springs: Record<string, MechanismSpring>;
-  onClose: () => void;
   removeJoint: (id: string) => void;
   removeSpring: (id: string) => void;
   setJointLabel: (id: string, label: string) => void;
@@ -117,16 +111,14 @@ type ListProps = {
   setEditingJointLabelId: (id: string | null) => void;
 };
 
-/** Inline list under a body row — closes on outside click within the bodies panel. */
+/** Joints & springs for one body, shown under the body row when expanded. */
 export function BodyNodesInlineList({
   body,
-  bodyMenuId,
   bodies,
   baseBodyId,
   joints,
   links,
   springs,
-  onClose,
   removeJoint,
   removeSpring,
   setJointLabel,
@@ -135,15 +127,6 @@ export function BodyNodesInlineList({
   editingJointLabelId,
   setEditingJointLabelId,
 }: ListProps) {
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      const root = document.querySelector(`[data-body-node-menu="${bodyMenuId}"]`);
-      if (root && !root.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('pointerdown', onDown, true);
-    return () => document.removeEventListener('pointerdown', onDown, true);
-  }, [bodyMenuId, onClose]);
-
   const visibleJoints = body.jointIds
     .map((id) => joints[id])
     .filter((j): j is Joint => Boolean(j) && !j.hidden);
@@ -258,25 +241,3 @@ export function BodyNodesInlineList({
   );
 }
 
-type TriggerProps = {
-  isOpen: boolean;
-  onToggle: () => void;
-};
-
-export function BodyNodesTrigger({ isOpen, onToggle }: TriggerProps) {
-  return (
-    <button
-      type="button"
-      className="body-nodes-trigger"
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
-      title="Features on this body (joints & springs)"
-      aria-expanded={isOpen}
-      aria-haspopup="true"
-    >
-      <ChevronDownIcon open={isOpen} />
-    </button>
-  );
-}

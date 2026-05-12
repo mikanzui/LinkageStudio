@@ -298,9 +298,12 @@ export function PropertyPanel() {
   const images = useMechanismStore((s) => s.images);
   const springs = useMechanismStore((s) => s.springs);
   const bodies = useMechanismStore((s) => s.bodies);
+  const baseBodyId = useMechanismStore((s) => s.baseBodyId);
   const moveJoint = useMechanismStore((s) => s.moveJoint);
   const updateImage = useMechanismStore((s) => s.updateImage);
   const updateSpring = useMechanismStore((s) => s.updateSpring);
+  const moveOutlineToBody = useMechanismStore((s) => s.moveOutlineToBody);
+  const moveImageToBody = useMechanismStore((s) => s.moveImageToBody);
 
   const visibleJointIds = useMemo(
     () =>
@@ -344,7 +347,7 @@ export function PropertyPanel() {
         <div className="panel-section-header">
           <div className="panel-title">Joint</div>
         </div>
-        <div className="panel-surface panel-section">
+        <div className="panel-section-flat">
           <div className="panel-kind-label">
             {joint.type === 'fixed' ? 'Fixed (Base)' : 'Revolute'}
           </div>
@@ -425,13 +428,14 @@ export function PropertyPanel() {
         </div>
         {jointReaction && (
           <>
-            <div className="panel-section-header" style={{ marginTop: 8 }}>
+            <hr className="panel-section-divider" aria-hidden />
+            <div className="panel-section-header">
               <div className="panel-subtitle">Reaction forces</div>
             </div>
             <div className="panel-info" style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>
               {FORCE_READOUT_LABEL_HINT}
             </div>
-            <div className="panel-surface panel-section" style={{ fontSize: 11, fontFamily: 'monospace' }}>
+            <div className="panel-section-flat" style={{ fontSize: 11, fontFamily: 'monospace' }}>
               <div className="panel-info" style={{ fontWeight: 'bold' }}>
                 Total: {formatForce(jointReaction.magnitude)}
                 {' '}
@@ -455,15 +459,30 @@ export function PropertyPanel() {
   }
 
   if (outline) {
-    const body = bodies[outline.bodyId];
+    const bodyOptions = Object.values(bodies).sort((a, b) => {
+      if (a.id === baseBodyId) return -1;
+      if (b.id === baseBodyId) return 1;
+      return a.name.localeCompare(b.name);
+    });
     return (
       <div className="panel-content">
         <div className="panel-section-header">
           <div className="panel-title">{outline.name || 'Shape'}</div>
         </div>
-        <div className="panel-surface panel-section">
-          <div className="panel-info">Body: {body?.name ?? 'Unknown'}</div>
-          <div className="panel-info">{outline.points.length} vertices</div>
+        <div className="panel-section-flat">
+          <label className="panel-toggle-row" style={{ alignItems: 'center', gap: 8 }}>
+            <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>Body</span>
+            <select
+              value={outline.bodyId}
+              onChange={(e) => moveOutlineToBody(outline.id, e.target.value)}
+              style={{ flex: 1, fontSize: 12, padding: '4px 6px', borderRadius: 4, background: '#2a2a2a', color: '#eee', border: '1px solid #444' }}
+            >
+              {bodyOptions.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="panel-info" style={{ marginTop: 6 }}>{outline.points.length} vertices</div>
         </div>
       </div>
     );
@@ -479,7 +498,7 @@ export function PropertyPanel() {
         <div className="panel-section-header">
           <div className="panel-title">{title}</div>
         </div>
-        <div className="panel-surface panel-section">
+        <div className="panel-section-flat">
           <div className="panel-spring-combined">
             <SpringEndEditor
               title={torsion ? 'Link A (at pivot)' : 'From'}
@@ -592,15 +611,30 @@ export function PropertyPanel() {
   }
 
   if (image) {
-    const body = bodies[image.bodyId];
+    const bodyOptions = Object.values(bodies).sort((a, b) => {
+      if (a.id === baseBodyId) return -1;
+      if (b.id === baseBodyId) return 1;
+      return a.name.localeCompare(b.name);
+    });
     return (
       <div className="panel-content">
         <div className="panel-section-header">
           <div className="panel-title">Image</div>
         </div>
-        <div className="panel-surface panel-section">
-          <div className="panel-info">Body: {body?.name ?? 'Unknown'}</div>
-          <div className="panel-info">{image.naturalWidth} x {image.naturalHeight} px</div>
+        <div className="panel-section-flat">
+          <label className="panel-toggle-row" style={{ alignItems: 'center', gap: 8 }}>
+            <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>Body</span>
+            <select
+              value={image.bodyId}
+              onChange={(e) => moveImageToBody(image.id, e.target.value)}
+              style={{ flex: 1, fontSize: 12, padding: '4px 6px', borderRadius: 4, background: '#2a2a2a', color: '#eee', border: '1px solid #444' }}
+            >
+              {bodyOptions.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="panel-info" style={{ marginTop: 6 }}>{image.naturalWidth} x {image.naturalHeight} px</div>
           <label>
             Scale
             <input

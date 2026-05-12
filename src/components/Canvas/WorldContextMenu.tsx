@@ -40,7 +40,6 @@ export function WorldContextMenu() {
   const closeMenu = useEditorStore((s) => s.setWorldContextMenu);
   const clearSelection = useEditorStore((s) => s.clearSelection);
   const setActiveBody = useEditorStore((s) => s.setActiveBody);
-  const toggleActiveBody = useEditorStore((s) => s.toggleActiveBody);
   const activeBodyIds = useEditorStore((s) => s.activeBodyIds);
   const camera = useEditorStore((s) => s.camera);
 
@@ -53,19 +52,26 @@ export function WorldContextMenu() {
   const removeBodyFromCollider = useMechanismStore((s) => s.removeBodyFromCollider);
   const colliders = useMechanismStore((s) => s.colliders);
   const tracers = useMechanismStore((s) => s.tracers);
+  const outlines = useMechanismStore((s) => s.outlines);
+  const images = useMechanismStore((s) => s.images);
   const updateTracerBody = useMechanismStore((s) => s.updateTracerBody);
+  const moveOutlineToBody = useMechanismStore((s) => s.moveOutlineToBody);
+  const moveImageToBody = useMechanismStore((s) => s.moveImageToBody);
   const joints = useMechanismStore((s) => s.joints);
   const links = useMechanismStore((s) => s.links);
   const removeJoint = useMechanismStore((s) => s.removeJoint);
   const removeLink = useMechanismStore((s) => s.removeLink);
   const removeCollider = useMechanismStore((s) => s.removeCollider);
   const removeTracer = useMechanismStore((s) => s.removeTracer);
+  const removeOutline = useMechanismStore((s) => s.removeOutline);
+  const removeImage = useMechanismStore((s) => s.removeImage);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
   const dragSnapLastBodyRef = useRef<string | null>(null);
   const dragReadyBodiesRef = useRef<Set<string>>(new Set());
   const primaryDownRef = useRef<boolean>(false);
   const didDragApplyRef = useRef<boolean>(false);
+  const didActionApplyRef = useRef<boolean>(false);
   const dragSessionKeyRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const dragMovedRef = useRef<boolean>(false);
@@ -113,9 +119,8 @@ export function WorldContextMenu() {
       const target = event.target as HTMLElement | null;
       // Only keep open when clicking actual interactive menu controls.
       const clickedInteractive = !!(
-        target?.closest('.world-context-hub')
-        || target?.closest('.world-context-orbit-pill')
-        || target?.closest('.world-context-add-body-dot')
+        target?.closest('.world-context-orbit-pill')
+        || target?.closest('[data-world-context-action]')
       );
       if (clickedInteractive) return;
       requestClose();
@@ -138,13 +143,24 @@ export function WorldContextMenu() {
     const onPointerUp = (event: PointerEvent) => {
       if (event.button !== 0) return;
       primaryDownRef.current = false;
-      if (menu.openMode === 'hold') requestClose();
+      if (menu.openMode === 'hold') {
+        const action = getActionUnderPointer(event.clientX, event.clientY);
+        if (action) {
+          didActionApplyRef.current = true;
+          executeOrbitAction(action);
+          return;
+        }
+        requestClose();
+      }
     };
 
     const onWheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement | null;
-      const insideHub = !!target?.closest('.world-context-hub');
-      if (!insideHub) requestClose();
+      const insideMenuControl = !!(
+        target?.closest('.world-context-orbit-pill')
+        || target?.closest('[data-world-context-action]')
+      );
+      if (!insideMenuControl) requestClose();
     };
 
     const onResize = () => requestClose();
@@ -202,6 +218,21 @@ export function WorldContextMenu() {
       if (!jA || !jC) return menu.screenPosition;
       return worldToScreen((jA.position.x + jC.position.x) * 0.5, (jA.position.y + jC.position.y) * 0.5);
     }
+    if (menu.targetType === 'outline') {
+      const outline = outlines[menu.targetId];
+      if (!outline) return menu.screenPosition;
+      const body = bodies[outline.bodyId];
+      if (!body || outline.points.length === 0) return menu.screenPosition;
+      const transform = computeBodyTransform(body, joints);
+      const worldPts = outline.points.map((p) => localToWorld(p, transform));
+      const center = worldPts.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+      return worldToScreen(center.x / worldPts.length, center.y / worldPts.length);
+    }
+    if (menu.targetType === 'image') {
+      const image = images[menu.targetId];
+      if (!image) return menu.screenPosition;
+      return worldToScreen(image.position.x, image.position.y);
+    }
     const tracer = tracers[menu.targetId];
     if (!tracer) return menu.screenPosition;
     const body = bodies[tracer.bodyId];
@@ -231,12 +262,63 @@ export function WorldContextMenu() {
     setActiveBody(newBodyId);
   };
 
+  type OrbitAction = 'add-body' | 'delete-target';
+
+  const executeOrbitAction = (action: OrbitAction) => {
+    if (!menu) return;
+    if (action === 'add-body') {
+      if (menu.targetType === 'joint') createAndAssignBodyToJoint(menu.targetId);
+      else if (menu.targetType === 'collider') createAndAssignBodyToCollider(menu.targetId);
+      else if (menu.targetType === 'outline') {
+        const newBodyId = addBody('Body');
+        moveOutlineToBody(menu.targetId, newBodyId);
+        setActiveBody(newBodyId);
+      } else if (menu.targetType === 'image') {
+        const newBodyId = addBody('Body');
+        moveImageToBody(menu.targetId, newBodyId);
+        setActiveBody(newBodyId);
+      }
+      return;
+    }
+
+    if (menu.targetType === 'joint') removeJoint(menu.targetId);
+    else if (menu.targetType === 'collider') removeCollider(menu.targetId);
+    else if (menu.targetType === 'link') removeLink(menu.targetId);
+    else if (menu.targetType === 'tracer') removeTracer(menu.targetId);
+    else if (menu.targetType === 'outline') removeOutline(menu.targetId);
+    else removeImage(menu.targetId);
+    closeMenuAndClearSelection();
+  };
+
   const orbit = getOrbitLayout(bodyList.length);
-  const maxOrbitY = Math.max(
-    ...orbit.positions.map((p) => p.y),
-    orbit.addPos.y,
-  );
-  const hubTopPx = Math.max(orbit.radius + 96, maxOrbitY + 122);
+  const getOrbitPoint = (angleDeg: number, radius = orbit.radius) => {
+    const angleRad = (angleDeg - 90) * (Math.PI / 180);
+    return {
+      x: Math.cos(angleRad) * radius,
+      y: Math.sin(angleRad) * radius,
+      angleDeg,
+    };
+  };
+  const deletePos = getOrbitPoint(135, orbit.radius + 8);
+
+  const getActionUnderPointer = (clientX: number, clientY: number): OrbitAction | null => {
+    const hitEl = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+    const actionEl = hitEl?.closest('[data-world-context-action]') as HTMLElement | null;
+    const action = actionEl?.dataset.worldContextAction;
+    if (action === 'add-body' || action === 'delete-target') return action;
+
+    // Pointer capture during hold-drag can make DOM targeting unreliable, so also
+    // hit-test the radial controls by their known screen-space centers.
+    const deleteDx = clientX - (anchor.x + deletePos.x);
+    const deleteDy = clientY - (anchor.y + deletePos.y);
+    if ((deleteDx * deleteDx + deleteDy * deleteDy) <= 24 * 24) return 'delete-target';
+
+    const addDx = clientX - (anchor.x + orbit.addPos.x);
+    const addDy = clientY - (anchor.y + orbit.addPos.y);
+    if ((addDx * addDx + addDy * addDy) <= 18 * 18) return 'add-body';
+
+    return null;
+  };
 
   useEffect(() => {
     if (!menu || isClosing) return undefined;
@@ -246,6 +328,7 @@ export function WorldContextMenu() {
       dragSnapLastBodyRef.current = null;
       dragReadyBodiesRef.current = new Set(bodyList.map((b) => b.id));
       didDragApplyRef.current = false;
+      didActionApplyRef.current = false;
       dragStartPointRef.current = null;
       dragMovedRef.current = false;
     }
@@ -254,7 +337,25 @@ export function WorldContextMenu() {
     const getBodyIdUnderPill = (clientX: number, clientY: number): string | null => {
       const hitEl = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
       const hitPill = hitEl?.closest('.world-context-orbit-pill') as HTMLElement | null;
-      return hitPill?.dataset.bodyId ?? null;
+      if (hitPill?.dataset.bodyId) return hitPill.dataset.bodyId;
+
+      // During long-press, canvas pointer capture can make DOM hit-testing flaky.
+      // Fall back to the known radial pill positions so sweeping across bodies
+      // still assigns them as the pointer passes over each label.
+      let bestBodyId: string | null = null;
+      let bestD2 = Infinity;
+      bodyList.forEach((body, index) => {
+        const pos = orbit.positions[index];
+        if (!pos) return;
+        const dx = clientX - (anchor.x + pos.x);
+        const dy = clientY - (anchor.y + pos.y);
+        const d2 = dx * dx + dy * dy;
+        if (d2 <= 34 * 34 && d2 < bestD2) {
+          bestBodyId = body.id;
+          bestD2 = d2;
+        }
+      });
+      return bestBodyId;
     };
 
     const applyBodySelection = (nearestBodyId: string, mech: ReturnType<typeof useMechanismStore.getState>, _mode: 'hold' | 'context') => {
@@ -270,14 +371,19 @@ export function WorldContextMenu() {
         const hasBody = collider.bodyIds.includes(nearestBodyId);
         if (hasBody) mech.removeBodyFromCollider(menu.targetId, nearestBodyId);
         else mech.addBodyToCollider(menu.targetId, nearestBodyId);
-      } else {
+      } else if (menu.targetType === 'tracer') {
         const tracer = mech.tracers[menu.targetId];
         if (!tracer) return;
         if (tracer.bodyId !== nearestBodyId) mech.updateTracerBody(menu.targetId, nearestBodyId);
+      } else if (menu.targetType === 'outline') {
+        if (mech.outlines[menu.targetId]) mech.moveOutlineToBody(menu.targetId, nearestBodyId);
+      } else if (menu.targetType === 'image') {
+        if (mech.images[menu.targetId]) mech.moveImageToBody(menu.targetId, nearestBodyId);
       }
     };
 
     const handleDragSnap = (clientX: number, clientY: number, buttons: number) => {
+      if (didActionApplyRef.current) return;
       const isDragGestureActive = primaryDownRef.current || (buttons & 1) === 1;
       if (!isDragGestureActive) {
         dragSnapLastBodyRef.current = null;
@@ -287,15 +393,7 @@ export function WorldContextMenu() {
         return;
       }
 
-      if (menu.openMode === 'hold' && !dragMovedRef.current) {
-        const start = dragStartPointRef.current;
-        if (!start) {
-          dragStartPointRef.current = { x: clientX, y: clientY };
-          return;
-        }
-        const dx = clientX - start.x;
-        const dy = clientY - start.y;
-        if ((dx * dx + dy * dy) < 36) return; // ~6px movement threshold
+      if (menu.openMode === 'hold') {
         dragMovedRef.current = true;
       }
 
@@ -322,10 +420,20 @@ export function WorldContextMenu() {
       handleDragSnap(event.clientX, event.clientY, event.buttons);
     };
     const onPointerUpSnap = (event: PointerEvent) => {
+      if (didActionApplyRef.current) return;
       if (menu.openMode !== 'hold') return;
-      // No actual drag gesture: don't apply anything on release.
+      const action = getActionUnderPointer(event.clientX, event.clientY);
+      if (action) {
+        didActionApplyRef.current = true;
+        executeOrbitAction(action);
+        didDragApplyRef.current = true;
+        requestClose();
+        return;
+      }
+      // No actual drag gesture: don't apply body assignments on release.
       if (!dragMovedRef.current) return;
-      // If drag already snapped, don't apply again on release.
+      // If a body already snapped during this hold gesture, don't apply it again
+      // on release. Explicit action targets above still win when hovered.
       if (didDragApplyRef.current) return;
       const nearestBodyId = getBodyIdUnderPill(event.clientX, event.clientY);
       if (!nearestBodyId) return;
@@ -353,6 +461,7 @@ export function WorldContextMenu() {
     onToggle: () => void,
   ) => {
     const isActive = activeBodyIds.has(body.id);
+    const isJointBaseAction = menu.targetType === 'joint' && body.id === baseBodyId;
     const pos = orbit.positions[index] ?? { x: 0, y: 0 };
     const lineLen = Math.max(0, Math.sqrt(pos.x * pos.x + pos.y * pos.y) - 14);
     const lineAngle = Math.atan2(pos.y, pos.x);
@@ -393,148 +502,16 @@ export function WorldContextMenu() {
             '--inward-y': `${inwardY}`,
           } as React.CSSProperties}
           onClick={onToggle}
-          title={`Toggle ${body.name}`}
+          title={isJointBaseAction ? (selected ? 'Set Revolute' : 'Set Fixed') : `Toggle ${body.name}`}
         >
           <span className="world-context-orbit-pill-dot" style={{ background: body.color }} />
-          {body.name}
+          <span>{body.name}</span>
         </button>
       </div>
     );
   };
 
-  const renderJointMenu = (): React.JSX.Element => {
-    const jointId = menu.targetId;
-    const inBase = bodies[baseBodyId]?.jointIds.includes(jointId) ?? false;
-    return (
-      <>
-        <div className="world-context-hub-title">Joint</div>
-        <div className="world-context-hub-tools">
-          <button
-            className="world-context-hub-btn"
-            onClick={() => {
-              if (inBase) removeJointFromBody(jointId, baseBodyId);
-              else addJointToBody(jointId, baseBodyId);
-            }}
-          >
-            {inBase ? 'Set Revolute' : 'Set Fixed'}
-          </button>
-          <button className="world-context-hub-btn" onClick={() => createAndAssignBodyToJoint(jointId)}>
-            + New Body
-          </button>
-          <button
-            type="button"
-            className="world-context-hub-btn world-context-hub-btn--danger"
-            onClick={() => {
-              removeJoint(jointId);
-              closeMenuAndClearSelection();
-            }}
-          >
-            Delete joint
-          </button>
-        </div>
-        <div className="world-context-menu-hints radial">
-          <span><kbd>Esc</kbd> close</span>
-          <span>Bodies use accent highlight when enabled</span>
-          <span>Use + New Body to append and attach</span>
-          <span>Linear spring tool â€” joint/link endpoints only</span>
-        </div>
-      </>
-    );
-  };
-
-  const renderColliderMenu = (): React.JSX.Element | null => {
-    const collider = colliders[menu.targetId];
-    if (!collider) return null;
-    return (
-      <>
-        <div className="world-context-hub-title">Collider</div>
-        <div className="world-context-hub-tools">
-          <button className="world-context-hub-btn" onClick={() => createAndAssignBodyToCollider(collider.id)}>
-            + New Body
-          </button>
-          <button
-            type="button"
-            className="world-context-hub-btn world-context-hub-btn--danger"
-            onClick={() => {
-              removeCollider(collider.id);
-              closeMenuAndClearSelection();
-            }}
-          >
-            Delete collider
-          </button>
-        </div>
-        <div className="world-context-menu-hints radial">
-          <span><kbd>Esc</kbd> close</span>
-          <span>Highlighted bodies are blocked by this barrier</span>
-          <span>Use + New Body to quickly include a new part</span>
-        </div>
-      </>
-    );
-  };
-
-  const renderLinkMenu = (): React.JSX.Element | null => {
-    const link = links[menu.targetId];
-    if (!link) return null;
-    return (
-      <>
-        <div className="world-context-hub-title">Link</div>
-        <div className="world-context-hub-tools">
-          <button
-            type="button"
-            className="world-context-hub-btn world-context-hub-btn--danger"
-            onClick={() => {
-              removeLink(link.id);
-              closeMenuAndClearSelection();
-            }}
-          >
-            Delete link
-          </button>
-        </div>
-        <div className="world-context-menu-hints radial" style={{ paddingTop: 6 }}>
-          <span><kbd>Esc</kbd> close</span>
-          <span>Linear spring tool â†’ Link â†” link or Joint â†” link</span>
-        </div>
-      </>
-    );
-  };
-
-  const renderTracerMenu = (): React.JSX.Element | null => {
-    const tracer = tracers[menu.targetId];
-    if (!tracer) return null;
-    return (
-      <>
-        <div className="world-context-hub-title">Path Plotter</div>
-        <div className="world-context-hub-tools">
-          <button className="world-context-hub-btn" onClick={() => toggleActiveBody(tracer.bodyId)}>
-            Toggle Active Route Body
-          </button>
-          <button
-            type="button"
-            className="world-context-hub-btn world-context-hub-btn--danger"
-            onClick={() => {
-              removeTracer(tracer.id);
-              closeMenuAndClearSelection();
-            }}
-          >
-            Delete path plotter
-          </button>
-        </div>
-        <div className="world-context-menu-hints radial">
-          <span><kbd>Esc</kbd> close</span>
-          <span>Tracer follows selected body frame</span>
-          <span>Accent-highlighted body is the route</span>
-        </div>
-      </>
-    );
-  };
-
-  let content: React.JSX.Element | null = null;
   let orbitNodes: React.JSX.Element[] = [];
-  if (menu.targetType === 'joint') content = renderJointMenu();
-  else if (menu.targetType === 'collider') content = renderColliderMenu();
-  else if (menu.targetType === 'link') content = renderLinkMenu();
-  else content = renderTracerMenu();
-
   if (menu.targetType === 'joint') {
     const jointId = menu.targetId;
     orbitNodes = bodyList.map((body, index) =>
@@ -560,24 +537,60 @@ export function WorldContextMenu() {
             renderBodyOrbitNode(body, index, tracer.bodyId === body.id, () => updateTracerBody(tracer.id, body.id)),
       );
     }
+  } else if (menu.targetType === 'outline') {
+    const outline = outlines[menu.targetId];
+    if (outline) {
+      orbitNodes = bodyList.map((body, index) =>
+            renderBodyOrbitNode(body, index, outline.bodyId === body.id, () => moveOutlineToBody(outline.id, body.id)),
+      );
+    }
+  } else if (menu.targetType === 'image') {
+    const image = images[menu.targetId];
+    if (image) {
+      orbitNodes = bodyList.map((body, index) =>
+            renderBodyOrbitNode(body, index, image.bodyId === body.id, () => moveImageToBody(image.id, body.id)),
+      );
+    }
   }
 
   const addBodyControl = (
     <button
       className="world-context-add-body-dot"
+      data-world-context-action="add-body"
       style={{
         left: `calc(50% + ${orbit.addPos.x}px)`,
         top: `calc(50% + ${orbit.addPos.y}px)`,
         '--orbit-x': `${orbit.addPos.x}px`,
         '--orbit-y': `${orbit.addPos.y}px`,
       } as React.CSSProperties}
-      onClick={() => {
-        if (menu.targetType === 'joint') createAndAssignBodyToJoint(menu.targetId);
-        else if (menu.targetType === 'collider') createAndAssignBodyToCollider(menu.targetId);
-      }}
+      onClick={() => executeOrbitAction('add-body')}
       title="Add Body"
     >
       +
+    </button>
+  );
+
+  const deleteActionControl = (
+    <button
+      className="world-context-action-btn world-context-action-btn--danger"
+      data-world-context-action="delete-target"
+      style={{
+        left: `calc(50% + ${deletePos.x}px)`,
+        top: `calc(50% + ${deletePos.y}px)`,
+        '--orbit-x': `${deletePos.x}px`,
+        '--orbit-y': `${deletePos.y}px`,
+      } as React.CSSProperties}
+      onClick={() => executeOrbitAction('delete-target')}
+      title={`Delete ${menu.targetType === 'outline' ? 'shape' : menu.targetType === 'tracer' ? 'path plotter' : menu.targetType}`}
+      aria-label={`Delete ${menu.targetType === 'outline' ? 'shape' : menu.targetType === 'tracer' ? 'path plotter' : menu.targetType}`}
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+        <path d="M6 6.5V14" />
+        <path d="M12 6.5V14" />
+        <path d="M4.5 5H13.5" />
+        <path d="M7 5V3.5H11V5" />
+        <path d="M5.5 5L6.1 15H11.9L12.5 5" />
+      </svg>
     </button>
   );
 
@@ -594,9 +607,7 @@ export function WorldContextMenu() {
       <div className="world-context-orbit">
         {orbitNodes}
         {menu.targetType !== 'tracer' && menu.targetType !== 'link' && addBodyControl}
-      </div>
-      <div className="world-context-hub" style={{ top: `calc(50% + ${hubTopPx}px)` }}>
-        {content}
+        {deleteActionControl}
       </div>
     </div>
   );

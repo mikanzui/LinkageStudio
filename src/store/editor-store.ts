@@ -6,6 +6,28 @@ import type {
 import type { Vec2 } from '../types';
 import { DEFAULT_GRID_SIZE, DEFAULT_SPRING_LINK_RESOLUTION } from '../utils/constants';
 
+export const DEFAULT_LEFT_SIDEBAR_WIDTH_PX = 140;
+export const DEFAULT_RIGHT_SIDEBAR_WIDTH_PX = 260;
+
+const LEFT_SIDEBAR_MIN_PX = 140;
+const RIGHT_SIDEBAR_MIN_PX = 220;
+
+function clampLeftSidebarWidth(w: number): number {
+  const max =
+    typeof globalThis.window !== 'undefined'
+      ? Math.max(LEFT_SIDEBAR_MIN_PX + 40, Math.floor(globalThis.window.innerWidth * 0.46))
+      : 560;
+  return Math.round(Math.min(Math.max(w, LEFT_SIDEBAR_MIN_PX), max));
+}
+
+function clampRightSidebarWidth(w: number): number {
+  const max =
+    typeof globalThis.window !== 'undefined'
+      ? Math.max(RIGHT_SIDEBAR_MIN_PX + 40, Math.floor(globalThis.window.innerWidth * 0.46))
+      : 560;
+  return Math.round(Math.min(Math.max(w, RIGHT_SIDEBAR_MIN_PX), max));
+}
+
 const GRID_DIVISOR: Record<GridLevel, number> = {
   normal: 1,
   fine: 4,
@@ -58,6 +80,10 @@ interface EditorStore {
   frozenOutlineWorldPoints: Map<string, Vec2[]>;
   leftCollapsed: boolean;
   rightCollapsed: boolean;
+  /** Expanded left toolbar width (px); unused while collapsed. */
+  leftSidebarWidthPx: number;
+  /** Expanded right panel width (px); unused while collapsed. */
+  rightSidebarWidthPx: number;
   /** While true (Space held), left-drag pans like the pan tool */
   spacePanHeld: boolean;
   imageDragMode: 'move' | 'rotate' | 'scale' | null;
@@ -116,6 +142,8 @@ interface EditorStore {
   setLockOutlines(locked: boolean, frozenPoints?: Map<string, Vec2[]>): void;
   toggleLeftCollapsed(): void;
   toggleRightCollapsed(): void;
+  setLeftSidebarWidthPx(w: number): void;
+  setRightSidebarWidthPx(w: number): void;
   setSpacePanHeld(held: boolean): void;
   setImageDragMode(mode: 'move' | 'rotate' | 'scale' | null): void;
   setSliderPointA(point: { position: Vec2; jointId: string } | null): void;
@@ -153,7 +181,7 @@ interface EditorStore {
   } | null;
   worldContextMenu: {
     screenPosition: Vec2;
-    targetType: 'joint' | 'collider' | 'tracer' | 'link';
+    targetType: 'joint' | 'collider' | 'tracer' | 'link' | 'outline' | 'image';
     targetId: string;
     /** Right-click on link: raw t along segment before quantize (create spring). */
     linkClickT?: number;
@@ -211,6 +239,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   frozenOutlineWorldPoints: new Map(),
   leftCollapsed: false,
   rightCollapsed: false,
+  leftSidebarWidthPx: DEFAULT_LEFT_SIDEBAR_WIDTH_PX,
+  rightSidebarWidthPx: DEFAULT_RIGHT_SIDEBAR_WIDTH_PX,
   spacePanHeld: false,
   imageDragMode: null,
   sliderPointA: null,
@@ -479,6 +509,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   toggleRightCollapsed() {
     set((s) => ({ rightCollapsed: !s.rightCollapsed }));
+  },
+
+  setLeftSidebarWidthPx(w) {
+    set({ leftSidebarWidthPx: clampLeftSidebarWidth(w) });
+  },
+
+  setRightSidebarWidthPx(w) {
+    set({ rightSidebarWidthPx: clampRightSidebarWidth(w) });
   },
 
   setSpacePanHeld(held) {

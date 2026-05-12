@@ -171,10 +171,14 @@ interface MechanismStore {
   updateOutlinePoints(outlineId: string, points: Vec2[]): void;
   insertOutlineVertex(outlineId: string, afterIndex: number, point: Vec2): void;
   removeOutlineVertex(outlineId: string, vertexIndex: number): void;
+  /** Move outline to another rigid body; vertices stay fixed in world space. */
+  moveOutlineToBody(outlineId: string, newBodyId: string): void;
 
   addImage(bodyId: string, src: string, naturalWidth: number, naturalHeight: number, position: Vec2): string;
   removeImage(id: string): void;
   updateImage(id: string, updates: Partial<Pick<CanvasImage, 'position' | 'scale' | 'rotation' | 'opacity' | 'visible'>>): void;
+  /** Reassign image to a body (position stays in world space). */
+  moveImageToBody(imageId: string, newBodyId: string): void;
 
   addSlider(jointIdA: string, jointIdC: string, jointIdB: string): string;
   removeSlider(id: string): void;
@@ -1561,6 +1565,33 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       const newPoints = outline.points.filter((_, i) => i !== vertexIndex);
       return { outlines: { ...s.outlines, [outlineId]: { ...outline, points: newPoints } } };
     });
+  },
+
+  moveOutlineToBody(outlineId, newBodyId) {
+    const s = get();
+    const outline = s.outlines[outlineId];
+    const oldBody = s.bodies[outline.bodyId];
+    const newBody = s.bodies[newBodyId];
+    if (!outline || !oldBody || !newBody || outline.bodyId === newBodyId) return;
+    get().pushHistory();
+    const oldT = computeBodyTransform(oldBody, s.joints);
+    const newT = computeBodyTransform(newBody, s.joints);
+    const worldPts = outline.points.map((p) => localToWorld(p, oldT));
+    const newLocal = worldPts.map((p) => worldToLocal(p, newT));
+    set((st) => ({
+      outlines: { ...st.outlines, [outlineId]: { ...outline, bodyId: newBodyId, points: newLocal } },
+    }));
+  },
+
+  moveImageToBody(imageId, newBodyId) {
+    const s = get();
+    const img = s.images[imageId];
+    const newBody = s.bodies[newBodyId];
+    if (!img || !newBody || img.bodyId === newBodyId) return;
+    get().pushHistory();
+    set((st) => ({
+      images: { ...st.images, [imageId]: { ...img, bodyId: newBodyId } },
+    }));
   },
 }));
 
