@@ -1,16 +1,9 @@
-import type { Joint, Link, SliderConstraint, ColliderConstraint, AngleConstraint, Vec2, SolverResult, ForceVector, MechanismSpring } from '../../types';
+import type { Joint, Link, SliderConstraint, ColliderConstraint, AngleConstraint, Vec2, SolverResult, ForceVector, MechanismSpring, SolverConfig } from '../../types';
 import { accumulateLinearSpringAccelerations, accumulateTorsionalSpringAccelerations } from '../springs/spring-solver';
 import { distanceConstraint, angleDriverConstraint } from './constraints';
 import { analyzeForces, smoothForceAnalysis, type LinkCorrection } from './force-analysis';
 import { createMatrix, solveLU } from '../math/linalg';
-import {
-  SOLVER_MAX_ITERATIONS,
-  SOLVER_TOLERANCE,
-  SOLVER_DAMPING,
-  SIM_STABILITY_MAX_SUBSTEP_DISPLACEMENT,
-  SIM_STABILITY_MAX_JOINT_SPEED,
-  SIM_STABILITY_MAX_LINK_LENGTH_ERROR,
-} from '../../utils/constants';
+import { mergeSolverConfig } from '../../utils/constants';
 
 interface DriverInfo {
   fixedJointId: string;
@@ -45,7 +38,9 @@ function solveSystem(J: number[][], phi: number[], m: number, n: number): number
 export function solve(
   joints: Record<string, Joint>, links: Record<string, Link>, driver: DriverInfo | null,
   fixedJointIds?: Set<string>,
+  solverConfig?: Partial<SolverConfig>,
 ): SolverResult {
+  const cfg = mergeSolverConfig(solverConfig);
   const freeJoints: Joint[] = [];
   const jointIndex = new Map<string, number>();
   for (const joint of Object.values(joints)) {
@@ -66,7 +61,7 @@ export function solve(
   const numConstraints = linkArray.length + (driver ? 1 : 0);
   let residual = Infinity; let iter = 0;
 
-  for (; iter < SOLVER_MAX_ITERATIONS; iter++) {
+  for (; iter < cfg.maxIterations; iter++) {
     const phi = new Array<number>(numConstraints).fill(0);
     const J = createMatrix(numConstraints, n);
     let row = 0;
@@ -94,16 +89,16 @@ export function solve(
     residual = 0;
     for (let i = 0; i < numConstraints; i++) residual += phi[i] * phi[i];
     residual = Math.sqrt(residual);
-    if (residual < SOLVER_TOLERANCE) break;
+    if (residual < cfg.tolerance) break;
     const dq = solveSystem(J, phi, numConstraints, n);
     if (!dq) break;
-    for (let i = 0; i < n; i++) q[i] += SOLVER_DAMPING * dq[i];
+    for (let i = 0; i < n; i++) q[i] += cfg.damping * dq[i];
   }
 
   const positions = new Map<string, Vec2>();
   for (let i = 0; i < freeJoints.length; i++) positions.set(freeJoints[i].id, { x: q[i * 2], y: q[i * 2 + 1] });
   for (const j of Object.values(joints)) if (j.type === 'fixed') positions.set(j.id, j.position);
-  return { converged: residual < SOLVER_TOLERANCE, iterations: iter, residual, positions, forceVectors: [] };
+  return { converged: residual < cfg.tolerance, iterations: iter, residual, positions, forceVectors: [] };
 }
 
 // --- Position-Based Dynamics simulation ---
@@ -125,10 +120,6 @@ const velocities = new Map<string, Vec2>();
 export function resetVelocities() {
   velocities.clear();
 }
-
-const PULL_STRENGTH = 6;
-const NUM_SUBSTEPS = 10;
-const CONSTRAINT_PASSES = 6;
 
 /** Closest point on segment A–C to P (for slider drag target — matches segment clamp, avoids spring vs clamp fight). */
 function closestPointOnSegment(
@@ -173,7 +164,9 @@ export function solveWithForce(
   springs?: Record<string, MechanismSpring>,
   bodiesRef?: Record<string, { jointIds: string[] }>,
   comBodyJointSets?: Set<string>[],
+  solverConfig?: Partial<SolverConfig>,
 ): SolverResult {
+  const cfg = mergeSolverConfig(solverConfig);
   const freeJoints: Joint[] = [];
   const jointIndex = new Map<string, number>();
   const forceVectors: ForceVector[] = [];
@@ -295,16 +288,16 @@ export function solveWithForce(
   }
 
   // --- Damping factor per substep (time-based) ---
-  const subDt = dt / NUM_SUBSTEPS;
+  const subDt = dt / cfg.pbdSubsteps;
   const retentionPerSecond = damping < 0.001 ? 0.001 : damping;
   const dampPerSubstep = Math.pow(retentionPerSecond, subDt);
-  const effectiveStrength = PULL_STRENGTH * dragMultiplier;
+  const effectiveStrength = cfg.simPullStrength * dragMultiplier;
 
   // --- Substep loop ---
   const linkCorrections: LinkCorrection[] = [];
   let maxSubstepDisplacementAll = 0;
-  for (let sub = 0; sub < NUM_SUBSTEPS; sub++) {
-    const isLastSubstep = sub === NUM_SUBSTEPS - 1;
+  for (let sub = 0; sub < cfg.pbdSubsteps; sub++) {
+    const isLastSubstep = sub === cfg.pbdSubsteps - 1;
     const springAx = new Float64Array(freeJoints.length);
     const springAy = new Float64Array(freeJoints.length);
     if (springs && Object.keys(springs).length > 0) {
@@ -416,8 +409,8 @@ export function solveWithForce(
     }
 
     // 3. Project distance constraints + slider constraints
-    for (let pass = 0; pass < CONSTRAINT_PASSES; pass++) {
-      const isLastPass = isLastSubstep && pass === CONSTRAINT_PASSES - 1;
+    for (let pass = 0; pass < cfg.pbdConstraintPasses; pass++) {
+      const isLastPass = isLastSubstep && pass === cfg.pbdConstraintPasses - 1;
       for (const link of linkArray) {
         const idxI = jointIndex.get(link.jointIds[0]);
         const idxJ = jointIndex.get(link.jointIds[1]);
@@ -837,7 +830,7 @@ export function solveWithForce(
 
   // --- Force analysis from PBD constraint corrections (with temporal smoothing) ---
   const rawForceAnalysis = linkCorrections.length > 0
-    ? analyzeForces(linkCorrections, joints, links, positions, subDt, CONSTRAINT_PASSES)
+    ? analyzeForces(linkCorrections, joints, links, positions, subDt, cfg.pbdConstraintPasses)
     : undefined;
   const forceAnalysis = rawForceAnalysis ? smoothForceAnalysis(rawForceAnalysis) : undefined;
 
@@ -880,9 +873,9 @@ export function solveWithForce(
   };
   const simulateStable =
     positionsFinite
-    && maxSubstepDisplacementAll <= SIM_STABILITY_MAX_SUBSTEP_DISPLACEMENT
-    && maxJointSpeed <= SIM_STABILITY_MAX_JOINT_SPEED
-    && maxLinkLengthError <= SIM_STABILITY_MAX_LINK_LENGTH_ERROR;
+    && maxSubstepDisplacementAll <= cfg.stabilityMaxSubstepDisplacement
+    && maxJointSpeed <= cfg.stabilityMaxJointSpeed
+    && maxLinkLengthError <= cfg.stabilityMaxLinkLengthError;
 
   return {
     converged: true,

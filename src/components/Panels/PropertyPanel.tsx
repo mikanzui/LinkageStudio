@@ -496,6 +496,9 @@ export function PropertyPanel() {
                 defaultMax={torsion ? 80 : 80}
                 step={0.5}
                 clamp={(v) => Math.max(0, v)}
+                rowTitle={torsion
+                  ? 'Element torsion damping (N·m·s/rad). Separate from global Simulation “Damping”, which scales all joint velocities each substep.'
+                  : 'Element linear damping (N·s/m). Separate from global Simulation “Damping”, which scales all joint velocities each substep.'}
               />
               {spring.kind !== 'damper' && (
                 <ParamSliderRow
@@ -509,6 +512,9 @@ export function PropertyPanel() {
                   step={torsion ? 0.01 : 0.01}
                   displayDecimals={torsion ? 3 : 3}
                   clamp={(v) => (torsion ? v : Math.max(1e-9, v))}
+                  rowTitle={torsion
+                    ? 'Natural rest angle φ₀ at equilibrium (radians). Equilibrium angle uses φ₀ + Δ (prestress).'
+                    : 'Natural rest length L₀ (metres, 1 grid unit ≈ 1 m). Equilibrium length uses L₀ + Δ.'}
                 />
               )}
               {spring.kind !== 'damper' && (
@@ -522,6 +528,9 @@ export function PropertyPanel() {
                   defaultMax={torsion ? 6.29 : 100}
                   step={0.01}
                   clamp={(v) => v}
+                  rowTitle={torsion
+                    ? 'Prestress angle offset (radians), added to φ₀ for equilibrium.'
+                    : 'Prestress length offset (m), added to L₀ for equilibrium.'}
                 />
               )}
               {!torsion && (

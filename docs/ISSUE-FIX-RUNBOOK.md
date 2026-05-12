@@ -88,7 +88,8 @@ Use this with [`phased-issue-fix-plan.md`](./phased-issue-fix-plan.md) and [`val
 
 | Phase | Status | PR / notes |
 |-------|--------|------------|
-| 1 P0 #1–#3 | **Implemented in repo** — verify tests | See commit / PR |
-| 2–7 | Pending | |
+| 1 P0 #1–#3 | Done | `master` — simulate metrics, motor sync, finite guards |
+| 2 P1 #4–#6, #19 | Done | `DEFAULT_SOLVER_CONFIG`, `stepError` UI, torsion `equilibriumRestAngle`, pre-sim validation; #18 tooltips included |
+| 3–7 | Pending | Stiff springs, tests batch, product tools |
 
 Update this table as you merge work.

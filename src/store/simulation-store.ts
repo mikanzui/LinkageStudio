@@ -23,6 +23,8 @@ interface SimulationStore {
   dragDamping: number;
   /** Force sensor time-series: sensorId → array of { time, force } */
   forceSensorData: Map<string, { time: number; force: number }[]>;
+  /** User-visible solver/driver message (invalid driver, bad mechanism, unstable step). */
+  stepError: string | null;
 
   play(): void;
   pause(): void;
@@ -44,6 +46,7 @@ interface SimulationStore {
   setDamping(d: number): void;
   setDragMultiplier(m: number): void;
   setDragDamping(d: number): void;
+  setStepError(msg: string | null): void;
 }
 
 export const useSimulationStore = create<SimulationStore>((set) => ({
@@ -66,18 +69,30 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
   dragMultiplier: 25,
   dragDamping: 0.25,
   forceSensorData: new Map(),
+  stepError: null,
 
   play() { set({ isPlaying: true }); },
   pause() { set({ isPlaying: false }); },
-  reset() { resetForceSmoothing(); set({ isPlaying: false, time: 0, driverAngle: 0, pathTraces: new Map(), tracerPaths: new Map(), forceSensorData: new Map() }); },
+  reset() {
+    resetForceSmoothing();
+    set({
+      isPlaying: false,
+      time: 0,
+      driverAngle: 0,
+      pathTraces: new Map(),
+      tracerPaths: new Map(),
+      forceSensorData: new Map(),
+      stepError: null,
+    });
+  },
   setSpeed(speed) { set({ speed }); },
 
   setDriver(jointId, linkId, type) {
-    set({ driverJointId: jointId, driverLinkId: linkId, driverType: type });
+    set({ driverJointId: jointId, driverLinkId: linkId, driverType: type, stepError: null });
   },
 
   clearDriver() {
-    set({ driverJointId: null, driverLinkId: null });
+    set({ driverJointId: null, driverLinkId: null, stepError: null });
   },
 
   setDriverAngle(angle) { set({ driverAngle: angle }); },
@@ -146,5 +161,9 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
 
   setDragDamping(d) {
     set({ dragDamping: d });
+  },
+
+  setStepError(msg) {
+    set({ stepError: msg });
   },
 }));

@@ -1,9 +1,17 @@
 import type { Vec2 } from './geometry';
 
+/** Single tuning surface for NR (`solve`) and PBD (`solveWithForce`). Defaults in `utils/constants.ts` (`DEFAULT_SOLVER_CONFIG`). */
 export interface SolverConfig {
   maxIterations: number;
   tolerance: number;
+  /** NR correction blend (maps to former SOLVER_DAMPING). */
   damping: number;
+  pbdSubsteps: number;
+  pbdConstraintPasses: number;
+  simPullStrength: number;
+  stabilityMaxSubstepDisplacement: number;
+  stabilityMaxJointSpeed: number;
+  stabilityMaxLinkLengthError: number;
 }
 
 export interface ForceVector {

@@ -12,6 +12,7 @@ import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
 import { SIM_DT } from './utils/constants';
 import { jointPositionsFinite } from './utils/solver-commit-guards';
+import { validateMechanismForSimulateStep } from './utils/mechanism-sim-validation';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from './core/body-transform';
 import { loadProject } from './services/onedrive';
 import { deserializeMechanism, openFilePicker } from './utils/file-io';
@@ -65,6 +66,18 @@ function App() {
       // --- SIMULATE MODE ---
       if (editor.mode === 'simulate') {
         const simDt = SIM_DT * sim.speed;
+
+        const precheck = validateMechanismForSimulateStep(
+          mech.joints,
+          mech.links,
+          mech.sliders,
+          mech.colliders,
+        );
+        if (!precheck.ok) {
+          sim.setStepError(precheck.reason ?? 'Mechanism failed validation.');
+          sim.pause();
+          return;
+        }
 
         // Build pull force from sim drag (link-based, direct on slider B, joint-only, or stale linkId fallback via simGrabJointId)
         const sd = editor.simDrag;
@@ -199,6 +212,7 @@ function App() {
         const finite = jointPositionsFinite(result.positions);
         const stable = result.simulateStable !== false && finite;
         if (stable && (result.converged || result.residual < 1)) {
+          sim.setStepError(null);
           sim.advanceTime(simDt);
           for (const [jointId, pos] of result.positions) {
             if (mech.joints[jointId] && !fixedJointIds.has(jointId)) {
@@ -232,6 +246,11 @@ function App() {
           }
         } else {
           if (!finite || result.simulateStable === false) {
+            sim.setStepError(
+              !finite
+                ? 'Simulation produced non-finite coordinates. Playback paused.'
+                : 'Simulation step unstable (excessive motion or constraint error). Try lower Speed or Damping, or reduce spring stiffness. Playback paused.',
+            );
             sim.pause();
           }
         }
@@ -243,11 +262,21 @@ function App() {
       if (!sim.isPlaying || !sim.driverJointId || !sim.driverLinkId) return;
 
       const link = mech.links[sim.driverLinkId];
-      if (!link) return;
+      if (!link) {
+        sim.setStepError('Motor driver link is missing. Choose a valid driver link.');
+        sim.pause();
+        return;
+      }
 
       const fixedJointId = link.jointIds.find((jid) => fixedJointIds.has(jid));
       const drivenJointId = link.jointIds.find((jid) => jid !== fixedJointId);
-      if (!fixedJointId || !drivenJointId) return;
+      if (!fixedJointId || !drivenJointId) {
+        sim.setStepError(
+          'Motor link must connect the red base body to a driven joint. Pick a link that touches the base (fixed) body.',
+        );
+        sim.pause();
+        return;
+      }
 
       if (initialAngleRef.current === null) {
         const fj = mech.joints[fixedJointId];
@@ -269,6 +298,7 @@ function App() {
 
       const motorOk = result.converged && jointPositionsFinite(result.positions);
       if (motorOk) {
+        sim.setStepError(null);
         sim.advanceTime(motorDt);
         sim.setDriverAngle(targetAngle);
         for (const [jointId, pos] of result.positions) {
@@ -283,6 +313,11 @@ function App() {
           }
         }
       } else {
+        sim.setStepError(
+          jointPositionsFinite(result.positions)
+            ? 'Kinematics did not converge this frame. Try a different pose, add constraints, or check DOF. Playback paused.'
+            : 'Motor solve produced non-finite coordinates. Playback paused.',
+        );
         sim.pause();
       }
       } catch (e) {

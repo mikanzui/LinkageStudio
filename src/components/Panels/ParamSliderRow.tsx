@@ -25,6 +25,8 @@ export type ParamSliderRowProps = {
   integer?: boolean;
   /** When set, number field shows this many fractional digits (full precision still stored). */
   displayDecimals?: number;
+  /** Optional tooltip / context for the whole row (e.g. parameter meaning). */
+  rowTitle?: string;
 };
 
 export function ParamSliderRow({
@@ -38,6 +40,7 @@ export function ParamSliderRow({
   clamp,
   integer,
   displayDecimals,
+  rowTitle,
 }: ParamSliderRowProps) {
   const [range, setRange] = useState(() => {
     const [a, b] = expandRangeToInclude(value, defaultMin, defaultMax);
@@ -75,7 +78,7 @@ export function ParamSliderRow({
       : Number(value.toFixed(displayDecimals));
 
   return (
-    <div className="panel-param-slider-row">
+    <div className="panel-param-slider-row" title={rowTitle}>
       <span className="panel-num-axis">{axisLabel}</span>
       <div className="panel-param-slider-body">
         <div className="panel-param-range-cell">

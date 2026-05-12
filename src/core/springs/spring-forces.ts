@@ -19,9 +19,14 @@ export const SPRING_DAMPING_SI_TO_SIM = 0.006;
 export const TORSION_STIFFNESS_SI_TO_SIM = 10;
 export const TORSION_DAMPING_SI_TO_SIM = 5;
 
-/** Effective equilibrium length: natural rest at placement + user prestress offset. */
+/** Effective equilibrium length: natural rest at placement + user prestress offset (linear springs, metres). */
 export function equilibriumRestLength(restLength: number, prestressDelta: number): number {
   return restLength + prestressDelta;
+}
+
+/** Equilibrium angle for torsion: φ_eq = φ₀ + Δφ (radians). Same math as linear rest; separate name for clarity in UI/code. */
+export function equilibriumRestAngle(restAngleRad: number, prestressDeltaRad: number): number {
+  return restAngleRad + prestressDeltaRad;
 }
 
 /**

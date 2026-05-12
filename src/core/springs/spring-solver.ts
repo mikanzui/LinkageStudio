@@ -1,6 +1,7 @@
 import type { Joint, Link, MechanismSpring, SpringAnchor, Vec2 } from '../../types';
 import {
   equilibriumRestLength,
+  equilibriumRestAngle,
   linearSpringAccelerationOnB,
   siDampingToSim,
   siStiffnessToSim,
@@ -346,7 +347,7 @@ export function accumulateTorsionalSpringAccelerations(
     if (!legA || !legB || legA.pivotJointId !== legB.pivotJointId) continue;
 
     const phi = Math.atan2(legA.ux * legB.uy - legA.uy * legB.ux, legA.ux * legB.ux + legA.uy * legB.uy);
-    const phiEq = equilibriumRestLength(sp.restLength, sp.prestressDelta);
+    const phiEq = equilibriumRestAngle(sp.restLength, sp.prestressDelta);
     const phiErr = wrapAngleMinusPiToPi(phi - phiEq);
     const k = siTorsionStiffnessToSim(sp.stiffness);
     const c = siTorsionDampingToSim(sp.damping);

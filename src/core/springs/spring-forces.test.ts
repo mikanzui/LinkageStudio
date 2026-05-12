@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   equilibriumRestLength,
+  equilibriumRestAngle,
   linearSpringAccelerationOnB,
   siStiffnessToSim,
   siDampingToSim,
@@ -10,6 +11,13 @@ describe('equilibriumRestLength', () => {
   it('adds prestress to natural rest', () => {
     expect(equilibriumRestLength(100, 5)).toBe(105);
     expect(equilibriumRestLength(100, -10)).toBe(90);
+  });
+});
+
+describe('equilibriumRestAngle', () => {
+  it('matches linear combination for torsion equilibrium', () => {
+    expect(equilibriumRestAngle(1.0, 0.1)).toBeCloseTo(1.1);
+    expect(equilibriumRestAngle(1.0, -0.25)).toBeCloseTo(0.75);
   });
 });
 

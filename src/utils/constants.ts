@@ -1,3 +1,5 @@
+import type { SolverConfig } from '../types/solver';
+
 // Rendering
 export const JOINT_RADIUS = 8;
 export const JOINT_RADIUS_FIXED = 10;
@@ -24,7 +26,7 @@ export const SOLVER_MAX_ITERATIONS = 100;
 export const SOLVER_TOLERANCE = 1e-10;
 export const SOLVER_DAMPING = 1.0;
 
-// Simulation
+// Simulation (stability thresholds used by PBD `solveWithForce`)
 export const SIM_DT = 1 / 60;
 export const DEFAULT_MOTOR_SPEED = 1.0;
 
@@ -34,6 +36,23 @@ export const SIM_STABILITY_MAX_SUBSTEP_DISPLACEMENT = 250;
 export const SIM_STABILITY_MAX_JOINT_SPEED = 20_000;
 /** PBD simulate: max |actual − restLength| on any distance link after the step. */
 export const SIM_STABILITY_MAX_LINK_LENGTH_ERROR = 120;
+
+/** Default NR + PBD + stability knobs; pass `Partial<SolverConfig>` into `solve` / `solveWithForce` to override. */
+export const DEFAULT_SOLVER_CONFIG: SolverConfig = {
+  maxIterations: SOLVER_MAX_ITERATIONS,
+  tolerance: SOLVER_TOLERANCE,
+  damping: SOLVER_DAMPING,
+  pbdSubsteps: 10,
+  pbdConstraintPasses: 6,
+  simPullStrength: 6,
+  stabilityMaxSubstepDisplacement: SIM_STABILITY_MAX_SUBSTEP_DISPLACEMENT,
+  stabilityMaxJointSpeed: SIM_STABILITY_MAX_JOINT_SPEED,
+  stabilityMaxLinkLengthError: SIM_STABILITY_MAX_LINK_LENGTH_ERROR,
+};
+
+export function mergeSolverConfig(p?: Partial<SolverConfig>): SolverConfig {
+  return { ...DEFAULT_SOLVER_CONFIG, ...p };
+}
 
 /** Default linear spring (SI): stiffness N/m, damping N·s/m — world unit = 1 m. */
 export const DEFAULT_SPRING_STIFFNESS_NM = 150;

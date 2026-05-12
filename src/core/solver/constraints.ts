@@ -29,6 +29,10 @@ export function distanceConstraint(
  * On-axis constraint for prismatic joints.
  * Point must stay on the line through p0 in direction axis.
  * Constrains the perpendicular component to zero.
+ *
+ * **Integration:** Not referenced by `solve` or `solveWithForce`; slider rails are projected
+ * inline in `newton-raphson.ts`. Kept as a reusable Jacobian building block if slider logic
+ * is ever unified with the NR constraint stack.
  */
 export function onAxisConstraint(
   point: Vec2,

@@ -30,6 +30,34 @@ export function SimulationPanel() {
   const lockOutlines = useEditorStore((s) => s.lockOutlines);
   const gridLevel = useEditorStore((s) => s.gridLevel);
   const outlineSimGrabInteriorWithJoints = useEditorStore((s) => s.outlineSimGrabInteriorWithJoints);
+  const stepError = useSimulationStore((s) => s.stepError);
+  const setStepError = useSimulationStore((s) => s.setStepError);
+
+  const stepErrorBanner = stepError ? (
+    <div
+      className="panel-surface panel-section"
+      style={{
+        border: '1px solid #c62828',
+        background: '#3e2723',
+        color: '#ffccbc',
+        fontSize: 12,
+        padding: '8px 10px',
+        display: 'flex',
+        gap: 8,
+        alignItems: 'flex-start',
+      }}
+    >
+      <span style={{ flex: 1 }}>{stepError}</span>
+      <button
+        type="button"
+        className="tool-btn"
+        style={{ flexShrink: 0, fontSize: 11 }}
+        onClick={() => setStepError(null)}
+      >
+        Dismiss
+      </button>
+    </div>
+  ) : null;
 
   // Physics controls - visible in both modes (title rendered above box)
   const physicsSection = (
@@ -56,7 +84,10 @@ export function SimulationPanel() {
           <span className="panel-slider-value">{gravityStrength}</span>
         </label>
       )}
-      <label className="panel-slider-row">
+      <label
+        className="panel-slider-row"
+        title="Global velocity retention each substep (applies to all free joints in simulate). Separate from per-spring damper coefficient c."
+      >
         <span className="panel-slider-label">Damping</span>
         <input
           type="range"
@@ -209,6 +240,7 @@ export function SimulationPanel() {
         <div className="panel-section-header">
           <div className="panel-title">Simulation</div>
         </div>
+        {stepErrorBanner}
         <div className="panel-surface panel-section">
           <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
           <div className="panel-info">Time: {time.toFixed(2)}s</div>
@@ -252,6 +284,7 @@ export function SimulationPanel() {
       <div className="panel-section-header">
         <div className="panel-title">Properties</div>
       </div>
+      {stepErrorBanner}
       <div className="panel-surface panel-section">
         <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
       </div>
