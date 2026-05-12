@@ -97,8 +97,9 @@ Use this with [`phased-issue-fix-plan.md`](./phased-issue-fix-plan.md) and [`val
 | 1 P0 #1–#3 | Done | `master` — simulate metrics, motor sync, finite guards |
 | 2 P1 #4–#6, #19 | Done | `DEFAULT_SOLVER_CONFIG`, `stepError` UI, torsion `equilibriumRestAngle`, pre-sim validation; #18 tooltips included |
 | 3 P2 #7–#9 | Done | Simulate `pbdSubsteps` scale with Speed; degenerate-length spring damping; `docs/physics-mass-model.md` |
-| 5 P3 #10–#11 partial | Done | Tick `catch` → `stepError` + pause; `FORCE_READOUT_LABEL_HINT` on force UI |
+| 5 P3 #10–#12 | Done | Tick `catch` → `stepError` + pause; force readout copy + canvas subtitle; dev timing HUD (`?devSolverTiming=1`, DEV only) |
 | 4 hygiene #17–#18 | Done | Landed with phase 2 (tooltips / `onAxisConstraint` doc per plan) |
-| 6–7 | Pending | Tests batch (#13–#16), product tools (#20–#23) |
+| 6 tests #13–#16 | Partial | **#13** `newton-raphson.test.ts` (kinematic `solve`); **#14–#16** pending |
+| 7 product #20–#23 | Pending | Tooling / annotations per plan |
 
 Update this table as you merge work.

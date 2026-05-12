@@ -1,6 +1,6 @@
 import type { Vec2, CameraState, SimDragState, ForceVector, GridLevel, SelectionGesture, Joint, Link, ForceAnalysisResult, Body, ForceSensor } from '../types';
 import { GRID_COLOR, GRID_MAJOR_COLOR, BACKGROUND_COLOR } from '../utils/constants';
-import { forceToColor, formatForce } from '../utils/units';
+import { forceToColor, formatForce, FORCE_READOUT_LABEL_HINT_SHORT } from '../utils/units';
 
 function drawBadgeLabel(
   ctx: CanvasRenderingContext2D,
@@ -10,7 +10,8 @@ function drawBadgeLabel(
   bgColor: string,
   textColor: string,
   zoom: number,
-  fontSizeScreen: number = 11
+  fontSizeScreen: number = 11,
+  subtitle?: string,
 ) {
   const fontSize = fontSizeScreen / zoom;
   ctx.font = `bold ${fontSize}px monospace`;
@@ -48,6 +49,18 @@ function drawBadgeLabel(
   ctx.fillText(text, x, y + (0.5 / zoom));
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
+
+  if (subtitle) {
+    const subSize = (fontSizeScreen * 0.62) / zoom;
+    ctx.font = `${subSize}px monospace`;
+    ctx.fillStyle = 'rgba(28, 28, 28, 0.9)';
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(subtitle, x, y + h * 0.5 + 2 / zoom);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
 }
 
 export function drawGrid(
@@ -499,6 +512,12 @@ export function drawForceVectors(
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(label, midX + nx * offsetDist, midY + ny * offsetDist);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.font = `${6.5 / zoom}px monospace`;
+        ctx.fillStyle = 'rgba(28, 28, 28, 0.88)';
+        ctx.globalAlpha = 1;
+        ctx.fillText(FORCE_READOUT_LABEL_HINT_SHORT, midX + nx * offsetDist, midY + ny * offsetDist + (7 / zoom));
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
       }
@@ -942,7 +961,17 @@ export function drawLinkLoads(
         const ny = len > 1e-6 ? dx / len : 1;
         const offsetDist = 18 / zoom;
 
-        drawBadgeLabel(ctx, prefix + label, midX + nx * offsetDist, midY + ny * offsetDist, color, '#FFFFFF', zoom, 12);
+        drawBadgeLabel(
+          ctx,
+          prefix + label,
+          midX + nx * offsetDist,
+          midY + ny * offsetDist,
+          color,
+          '#FFFFFF',
+          zoom,
+          12,
+          FORCE_READOUT_LABEL_HINT_SHORT,
+        );
       }
     }
   }
@@ -1013,7 +1042,17 @@ export function drawJointReactions(
       const labelX = toX + ux * (10 / zoom);
       const labelY = toY + uy * (10 / zoom);
       
-      drawBadgeLabel(ctx, label, labelX, labelY, arrowColor, '#FFFFFF', zoom, 11);
+      drawBadgeLabel(
+        ctx,
+        label,
+        labelX,
+        labelY,
+        arrowColor,
+        '#FFFFFF',
+        zoom,
+        11,
+        FORCE_READOUT_LABEL_HINT_SHORT,
+      );
     }
   }
 }

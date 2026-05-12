@@ -11,6 +11,7 @@ import { computeDOF } from './core/solver/dof';
 import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
 import { SIM_DT, mergeSolverConfig, simulatePbdSubstepsForFrameDt } from './utils/constants';
+import { isDevSolverTimingOverlayEnabled } from './utils/dev-solver-overlay';
 import { jointPositionsFinite } from './utils/solver-commit-guards';
 import { validateMechanismForSimulateStep } from './utils/mechanism-sim-validation';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from './core/body-transform';
@@ -50,6 +51,9 @@ function App() {
 
   useEffect(() => {
     const tick = () => {
+      const devTiming = isDevSolverTimingOverlayEnabled();
+      const t0 = devTiming ? performance.now() : 0;
+      let simDtForTiming: number | null = null;
       try {
       const sim = useSimulationStore.getState();
       const mech = useMechanismStore.getState();
@@ -66,6 +70,7 @@ function App() {
       // --- SIMULATE MODE ---
       if (editor.mode === 'simulate') {
         const simDt = SIM_DT * sim.speed;
+        simDtForTiming = simDt;
 
         const precheck = validateMechanismForSimulateStep(
           mech.joints,
@@ -286,6 +291,7 @@ function App() {
       }
 
       const motorDt = SIM_DT * sim.speed;
+      simDtForTiming = motorDt;
       const proposedTime = sim.time + motorDt;
       const targetAngle = computeDriverAngle(proposedTime, sim.speed, initialAngleRef.current);
 
@@ -333,6 +339,10 @@ function App() {
           simErr.pause();
         } catch {
           /* store unavailable — logged above */
+        }
+      } finally {
+        if (devTiming && t0) {
+          useSimulationStore.getState().setDevSolverTiming(performance.now() - t0, simDtForTiming);
         }
       }
     };

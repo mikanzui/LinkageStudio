@@ -19,6 +19,8 @@ Fill this **once per batch** after validation so later chats do not re-explore t
 | #8 zero-length linear spring | `spring-forces.ts` `LINEAR_SPRING_SINGULAR_SEPARATION`; `spring-forces.test.ts` | Coincident anchors: damping along v_rel only if `c>0`; no k-term |
 | #9 mass model doc | `docs/physics-mass-model.md`, `physics-engine-release-review.md` | Explains `Link.mass` vs joint unit-mass / PBD particle model |
 | #10 tick exceptions | `App.tsx` `catch` uses `stepError` + `pause()` | Banner in `SimulationPanel` shows message; dismiss clears |
-| #11 force readout copy | `utils/units.ts` `FORCE_READOUT_LABEL_HINT`, `SimulationPanel` force-overlay toggle, `PropertyPanel` reactions | Labels match disclosed model-units wording |
+| #11 force readout copy | `utils/units.ts` `FORCE_READOUT_LABEL_HINT`, `FORCE_READOUT_LABEL_HINT_SHORT`, `SimulationPanel` force-overlay toggle, `PropertyPanel` reactions, `draw-overlays.ts` link/joint/vector labels | Labels match disclosed model-units wording; canvas shows short subtitle near force readouts |
+| #12 dev solver timing | `utils/dev-solver-overlay.ts`, `simulation-store.ts`, `App.tsx`, `SimulationPanel.tsx` | DEV + `?devSolverTiming=1` (or hash query): panel shows last tick wall ms and integration Δt; production build off |
+| #13 kinematic NR test | `core/solver/newton-raphson.test.ts` | Vitest: two-bar triangle crank fixture converges at driven angle |
 
 Use the stub in `.cursor/rules/issue-context-efficiency.mdc` when triaging a single issue before adding a row here.

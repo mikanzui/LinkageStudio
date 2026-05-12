@@ -2,6 +2,9 @@
 export const FORCE_READOUT_LABEL_HINT =
   'Displayed “N / kN” values are solver model units scaled for readability, not strict SI calibrated to masses in the file.';
 
+/** Short line for on-canvas force labels (see `draw-overlays.ts`). */
+export const FORCE_READOUT_LABEL_HINT_SHORT = 'Model-scaled readout';
+
 export type ForceUnit = 'N' | 'kN';
 
 /** Format a force value (in sim units) for display. */

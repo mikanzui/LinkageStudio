@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editor-store';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import { DOF_TOOLTIP } from '../../core/solver/dof';
 import { FORCE_READOUT_LABEL_HINT } from '../../utils/units';
+import { isDevSolverTimingOverlayEnabled } from '../../utils/dev-solver-overlay';
 
 export function SimulationPanel() {
   const mode = useEditorStore((s) => s.mode);
@@ -33,6 +34,25 @@ export function SimulationPanel() {
   const outlineSimGrabInteriorWithJoints = useEditorStore((s) => s.outlineSimGrabInteriorWithJoints);
   const stepError = useSimulationStore((s) => s.stepError);
   const setStepError = useSimulationStore((s) => s.setStepError);
+  const devSolverLastTickWallMs = useSimulationStore((s) => s.devSolverLastTickWallMs);
+  const devSolverLastSimDt = useSimulationStore((s) => s.devSolverLastSimDt);
+
+  const devSolverTimingHud =
+    import.meta.env.DEV && isDevSolverTimingOverlayEnabled() ? (
+      <div
+        className="panel-info"
+        style={{
+          fontSize: 11,
+          fontFamily: 'monospace',
+          opacity: 0.8,
+          marginTop: 4,
+        }}
+        title="Dev only: wall time for last App tick and integration step dt. Enable with ?devSolverTiming=1"
+      >
+        solver tick {devSolverLastTickWallMs != null ? `${devSolverLastTickWallMs.toFixed(2)} ms` : '—'}
+        {devSolverLastSimDt != null ? ` · Δt ${(devSolverLastSimDt * 1000).toFixed(3)} ms` : ''}
+      </div>
+    ) : null;
 
   const stepErrorBanner = stepError ? (
     <div
@@ -242,6 +262,7 @@ export function SimulationPanel() {
           <div className="panel-title">Simulation</div>
         </div>
         {stepErrorBanner}
+        {devSolverTimingHud}
         <div className="panel-surface panel-section">
           <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
           <div className="panel-info">Time: {time.toFixed(2)}s</div>
@@ -286,6 +307,7 @@ export function SimulationPanel() {
         <div className="panel-title">Properties</div>
       </div>
       {stepErrorBanner}
+      {devSolverTimingHud}
       <div className="panel-surface panel-section">
         <div className="panel-info" title={DOF_TOOLTIP} style={{ cursor: 'help' }}>DOF: {dof}</div>
       </div>

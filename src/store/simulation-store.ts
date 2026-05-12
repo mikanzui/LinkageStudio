@@ -25,6 +25,10 @@ interface SimulationStore {
   forceSensorData: Map<string, { time: number; force: number }[]>;
   /** User-visible solver/driver message (invalid driver, bad mechanism, unstable step). */
   stepError: string | null;
+  /** Dev overlay: wall ms for last App simulation tick (`?devSolverTiming=1` + DEV only). */
+  devSolverLastTickWallMs: number | null;
+  /** Dev overlay: simulation / motor dt used on last tick (same gating). */
+  devSolverLastSimDt: number | null;
 
   play(): void;
   pause(): void;
@@ -47,6 +51,7 @@ interface SimulationStore {
   setDragMultiplier(m: number): void;
   setDragDamping(d: number): void;
   setStepError(msg: string | null): void;
+  setDevSolverTiming(tickWallMs: number, simDt: number | null): void;
 }
 
 export const useSimulationStore = create<SimulationStore>((set) => ({
@@ -70,6 +75,8 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
   dragDamping: 0.25,
   forceSensorData: new Map(),
   stepError: null,
+  devSolverLastTickWallMs: null,
+  devSolverLastSimDt: null,
 
   play() { set({ isPlaying: true }); },
   pause() { set({ isPlaying: false }); },
@@ -83,6 +90,8 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
       tracerPaths: new Map(),
       forceSensorData: new Map(),
       stepError: null,
+      devSolverLastTickWallMs: null,
+      devSolverLastSimDt: null,
     });
   },
   setSpeed(speed) { set({ speed }); },
@@ -165,5 +174,9 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
 
   setStepError(msg) {
     set({ stepError: msg });
+  },
+
+  setDevSolverTiming(tickWallMs, simDt) {
+    set({ devSolverLastTickWallMs: tickWallMs, devSolverLastSimDt: simDt });
   },
 }));
