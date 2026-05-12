@@ -11,6 +11,7 @@ import { computeDOF } from './core/solver/dof';
 import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
 import { SIM_DT } from './utils/constants';
+import { jointPositionsFinite } from './utils/solver-commit-guards';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from './core/body-transform';
 import { loadProject } from './services/onedrive';
 import { deserializeMechanism, openFilePicker } from './utils/file-io';
@@ -63,7 +64,7 @@ function App() {
 
       // --- SIMULATE MODE ---
       if (editor.mode === 'simulate') {
-        sim.advanceTime(SIM_DT * sim.speed);
+        const simDt = SIM_DT * sim.speed;
 
         // Build pull force from sim drag (link-based, direct on slider B, joint-only, or stale linkId fallback via simGrabJointId)
         const sd = editor.simDrag;
@@ -181,7 +182,7 @@ function App() {
           sim.damping,
           sim.dragMultiplier,
           sim.dragDamping,
-          SIM_DT * sim.speed,
+          simDt,
           fixedJointIds,
           jointGravityWeights,
           mech.sliders,
@@ -195,7 +196,10 @@ function App() {
 
         sim.setSolverResult(result);
 
-        if (result.converged || result.residual < 1) {
+        const finite = jointPositionsFinite(result.positions);
+        const stable = result.simulateStable !== false && finite;
+        if (stable && (result.converged || result.residual < 1)) {
+          sim.advanceTime(simDt);
           for (const [jointId, pos] of result.positions) {
             if (mech.joints[jointId] && !fixedJointIds.has(jointId)) {
               mech.moveJoint(jointId, pos);
@@ -226,6 +230,10 @@ function App() {
               sim.recordForceSensorData(sensor.id, sim.time, force);
             }
           }
+        } else {
+          if (!finite || result.simulateStable === false) {
+            sim.pause();
+          }
         }
         return;
       }
@@ -247,9 +255,9 @@ function App() {
         initialAngleRef.current = angleBetween(fj.position, dj.position);
       }
 
-      sim.advanceTime(SIM_DT * sim.speed);
-      const targetAngle = computeDriverAngle(sim.time, sim.speed, initialAngleRef.current);
-      sim.setDriverAngle(targetAngle);
+      const motorDt = SIM_DT * sim.speed;
+      const proposedTime = sim.time + motorDt;
+      const targetAngle = computeDriverAngle(proposedTime, sim.speed, initialAngleRef.current);
 
       const result = solve(mech.joints, mech.links, {
         fixedJointId,
@@ -259,7 +267,10 @@ function App() {
 
       sim.setSolverResult(result);
 
-      if (result.converged) {
+      const motorOk = result.converged && jointPositionsFinite(result.positions);
+      if (motorOk) {
+        sim.advanceTime(motorDt);
+        sim.setDriverAngle(targetAngle);
         for (const [jointId, pos] of result.positions) {
           if (mech.joints[jointId] && !fixedJointIds.has(jointId)) {
             mech.moveJoint(jointId, pos);
@@ -271,6 +282,8 @@ function App() {
             if (pos) sim.recordTrace(jointId, pos);
           }
         }
+      } else {
+        sim.pause();
       }
       } catch (e) {
         console.error('Simulation tick error:', e);

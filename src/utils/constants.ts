@@ -28,6 +28,13 @@ export const SOLVER_DAMPING = 1.0;
 export const SIM_DT = 1 / 60;
 export const DEFAULT_MOTOR_SPEED = 1.0;
 
+/** PBD simulate: max |Δpos| per joint in any one substep before we treat the step as unstable. */
+export const SIM_STABILITY_MAX_SUBSTEP_DISPLACEMENT = 250;
+/** PBD simulate: max |velocity| (world units/s) on any free joint after substeps. */
+export const SIM_STABILITY_MAX_JOINT_SPEED = 20_000;
+/** PBD simulate: max |actual − restLength| on any distance link after the step. */
+export const SIM_STABILITY_MAX_LINK_LENGTH_ERROR = 120;
+
 /** Default linear spring (SI): stiffness N/m, damping N·s/m — world unit = 1 m. */
 export const DEFAULT_SPRING_STIFFNESS_NM = 150;
 export const DEFAULT_SPRING_DAMPING_NS_PER_M = 12;

@@ -3,7 +3,14 @@ import { accumulateLinearSpringAccelerations, accumulateTorsionalSpringAccelerat
 import { distanceConstraint, angleDriverConstraint } from './constraints';
 import { analyzeForces, smoothForceAnalysis, type LinkCorrection } from './force-analysis';
 import { createMatrix, solveLU } from '../math/linalg';
-import { SOLVER_MAX_ITERATIONS, SOLVER_TOLERANCE, SOLVER_DAMPING } from '../../utils/constants';
+import {
+  SOLVER_MAX_ITERATIONS,
+  SOLVER_TOLERANCE,
+  SOLVER_DAMPING,
+  SIM_STABILITY_MAX_SUBSTEP_DISPLACEMENT,
+  SIM_STABILITY_MAX_JOINT_SPEED,
+  SIM_STABILITY_MAX_LINK_LENGTH_ERROR,
+} from '../../utils/constants';
 
 interface DriverInfo {
   fixedJointId: string;
@@ -180,7 +187,20 @@ export function solveWithForce(
 
   const n = freeJoints.length * 2;
   if (n === 0) {
-    return { converged: true, iterations: 0, residual: 0, positions: new Map(), forceVectors };
+    const stableMetrics = {
+      maxSubstepDisplacement: 0,
+      maxJointSpeed: 0,
+      maxLinkLengthError: 0,
+    };
+    return {
+      converged: true,
+      iterations: 0,
+      residual: 0,
+      positions: new Map(),
+      forceVectors,
+      simulateStable: true,
+      simulateMetrics: stableMetrics,
+    };
   }
 
   const linkArray = Object.values(links);
@@ -282,6 +302,7 @@ export function solveWithForce(
 
   // --- Substep loop ---
   const linkCorrections: LinkCorrection[] = [];
+  let maxSubstepDisplacementAll = 0;
   for (let sub = 0; sub < NUM_SUBSTEPS; sub++) {
     const isLastSubstep = sub === NUM_SUBSTEPS - 1;
     const springAx = new Float64Array(freeJoints.length);
@@ -657,6 +678,16 @@ export function solveWithForce(
       }
     }
 
+    let maxSubThis = 0;
+    for (let j = 0; j < freeJoints.length; j++) {
+      const ix = j * 2;
+      const dx = predicted[ix] - q[ix];
+      const dy = predicted[ix + 1] - q[ix + 1];
+      const mag = Math.hypot(dx, dy);
+      if (mag > maxSubThis) maxSubThis = mag;
+    }
+    if (maxSubThis > maxSubstepDisplacementAll) maxSubstepDisplacementAll = maxSubThis;
+
     // 4. Derive velocity from position change
     const invSubDt = 1 / subDt;
     for (let i = 0; i < n; i++) {
@@ -810,5 +841,57 @@ export function solveWithForce(
     : undefined;
   const forceAnalysis = rawForceAnalysis ? smoothForceAnalysis(rawForceAnalysis) : undefined;
 
-  return { converged: true, iterations: 0, residual: 0, positions, forceVectors, forceAnalysis };
+  let maxJointSpeed = 0;
+  for (let j = 0; j < freeJoints.length; j++) {
+    const sp = Math.hypot(v[j * 2], v[j * 2 + 1]);
+    if (sp > maxJointSpeed) maxJointSpeed = sp;
+  }
+
+  let maxLinkLengthError = 0;
+  for (const link of linkArray) {
+    const ji = joints[link.jointIds[0]];
+    const jj = joints[link.jointIds[1]];
+    if (!ji || !jj) continue;
+    const idxI = jointIndex.get(ji.id);
+    const idxJ = jointIndex.get(jj.id);
+    const x1 = idxI !== undefined ? q[idxI] : ji.position.x;
+    const y1 = idxI !== undefined ? q[idxI + 1] : ji.position.y;
+    const x2 = idxJ !== undefined ? q[idxJ] : jj.position.x;
+    const y2 = idxJ !== undefined ? q[idxJ + 1] : jj.position.y;
+    const dist = Math.hypot(x2 - x1, y2 - y1);
+    const err = Math.abs(dist - link.restLength);
+    if (err > maxLinkLengthError) maxLinkLengthError = err;
+  }
+
+  let positionsFinite = true;
+  for (let i = 0; i < freeJoints.length; i++) {
+    const x = q[i * 2];
+    const y = q[i * 2 + 1];
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      positionsFinite = false;
+      break;
+    }
+  }
+
+  const simulateMetrics = {
+    maxSubstepDisplacement: maxSubstepDisplacementAll,
+    maxJointSpeed,
+    maxLinkLengthError,
+  };
+  const simulateStable =
+    positionsFinite
+    && maxSubstepDisplacementAll <= SIM_STABILITY_MAX_SUBSTEP_DISPLACEMENT
+    && maxJointSpeed <= SIM_STABILITY_MAX_JOINT_SPEED
+    && maxLinkLengthError <= SIM_STABILITY_MAX_LINK_LENGTH_ERROR;
+
+  return {
+    converged: true,
+    iterations: 0,
+    residual: 0,
+    positions,
+    forceVectors,
+    forceAnalysis,
+    simulateStable,
+    simulateMetrics,
+  };
 }

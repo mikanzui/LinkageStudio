@@ -44,6 +44,16 @@ export interface ForceAnalysisResult {
   maxJointReaction: number;
 }
 
+/** Populated by `solveWithForce` for simulate-mode health (not NR `solve`). */
+export interface SimulateStepMetrics {
+  /** Largest single-joint displacement in any one substep (world units). */
+  maxSubstepDisplacement: number;
+  /** Largest speed magnitude on any free joint after integration (world units/s). */
+  maxJointSpeed: number;
+  /** Largest absolute link length error vs rest length (world units). */
+  maxLinkLengthError: number;
+}
+
 export interface SolverResult {
   converged: boolean;
   iterations: number;
@@ -51,6 +61,9 @@ export interface SolverResult {
   positions: Map<string, Vec2>;
   forceVectors: ForceVector[];
   forceAnalysis?: ForceAnalysisResult;
+  /** When false, simulate should not commit positions (exploding / unstable step). */
+  simulateStable?: boolean;
+  simulateMetrics?: SimulateStepMetrics;
 }
 
 export interface SimulationState {
