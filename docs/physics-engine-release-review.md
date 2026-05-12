@@ -30,14 +30,16 @@ Multi-agent codebase review focused on **`src/core/solver`**, **`src/core/spring
 
 | Risk | Notes | Where to look |
 |------|--------|----------------|
-| **Stiff springs + large effective `dt`** | Explicit substep integration; **`sim.speed`** scales timestep in **`App.tsx`** — stability budget shrinks with speed and stiffness. | `solveWithForce`, `App.tsx`, `constants.ts` |
+| **Stiff springs + large effective `dt`** | **`sim.speed`** scales frame `dt`; PBD **`pbdSubsteps`** is bumped via **`simulatePbdSubstepsForFrameDt`** (#7). Still tighten dampers/spring k if unstable. | `App.tsx`, `constants.ts`, `solveWithForce` |
 | **Springs vs PBD ordering** | Springs apply forces then links are projected; stiff springs fight projection → jitter / non-physical transients. | `solveWithForce` |
-| **Zero-length linear spring** | If \|B−A\| &lt; threshold, **no** spring/damper force (`linearSpringAccelerationOnB`). | `spring-forces.ts` |
+| **Zero-length linear spring** | Near-coincident anchors (**no stiff k-term**): **damper-only** along relative velocity when `c>0`; see `LINEAR_SPRING_SINGULAR_SEPARATION` in `spring-forces.ts`. | `spring-forces.ts` (**#8**) |
 | **Collapsed torsion legs** | Near-zero leg length skips torsion torque for that frame. | `spring-solver.ts` |
 | **Torsion model semantics** | Simplified paired tangential accelerations + large SI→sim scale **`TORSION_STIFFNESS_SI_TO_SIM`**; not full rigid-body **`τ = Iα`** across links. Misleading vs UI N·m labels. | `spring-forces.ts`, `spring-solver.ts` |
 | **Dual damping** | Global per-substep velocity damping **and** per-spring damper coefficients — easy to overtune or misunderstand. | `solveWithForce`, `spring-solver.ts` |
 | **Naming: `equilibriumRestLength` for torsion** | Same helper name used for linear rest length vs torsion equilibrium angle; **`restLength`/`prestress`** semantics differ by spring kind — documentation/tooltip risk. | `spring-solver.ts`, `spring-forces.ts` |
 | **`solve` omits springs** | Any future code path that calls **`solve`** expecting “physics” will silently drop springs. | `newton-raphson.ts` |
+
+**Mass semantics:** **`Link.mass`** vs **`Joint.mass?`** vs PBD / spring conventions are summarized in [`physics-mass-model.md`](./physics-mass-model.md) (**#9**).
 
 ### Integration, UI, and state
 

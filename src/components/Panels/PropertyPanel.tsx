@@ -4,7 +4,7 @@ import { useMechanismStore } from '../../store/mechanism-store';
 import { useSimulationStore } from '../../store/simulation-store';
 import type { Joint, Link, Outline, CanvasImage, SpringAnchor, MechanismSpring } from '../../types';
 import { getJointDisplayName } from '../../utils/joint-labels';
-import { formatForce } from '../../utils/units';
+import { formatForce, FORCE_READOUT_LABEL_HINT } from '../../utils/units';
 import { ParamSliderRow } from './ParamSliderRow';
 
 function linkRowLabel(link: Link, joints: Record<string, Joint>): string {
@@ -426,7 +426,10 @@ export function PropertyPanel() {
         {jointReaction && (
           <>
             <div className="panel-section-header" style={{ marginTop: 8 }}>
-              <div className="panel-subtitle">Reaction Forces</div>
+              <div className="panel-subtitle">Reaction forces</div>
+            </div>
+            <div className="panel-info" style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>
+              {FORCE_READOUT_LABEL_HINT}
             </div>
             <div className="panel-surface panel-section" style={{ fontSize: 11, fontFamily: 'monospace' }}>
               <div className="panel-info" style={{ fontWeight: 'bold' }}>

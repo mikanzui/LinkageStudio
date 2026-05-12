@@ -10,7 +10,7 @@ import { solve, solveWithForce, resetVelocities } from './core/solver/newton-rap
 import { computeDOF } from './core/solver/dof';
 import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
-import { SIM_DT } from './utils/constants';
+import { SIM_DT, mergeSolverConfig, simulatePbdSubstepsForFrameDt } from './utils/constants';
 import { jointPositionsFinite } from './utils/solver-commit-guards';
 import { validateMechanismForSimulateStep } from './utils/mechanism-sim-validation';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from './core/body-transform';
@@ -205,6 +205,7 @@ function App() {
           mech.springs,
           mech.bodies,
           comBodyJointSets,
+          mergeSolverConfig({ pbdSubsteps: simulatePbdSubstepsForFrameDt(simDt) }),
         );
 
         sim.setSolverResult(result);
@@ -322,6 +323,17 @@ function App() {
       }
       } catch (e) {
         console.error('Simulation tick error:', e);
+        try {
+          const simErr = useSimulationStore.getState();
+          const hint =
+            e instanceof Error ? e.message : typeof e === 'string' ? e : 'unexpected error';
+          simErr.setStepError(
+            `Simulation tick failed (${hint}). Playback paused — see console for detail.`,
+          );
+          simErr.pause();
+        } catch {
+          /* store unavailable — logged above */
+        }
       }
     };
 

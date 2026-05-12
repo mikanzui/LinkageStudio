@@ -3,6 +3,7 @@ import { useMechanismStore } from '../../store/mechanism-store';
 import { useEditorStore } from '../../store/editor-store';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import { DOF_TOOLTIP } from '../../core/solver/dof';
+import { FORCE_READOUT_LABEL_HINT } from '../../utils/units';
 
 export function SimulationPanel() {
   const mode = useEditorStore((s) => s.mode);
@@ -152,13 +153,13 @@ export function SimulationPanel() {
         />
         Show rulers
       </label>
-      <label className="panel-toggle-row">
+      <label className="panel-toggle-row" title={FORCE_READOUT_LABEL_HINT}>
         <input
           type="checkbox"
           checked={showForceUnits}
           onChange={() => useEditorStore.getState().toggleShowForceUnits()}
         />
-        Show force units
+        Force units on links (scaled model)
       </label>
       <label className="panel-toggle-row">
         <input

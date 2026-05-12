@@ -54,6 +54,22 @@ export function mergeSolverConfig(p?: Partial<SolverConfig>): SolverConfig {
   return { ...DEFAULT_SOLVER_CONFIG, ...p };
 }
 
+/**
+ * Simulate mode: extra PBD substeps when Speed > 1 scales frame dt (#7).
+ * Keeps integration sub-steps closer to the Speed 1 baseline for stiff springs
+ * (`subDt ∝ dt / pbdSubsteps`). Capped so very high speeds do not explode cost.
+ */
+export const SIM_PBD_SUBSTEPS_SIMULATE_CEIL = 56;
+
+export function simulatePbdSubstepsForFrameDt(frameDt: number): number {
+  const base = DEFAULT_SOLVER_CONFIG.pbdSubsteps;
+  const ratio = frameDt / SIM_DT;
+  return Math.min(
+    SIM_PBD_SUBSTEPS_SIMULATE_CEIL,
+    Math.max(base, Math.round(base * ratio)),
+  );
+}
+
 /** Default linear spring (SI): stiffness N/m, damping N·s/m — world unit = 1 m. */
 export const DEFAULT_SPRING_STIFFNESS_NM = 150;
 export const DEFAULT_SPRING_DAMPING_NS_PER_M = 12;

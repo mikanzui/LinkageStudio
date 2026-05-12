@@ -33,7 +33,15 @@ export function equilibriumRestAngle(restAngleRad: number, prestressDeltaRad: nu
  * Linear spring between anchors A and B (direction u = unit(B - A)).
  * Returns acceleration increment for the particle at B when A is held fixed (unit mass).
  * F_B = -k·(L - L_eq)·u - c·((v_B - v_A)·u)·u
+ *
+ * **Singular spacing** (distance below `LINEAR_SPRING_SINGULAR_SEPARATION`): the stiff
+ * k·(L−L₀) term is skipped so near-coincidence with large L_eq does not spike force.
+ * Axial **damping only** is applied along **relative velocity** when that direction
+ * is defined; otherwise acceleration is zero (#8).
  */
+const LINEAR_SPRING_SINGULAR_SEPARATION = 1e-12;
+const LINEAR_SPRING_DAMPING_VREL_EPS = 1e-14;
+
 export function linearSpringAccelerationOnB(
   pA: Vec2,
   pB: Vec2,
@@ -46,7 +54,19 @@ export function linearSpringAccelerationOnB(
   const dx = pB.x - pA.x;
   const dy = pB.y - pA.y;
   const L = Math.hypot(dx, dy);
-  if (L < 1e-12) return { ax: 0, ay: 0 };
+
+  if (L < LINEAR_SPRING_SINGULAR_SEPARATION) {
+    const vrx = vB.x - vA.x;
+    const vry = vB.y - vA.y;
+    const vmag = Math.hypot(vrx, vry);
+    if (vmag < LINEAR_SPRING_DAMPING_VREL_EPS || cSim === 0) return { ax: 0, ay: 0 };
+    const ux = vrx / vmag;
+    const uy = vry / vmag;
+    const valong = vrx * ux + vry * uy;
+    const f = -cSim * valong;
+    return { ax: f * ux, ay: f * uy };
+  }
+
   const ux = dx / L;
   const uy = dy / L;
   const e = L - LEq;

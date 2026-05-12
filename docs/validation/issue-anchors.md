@@ -15,6 +15,10 @@ Fill this **once per batch** after validation so later chats do not re-explore t
 | #19 P1-b pre-sim | `mechanism-sim-validation.ts`, `App.tsx` simulate path | Validates before `solveWithForce`; message + pause |
 | #17 maint | `constraints.ts` `onAxisConstraint` doc | Documented unused-by-solver status |
 | #18 dual damping | `SimulationPanel` global Damping label, `PropertyPanel` spring `c` rows | Tooltips distinguish global vs element damping |
-| | | |
+| #7 simulate dt / stiff springs | `constants.ts` `simulatePbdSubstepsForFrameDt`, `SIM_PBD_SUBSTEPS_SIMULATE_CEIL`, `App.tsx` simulate `solveWithForce` `mergeSolverConfig` | Higher Speed increases `pbdSubsteps` so substep dt stays nearer Speed‑1 baseline |
+| #8 zero-length linear spring | `spring-forces.ts` `LINEAR_SPRING_SINGULAR_SEPARATION`; `spring-forces.test.ts` | Coincident anchors: damping along v_rel only if `c>0`; no k-term |
+| #9 mass model doc | `docs/physics-mass-model.md`, `physics-engine-release-review.md` | Explains `Link.mass` vs joint unit-mass / PBD particle model |
+| #10 tick exceptions | `App.tsx` `catch` uses `stepError` + `pause()` | Banner in `SimulationPanel` shows message; dismiss clears |
+| #11 force readout copy | `utils/units.ts` `FORCE_READOUT_LABEL_HINT`, `SimulationPanel` force-overlay toggle, `PropertyPanel` reactions | Labels match disclosed model-units wording |
 
 Use the stub in `.cursor/rules/issue-context-efficiency.mdc` when triaging a single issue before adding a row here.

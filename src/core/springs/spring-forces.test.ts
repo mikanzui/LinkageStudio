@@ -22,7 +22,7 @@ describe('equilibriumRestAngle', () => {
 });
 
 describe('linearSpringAccelerationOnB', () => {
-  it('returns zero when A and B coincide (degenerate length)', () => {
+  it('returns zero when A and B coincide and there is no damping', () => {
     const a = linearSpringAccelerationOnB(
       { x: 0, y: 0 },
       { x: 0, y: 0 },
@@ -34,6 +34,21 @@ describe('linearSpringAccelerationOnB', () => {
     );
     expect(a.ax).toBe(0);
     expect(a.ay).toBe(0);
+  });
+
+  it('applies axial damping along relative velocity when coincident (#8)', () => {
+    const a = linearSpringAccelerationOnB(
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 40, y: 0 },
+      10,
+      2,
+      100,
+    );
+    // v_rel=(40,0), u=(1,0), valong=40, f=-80
+    expect(a.ax).toBeCloseTo(-80, 5);
+    expect(a.ay).toBeCloseTo(0, 5);
   });
 
   it('has no force when length matches equilibrium', () => {

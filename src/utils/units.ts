@@ -1,11 +1,6 @@
-/**
- * Force unit conversion and formatting.
- *
- * PBD constraint corrections produce force in sim-internal units.
- * The display scaling normalises to make readouts comparable to SI Newtons.
- * The exact mapping depends on gravity strength / mass conventions but the
- * user-facing labels are always "N" or "kN".
- */
+/** User-facing clarification for overlays / panels — matches `formatForce` (model-scaled labels, ~N equivalents). */
+export const FORCE_READOUT_LABEL_HINT =
+  'Displayed “N / kN” values are solver model units scaled for readability, not strict SI calibrated to masses in the file.';
 
 export type ForceUnit = 'N' | 'kN';
 
