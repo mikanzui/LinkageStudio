@@ -1,0 +1,17 @@
+---
+description: Bump app semver whenever the user asks for an update, commit, ship, or release of LinkageStudio changes. Default patch bump unless they specify major/minor.
+globs: "**/*"
+alwaysApply: false
+---
+
+# Version on “update”
+
+When the user says **update**, **commit this update**, **ship**, **release**, or clearly treats the session as a shippable increment:
+
+1. **Bump `package.json` version** before or as part of the same commit as the code changes.
+   - Default: **`npm version patch --no-git-tag-version`** (e.g. `0.15.1` → `0.15.2`).
+   - If they ask for a minor or major bump, use `minor` or `major` instead.
+2. **Keep `package-lock.json` in sync** (using `npm version` handles this).
+3. **Mention the new version** in the commit message body or subject when committing.
+
+Do **not** bump version for tiny doc-only typo fixes unless they still asked for an update/release.
