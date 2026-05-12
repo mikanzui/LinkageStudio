@@ -181,6 +181,9 @@ export function SimulationPanel() {
         />
         Force units on links (scaled model)
       </label>
+      <div className="panel-info" style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2, marginBottom: 2 }}>
+        To hide on-canvas force readouts, uncheck the option above. To remove a force sensor, select it and press Delete, or open its body in the Body panel and remove the sensor there.
+      </div>
       <label className="panel-toggle-row">
         <input
           type="checkbox"

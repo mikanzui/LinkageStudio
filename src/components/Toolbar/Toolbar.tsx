@@ -248,8 +248,9 @@ export function Toolbar() {
       return (
         <>
           <div className="sim-hint">Click a link to attach sensor</div>
-          <div className="sim-hint">Records axial force over time</div>
+          <div className="sim-hint">One sensor → axial force on that link; compare bars with two sensors</div>
           <div className="sim-hint">View plot during simulation</div>
+          <div className="sim-hint">Remove: Delete key or Body panel · Hide link labels: Sim panel → uncheck force units</div>
         </>
       );
     }

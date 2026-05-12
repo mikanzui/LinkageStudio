@@ -80,6 +80,9 @@ export function BodyPanel() {
   const tracers = useMechanismStore((s) => s.tracers);
   const toggleTracerEnabled = useMechanismStore((s) => s.toggleTracerEnabled);
   const removeTracer = useMechanismStore((s) => s.removeTracer);
+  const forceSensors = useMechanismStore((s) => s.forceSensors);
+  const toggleForceSensorEnabled = useMechanismStore((s) => s.toggleForceSensorEnabled);
+  const removeForceSensor = useMechanismStore((s) => s.removeForceSensor);
   const colliders = useMechanismStore((s) => s.colliders);
   const addBodyToCollider = useMechanismStore((s) => s.addBodyToCollider);
   const removeBodyFromCollider = useMechanismStore((s) => s.removeBodyFromCollider);
@@ -129,7 +132,12 @@ export function BodyPanel() {
         const bodyOutlines = Object.values(outlines).filter((o) => o.bodyId === body.id);
         const bodyImages = Object.values(images).filter((img) => img.bodyId === body.id);
         const bodyTracers = Object.values(tracers).filter((t) => t.bodyId === body.id);
-        const hasChildren = bodyOutlines.length > 0 || bodyImages.length > 0 || bodyTracers.length > 0;
+        const bodyForceSensors = Object.values(forceSensors).filter((fs) => {
+          const link = links[fs.linkId];
+          if (!link) return false;
+          return link.jointIds.some((jid) => body.jointIds.includes(jid));
+        });
+        const hasChildren = bodyOutlines.length > 0 || bodyImages.length > 0 || bodyTracers.length > 0 || bodyForceSensors.length > 0;
         const isCollapsed = collapsedBodies.has(body.id);
 
         return (
@@ -520,6 +528,53 @@ export function BodyPanel() {
                     </button>
                   </div>
                 ))}
+
+                {/* Force Sensors */}
+                {bodyForceSensors.map((sensor) => {
+                  const sensorLink = links[sensor.linkId];
+                  const j0 = sensorLink ? joints[sensorLink.jointIds[0]] : null;
+                  const j1 = sensorLink ? joints[sensorLink.jointIds[1]] : null;
+                  const label0 = j0?.label || sensorLink?.jointIds[0]?.slice(0, 4) || '?';
+                  const label1 = j1?.label || sensorLink?.jointIds[1]?.slice(0, 4) || '?';
+                  return (
+                    <div
+                      key={sensor.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '2px 6px', marginBottom: 1,
+                        borderRadius: 3, fontSize: 11,
+                        backgroundColor: selectedIds.has(sensor.id) ? 'rgba(74,158,255,0.15)' : 'transparent',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => select(sensor.id)}
+                    >
+                      <button
+                        onClick={(ev) => { ev.stopPropagation(); toggleForceSensorEnabled(sensor.id); }}
+                        title={sensor.enabled ? 'Disable force sensor' : 'Enable force sensor'}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: '0 1px', color: sensor.enabled ? '#aaa' : '#555',
+                          lineHeight: 1, display: 'flex', alignItems: 'center',
+                        }}
+                      >
+                        {sensor.enabled ? <EyeIcon /> : <EyeOffIcon />}
+                      </button>
+                      {/* Diamond icon */}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E91E63" strokeWidth="2" strokeLinejoin="round" style={{ flexShrink: 0, opacity: sensor.enabled ? 1 : 0.3 }}>
+                        <polygon points="12 2 22 12 12 22 2 12" />
+                      </svg>
+                      <span style={{ flex: 1, color: '#aaa' }}>Force {label0}–{label1}</span>
+                      <button
+                        className="tool-btn"
+                        style={{ fontSize: 10, padding: '1px 4px' }}
+                        onClick={(ev) => { ev.stopPropagation(); removeForceSensor(sensor.id); }}
+                        title="Remove force sensor"
+                      >
+                        x
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

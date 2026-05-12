@@ -69,6 +69,8 @@ export function WorldContextMenu() {
   const dragSessionKeyRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const dragMovedRef = useRef<boolean>(false);
+  /** Ignore stray capture-phase pointerdowns right after hold-menu mount (avoids instant close). */
+  const holdMenuPointerDownGraceUntilRef = useRef<number>(0);
 
   const closeMenuAndClearSelection = () => {
     closeMenu(null);
@@ -96,9 +98,18 @@ export function WorldContextMenu() {
     if (menu.openMode === 'hold') {
       // Hold-menu: pointer was down to open; release dismisses (see onPointerUp).
       primaryDownRef.current = true;
+      holdMenuPointerDownGraceUntilRef.current = performance.now() + 120;
+    } else {
+      holdMenuPointerDownGraceUntilRef.current = 0;
     }
 
     const onGlobalPointerDown = (event: PointerEvent) => {
+      if (
+        menu.openMode === 'hold' &&
+        performance.now() < holdMenuPointerDownGraceUntilRef.current
+      ) {
+        return;
+      }
       const target = event.target as HTMLElement | null;
       // Only keep open when clicking actual interactive menu controls.
       const clickedInteractive = !!(

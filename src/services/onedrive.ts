@@ -1,16 +1,25 @@
 import type { IPublicClientApplication, AccountInfo } from '@azure/msal-browser';
+import { InteractionRequiredAuthError } from '@azure/msal-browser';
 import { graphScopes } from '../auth/msal-config';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const FOLDER_PATH = 'Documents/LinkageStudio';
 
+/** Strip path-traversal and URL-unsafe characters from filenames. */
+function sanitizeFileName(name: string): string {
+  return name.replace(/[/\\:?#[\]@!$&'()*+,;=\x00-\x1f]/g, '_').replace(/\.\./g, '_');
+}
+
 async function getToken(instance: IPublicClientApplication, account: AccountInfo): Promise<string> {
   try {
     const resp = await instance.acquireTokenSilent({ scopes: graphScopes, account });
     return resp.accessToken;
-  } catch {
-    const resp = await instance.acquireTokenPopup({ scopes: graphScopes, account });
-    return resp.accessToken;
+  } catch (err) {
+    if (err instanceof InteractionRequiredAuthError) {
+      const resp = await instance.acquireTokenPopup({ scopes: graphScopes, account });
+      return resp.accessToken;
+    }
+    throw err;
   }
 }
 
@@ -102,7 +111,7 @@ export async function saveProject(
   content: string,
 ): Promise<string> {
   await ensureFolder(instance, account);
-  const safeName = fileName.endsWith('.slinker') ? fileName : `${fileName}.slinker`;
+  const safeName = sanitizeFileName(fileName.endsWith('.slinker') ? fileName : `${fileName}.slinker`);
   const resp = await graphFetch(
     instance,
     account,
@@ -137,7 +146,7 @@ export async function renameProject(
   itemId: string,
   newName: string,
 ): Promise<void> {
-  const safeName = newName.endsWith('.slinker') ? newName : `${newName}.slinker`;
+  const safeName = sanitizeFileName(newName.endsWith('.slinker') ? newName : `${newName}.slinker`);
   const resp = await graphFetch(instance, account, `/me/drive/items/${itemId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
