@@ -1,5 +1,9 @@
 # Build and deploy the Vite app to GitHub Pages.
 # Repo settings → Pages → Build and deployment → Source: GitHub Actions.
+#
+# If deploy fails with: Branch "main" is not allowed to deploy to github-pages:
+#   Repo → Settings → Environments → github-pages → Deployment branches
+#   → allow `main` (e.g. “Selected branches” and add main + master), or “All branches”.
 
 name: Deploy GitHub Pages
 
