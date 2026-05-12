@@ -257,6 +257,43 @@ describe('linear spring physics', () => {
     expect(joints.r.position.x).toBeCloseTo(100, 0);
     expect(joints.r.position.y).toBeCloseTo(0, 0);
   });
+
+  // Issue #14: link midpoint anchor exercises split weights in resolveAnchor inside spring accumulation.
+  it('link-anchored linear spring settles to finite positions after many steps (#14)', () => {
+    const joints: Record<string, Joint> = {
+      f: mkJoint('f', 'fixed', 0, 0, ['l1']),
+      m: mkJoint('m', 'revolute', 80, 15, ['l1', 'l2']),
+      e: mkJoint('e', 'revolute', 160, -10, ['l2']),
+    };
+    const links: Record<string, Link> = {
+      l1: mkLink('l1', 'f', 'm', 80),
+      l2: mkLink('l2', 'm', 'e', 80),
+    };
+    const spring: MechanismSpring = {
+      id: 'mid',
+      kind: 'linear',
+      anchorA: { type: 'joint', jointId: 'f' },
+      anchorB: { type: 'link', linkId: 'l2', t: 0.5 },
+      stiffness: 140,
+      damping: 18,
+      restLength: 45,
+      prestressDelta: 0,
+    };
+
+    simulate({ joints, links, steps: 220, gravity: 0, damping: 0.55, springs: { mid: spring } });
+
+    const assertFiniteJoint = (j: Joint) => {
+      expect(Number.isFinite(j.position.x)).toBe(true);
+      expect(Number.isFinite(j.position.y)).toBe(true);
+      expect(Math.abs(j.position.x) + Math.abs(j.position.y)).toBeLessThan(1e6);
+    };
+    assertFiniteJoint(joints.f);
+    assertFiniteJoint(joints.m);
+    assertFiniteJoint(joints.e);
+
+    expect(Math.abs(dist(joints.f.position, joints.m.position) - 80)).toBeLessThan(3);
+    expect(Math.abs(dist(joints.m.position, joints.e.position) - 80)).toBeLessThan(3);
+  });
 });
 
 // ── Damper (k=0) ───────────────────────────────────────────────────

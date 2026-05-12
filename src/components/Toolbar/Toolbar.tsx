@@ -391,6 +391,7 @@ export function Toolbar() {
         <>
           <div className="sim-hint">Click and drag across outline edges</div>
           <div className="sim-hint">Crossed edges will be trimmed</div>
+          <div className="sim-hint">Only the active body colour is cut when a body tab is selected</div>
           <div className="sim-hint">Escape to switch back</div>
         </>
       );

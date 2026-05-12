@@ -22,5 +22,9 @@ Fill this **once per batch** after validation so later chats do not re-explore t
 | #11 force readout copy | `utils/units.ts` `FORCE_READOUT_LABEL_HINT`, `FORCE_READOUT_LABEL_HINT_SHORT`, `SimulationPanel` force-overlay toggle, `PropertyPanel` reactions, `draw-overlays.ts` link/joint/vector labels | Labels match disclosed model-units wording; canvas shows short subtitle near force readouts |
 | #12 dev solver timing | `utils/dev-solver-overlay.ts`, `simulation-store.ts`, `App.tsx`, `SimulationPanel.tsx` | DEV + `?devSolverTiming=1` (or hash query): panel shows last tick wall ms and integration Δt; production build off |
 | #13 kinematic NR test | `core/solver/newton-raphson.test.ts` | Vitest: two-bar triangle crank fixture converges at driven angle |
+| #14 link-anchored linear sim | `physics-integration.test.ts` | `solveWithForce` + link midpoint anchor: finite joints + link lengths after N steps |
+| #15 torsion equilibrium + SI | `spring-forces.test.ts` `siTorsion*`, `spring-solver.test.ts` torsion accumulate + `equilibriumRestAngle` | Vitest: mapper scaling; prestress shifts torque vs same pose |
+| #16 pre-sim validation tests | `mechanism-sim-validation.test.ts` | Vitest: sliders/colliders missing-joint paths; no full App mode-switch harness |
+| #21 trim active body | `tool-manager.ts` (trim loop), `Toolbar.tsx` hint | When a body tab is selected, trim only that body’s outlines |
 
 Use the stub in `.cursor/rules/issue-context-efficiency.mdc` when triaging a single issue before adding a row here.

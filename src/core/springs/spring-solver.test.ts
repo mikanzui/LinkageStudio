@@ -6,6 +6,7 @@ import {
   springEndpointsWorld,
   torsionRestAngleFromAnchors,
 } from './spring-solver';
+import { equilibriumRestAngle } from './spring-forces';
 import { solveWithForce, resetVelocities } from '../../core/solver/newton-raphson';
 import type { Joint, Link, MechanismSpring } from '../../types';
 
@@ -157,6 +158,47 @@ describe('torsionRestAngleFromAnchors', () => {
 });
 
 describe('accumulateTorsionalSpringAccelerations', () => {
+  it('uses equilibriumRestAngle(restLength, prestressDelta) so prestress shifts torque sign (#15)', () => {
+    const p: Joint = { id: 'p', type: 'revolute', position: { x: 0, y: 0 }, connectedLinkIds: [] };
+    const ja: Joint = { id: 'a', type: 'revolute', position: { x: 1, y: 0 }, connectedLinkIds: [] };
+    const jb: Joint = { id: 'b', type: 'revolute', position: { x: 0, y: 1 }, connectedLinkIds: [] };
+    const joints = { p, a: ja, b: jb };
+    const links: Record<string, Link> = {
+      L1: { id: 'L1', jointIds: ['p', 'a'], restLength: 1, mass: 1 },
+      L2: { id: 'L2', jointIds: ['p', 'b'], restLength: 1, mass: 1 },
+    };
+    const jointIndex = new Map<string, number>([
+      ['p', 0],
+      ['a', 2],
+      ['b', 4],
+    ]);
+    const q = new Float64Array([0, 0, 1, 0, 0, 1]);
+    const v = new Float64Array(6);
+
+    const run = (prestressDelta: number) => {
+      const outAx = new Float64Array(3);
+      const outAy = new Float64Array(3);
+      const spring: MechanismSpring = {
+        id: 't1',
+        kind: 'torsional',
+        anchorA: { type: 'link', linkId: 'L1', t: 0 },
+        anchorB: { type: 'link', linkId: 'L2', t: 0 },
+        stiffness: 50000,
+        damping: 0,
+        restLength: Math.PI / 2,
+        prestressDelta,
+      };
+      accumulateTorsionalSpringAccelerations({ t1: spring }, joints, links, q, v, jointIndex, outAx, outAy);
+      expect(equilibriumRestAngle(Math.PI / 2, prestressDelta)).toBeCloseTo(Math.PI / 2 + prestressDelta, 6);
+      return { pivotX: outAx[0], pivotY: outAy[0] };
+    };
+
+    const a = run(0);
+    const b = run(0.4);
+    // Same pose; different equilibrium angle → restoring torque at pivot differs
+    expect(Math.abs(a.pivotX - b.pivotX) + Math.abs(a.pivotY - b.pivotY)).toBeGreaterThan(1e-6);
+  });
+
   it('produces non-zero accelerations when angle differs from rest', () => {
     const p: Joint = { id: 'p', type: 'revolute', position: { x: 0, y: 0 }, connectedLinkIds: [] };
     const ja: Joint = { id: 'a', type: 'revolute', position: { x: 1, y: 0 }, connectedLinkIds: [] };

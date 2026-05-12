@@ -99,7 +99,7 @@ Use this with [`phased-issue-fix-plan.md`](./phased-issue-fix-plan.md) and [`val
 | 3 P2 #7–#9 | Done | Simulate `pbdSubsteps` scale with Speed; degenerate-length spring damping; `docs/physics-mass-model.md` |
 | 5 P3 #10–#12 | Done | Tick `catch` → `stepError` + pause; force readout copy + canvas subtitle; dev timing HUD (`?devSolverTiming=1`, DEV only) |
 | 4 hygiene #17–#18 | Done | Landed with phase 2 (tooltips / `onAxisConstraint` doc per plan) |
-| 6 tests #13–#16 | Partial | **#13** `newton-raphson.test.ts` (kinematic `solve`); **#14–#16** pending |
-| 7 product #20–#23 | Pending | Tooling / annotations per plan |
+| 6 tests #13–#16 | Done | **#13** NR kinematic; **#14** link-anchored linear `solveWithForce` in `physics-integration.test.ts`; **#15** torsion equilibrium + `siTorsion*` in `spring-forces.test.ts` / `spring-solver.test.ts`; **#16** `validateMechanismForSimulateStep` slider/collider cases in `mechanism-sim-validation.test.ts` (no motor/mode harness) |
+| 7 product #20–#23 | Partial | **#21** trim scoped to active body + toolbar hint (**#22**–**#23** pending) |
 
 Update this table as you merge work.

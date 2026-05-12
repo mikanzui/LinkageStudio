@@ -5,6 +5,8 @@ import {
   linearSpringAccelerationOnB,
   siStiffnessToSim,
   siDampingToSim,
+  siTorsionStiffnessToSim,
+  siTorsionDampingToSim,
 } from './spring-forces';
 
 describe('equilibriumRestLength', () => {
@@ -120,5 +122,12 @@ describe('SI scaling helpers', () => {
   it('maps positive SI to positive sim factors', () => {
     expect(siStiffnessToSim(100)).toBeGreaterThan(0);
     expect(siDampingToSim(5)).toBeGreaterThan(0);
+  });
+
+  it('maps torsion SI stiffness/damping consistently (#15)', () => {
+    expect(siTorsionStiffnessToSim(2)).toBeCloseTo(20, 6);
+    expect(siTorsionDampingToSim(0.4)).toBeCloseTo(2, 6);
+    expect(siTorsionStiffnessToSim(0)).toBe(0);
+    expect(siTorsionDampingToSim(0)).toBe(0);
   });
 });

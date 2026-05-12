@@ -117,6 +117,8 @@ function startArcTimer(jointId: string, screenX: number, screenY: number) {
         });
         isDragging = false;
         dragJointId = null;
+        longPressStartScreen = null;
+        longPressJointId = null;
       }
     }
     longPressTimer = null;
@@ -139,6 +141,8 @@ function startColliderArcTimer(colliderId: string, _worldPos: Vec2, screenX: num
         screenPosition: { x: screenX, y: screenY },
         openMode: 'hold',
       });
+      longPressStartScreen = null;
+      longPressJointId = null;
     }
     longPressTimer = null;
   }, LONG_PRESS_MS);
@@ -160,6 +164,8 @@ function startTracerArcTimer(tracerId: string, screenX: number, screenY: number)
         screenPosition: { x: screenX, y: screenY },
         openMode: 'hold',
       });
+      longPressStartScreen = null;
+      longPressJointId = null;
     }
     longPressTimer = null;
   }, LONG_PRESS_MS);
@@ -293,7 +299,7 @@ let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressJointId: string | null = null;
 let longPressStartScreen: Vec2 | null = null;
 const LONG_PRESS_MS = 340;
-const LONG_PRESS_MOVE_THRESHOLD_BASE = 8; // px screen movement to cancel (minimum)
+const LONG_PRESS_MOVE_THRESHOLD_BASE = 12; // px screen movement to cancel (minimum; trackpads jitter)
 let imageStartPos: Vec2 = { x: 0, y: 0 };
 
 /** Box or lasso marquee drag (screen space, canvas-relative). */
@@ -342,6 +348,8 @@ function scheduleSliderRailHoldMenu(clientX: number, clientY: number) {
       screenPosition: { x: cx, y: cy },
       openMode: 'hold',
     });
+    longPressStartScreen = null;
+    longPressJointId = null;
   }, LONG_PRESS_MS);
 }
 
@@ -1000,6 +1008,8 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
                 },
                 openMode: 'hold',
               });
+              longPressStartScreen = null;
+              longPressJointId = null;
             }
           }
         }
@@ -1349,6 +1359,8 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
             },
             openMode: 'hold',
           });
+          longPressStartScreen = null;
+          longPressJointId = null;
         }
       }
       longPressTimer = null;
@@ -1464,8 +1476,10 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
 
     // Check each outline: does the trim stroke (prev→worldPos) cross any edge?
     const outlines = Object.values(mechanism.outlines);
+    const activeBodies = editor.activeBodyIds;
     for (const outline of outlines) {
       if (!outline.visible || outline.points.length < 3) continue;
+      if (activeBodies.size > 0 && !activeBodies.has(outline.bodyId)) continue;
       const body = mechanism.bodies[outline.bodyId];
       if (!body) continue;
       const transform = computeBodyTransform(body, mechanism.joints);
