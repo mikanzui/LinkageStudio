@@ -1,3 +1,4 @@
+import { deleteSelectedEntities } from '../utils/delete-selection';
 import { MechanismCanvas } from './Canvas/MechanismCanvas';
 import { TopBar } from './TopBar/TopBar';
 import { Toolbar } from './Toolbar/Toolbar';
@@ -9,6 +10,9 @@ import { useMechanismStore } from '../store/mechanism-store';
 import { switchMode } from '../utils/mode-switch';
 import { screenToWorld } from '../renderer/camera';
 import './Layout.css';
+import { useEffect } from 'react';
+import { ViewportTools } from './Canvas/ViewportTools';
+import { PanelResizeHandle } from './PanelResizeHandle';
 
 /* ---- Shared chevron icon ---- */
 const ChevronIcon = ({ direction }: { direction: 'left' | 'right' }) => (
@@ -96,20 +100,9 @@ const IconImageSmall = () => (
 
 /* ---- Delete button for collapsed toolbar ---- */
 function CollapsedDeleteButton() {
-  const joints = useMechanismStore((s) => s.joints);
   const outlines = useMechanismStore((s) => s.outlines);
-  const images = useMechanismStore((s) => s.images);
-  const removeJoint = useMechanismStore((s) => s.removeJoint);
-  const removeOutline = useMechanismStore((s) => s.removeOutline);
-  const removeImage = useMechanismStore((s) => s.removeImage);
-  const removeTracer = useMechanismStore((s) => s.removeTracer);
-  const removeOutlineVertex = useMechanismStore((s) => s.removeOutlineVertex);
-  const tracers = useMechanismStore((s) => s.tracers);
-  const selectedIds = useEditorStore((s) => s.selectedIds);
-  const clearSelection = useEditorStore((s) => s.clearSelection);
   const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
-  const setEditingVertexIndex = useEditorStore((s) => s.setEditingVertexIndex);
 
   const hasVertexSelection = editingOutlineId !== null && editingVertexIndex !== null;
   const canDeleteVertex = hasVertexSelection && (() => {
@@ -117,20 +110,7 @@ function CollapsedDeleteButton() {
     return outline && outline.points.length > 3;
   })();
 
-  const handleDelete = () => {
-    if (hasVertexSelection && canDeleteVertex) {
-      removeOutlineVertex(editingOutlineId!, editingVertexIndex!);
-      setEditingVertexIndex(null);
-      return;
-    }
-    for (const id of selectedIds) {
-      if (joints[id]) removeJoint(id);
-      else if (outlines[id]) removeOutline(id);
-      else if (images[id]) removeImage(id);
-      else if (tracers[id]) removeTracer(id);
-    }
-    clearSelection();
-  };
+
 
   const isDisabled = hasVertexSelection && !canDeleteVertex;
   const title = hasVertexSelection ? 'Delete vertex' : 'Delete selected';
@@ -138,7 +118,7 @@ function CollapsedDeleteButton() {
   return (
     <button
       className="collapsed-tool-btn delete"
-      onClick={handleDelete}
+      onClick={deleteSelectedEntities}
       disabled={isDisabled}
       title={title}
     >
@@ -244,8 +224,11 @@ function CollapsedBodyList() {
 }
 
 export function Layout() {
+  const drawing = useEditorStore((s) => s.activeTool === 'joint');
   const leftCollapsed = useEditorStore((s) => s.leftCollapsed);
   const rightCollapsed = useEditorStore((s) => s.rightCollapsed);
+  const leftWidth = useEditorStore(s => s.leftWidth);
+  const rightWidth = useEditorStore(s => s.rightWidth);
   const toggleLeft = useEditorStore((s) => s.toggleLeftCollapsed);
   const toggleRight = useEditorStore((s) => s.toggleRightCollapsed);
   const mode = useEditorStore((s) => s.mode);
@@ -256,6 +239,13 @@ export function Layout() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
+
+  useEffect(() => {
+    const narrow = matchMedia('(max-width: 1099px)');
+    const adapt = () => { if (narrow.matches) useEditorStore.setState({ leftCollapsed: true, rightCollapsed: true }); };
+    adapt(); narrow.addEventListener('change', adapt);
+    return () => narrow.removeEventListener('change', adapt);
+  }, []);
 
   const handleImportImage = () => {
     const input = document.createElement('input');
@@ -329,21 +319,21 @@ export function Layout() {
                 <div className="collapsed-divider" />
                 <div className="collapsed-group-label">Joints</div>
                 <button
-                  className={`collapsed-tool-btn ${createTool === 'joints' ? 'active' : ''}`}
+                  className={`collapsed-tool-btn ${drawing && createTool === 'joints' ? 'active' : ''}`}
                   onClick={() => setCreateTool('joints')}
                   title="Pivot joint"
                 >
                   <IconPivotSmall />
                 </button>
                 <button
-                  className={`collapsed-tool-btn ${createTool === 'slider' ? 'active' : ''}`}
+                  className={`collapsed-tool-btn ${drawing && createTool === 'slider' ? 'active' : ''}`}
                   onClick={() => setCreateTool('slider')}
                   title="Slider joint"
                 >
                   <IconSliderSmall />
                 </button>
                 <button
-                  className={`collapsed-tool-btn ${createTool === 'collider' ? 'active' : ''}`}
+                  className={`collapsed-tool-btn ${drawing && createTool === 'collider' ? 'active' : ''}`}
                   onClick={() => setCreateTool('collider')}
                   title="Collider barrier"
                 >
@@ -353,14 +343,14 @@ export function Layout() {
                 <div className="collapsed-divider" />
                 <div className="collapsed-group-label">Shapes</div>
                 <button
-                  className={`collapsed-tool-btn ${createTool === 'outline' ? 'active' : ''}`}
+                  className={`collapsed-tool-btn ${drawing && createTool === 'outline' ? 'active' : ''}`}
                   onClick={() => setCreateTool('outline')}
                   title="Outline"
                 >
                   <IconOutlineSmall />
                 </button>
                 <button
-                  className={`collapsed-tool-btn ${createTool === 'image' ? 'active' : ''}`}
+                  className={`collapsed-tool-btn ${drawing && createTool === 'image' ? 'active' : ''}`}
                   onClick={() => {
                     if (createTool === 'image') {
                       handleImportImage();
@@ -378,7 +368,7 @@ export function Layout() {
                 <div className="collapsed-divider" />
                 <div className="collapsed-group-label">Sensors</div>
                 <button
-                  className={`collapsed-tool-btn ${createTool === 'tracer' ? 'active' : ''}`}
+                  className={`collapsed-tool-btn ${drawing && createTool === 'tracer' ? 'active' : ''}`}
                   onClick={() => setCreateTool('tracer')}
                   title="Path Plotter"
                 >
@@ -396,11 +386,12 @@ export function Layout() {
             )}
           </div>
         ) : (
-          <div className="toolbar-wrapper">
+          <div className="toolbar-wrapper" style={{ width: leftWidth }}>
             <div className="collapse-header">
               <button className="collapse-btn" onClick={toggleLeft} title="Collapse toolbar">
                 <ChevronIcon direction="left" />
               </button>
+              <PanelResizeHandle side="left" />
             </div>
             <Toolbar />
           </div>
@@ -409,6 +400,7 @@ export function Layout() {
         {/* ---- CANVAS ---- */}
         <div className="canvas-container">
           <MechanismCanvas />
+          <ViewportTools />
         </div>
 
         {/* ---- RIGHT PANEL ---- */}
@@ -420,11 +412,12 @@ export function Layout() {
             {mode === 'create' && <CollapsedBodyList />}
           </div>
         ) : (
-          <div className="right-panel">
+          <div className="right-panel" style={{ width: rightWidth }}>
             <div className="collapse-header right">
               <button className="collapse-btn" onClick={toggleRight} title="Collapse panel">
                 <ChevronIcon direction="right" />
               </button>
+              <PanelResizeHandle side="right" />
             </div>
             <BodyPanel />
             <PropertyPanel />

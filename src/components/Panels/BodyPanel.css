@@ -1,0 +1,51 @@
+.body-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 24px auto;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 2px;
+  margin-bottom: 1px;
+  border-radius: 4px;
+}
+
+.body-row-active { background: rgba(255, 255, 255, 0.1); }
+.body-context { margin: 5px 2px 3px; color: #aaa; font-size: 11px; }
+.body-selection { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 24px; cursor: pointer; }
+.body-selection input { flex-shrink: 0; margin: 0; cursor: pointer; }
+.body-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.body-actions { display: flex; align-items: center; gap: 1px; }
+.body-panel .body-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+}
+.body-panel .body-icon-btn:hover:not(:disabled) { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.body-panel .body-icon-btn[aria-pressed=true] { color: #8acaed; background: rgba(74, 158, 255, 0.12); }
+.body-panel .body-icon-btn:disabled { cursor: default; }
+.body-color-swatch { width: 14px; height: 14px; border: 1px solid #bbb; border-radius: 50%; }
+.body-panel button:focus-visible,
+.body-panel input:focus-visible { outline: 2px solid #8acaed; outline-offset: 1px; }
+.body-rename { grid-column: 2 / -1; display: flex; align-items: center; gap: 2px; min-width: 0; }
+.body-rename input { min-width: 0; flex: 1; width: 0; height: 26px; padding: 0 4px; border: 1px solid #777; border-radius: 2px; background: #333; color: inherit; font: inherit; font-size: 12px; }
+.body-panel .lucide-eye, .body-panel .lucide-eye-off { width: 14px; height: 14px; }
+
+@media (pointer: coarse) {
+  .body-row { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 2px; }
+  .body-panel .body-icon-btn { width: 44px; height: 44px; }
+  .body-selection { min-height: 44px; }
+  .body-selection input { width: 20px; height: 20px; }
+  .body-actions { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
+  .body-rename { grid-column: 1 / -1; }
+  .body-rename input { height: 44px; font-size: 16px; }
+  .body-panel button { min-height: 44px; min-width: 44px; }
+  .body-panel input[type=range] { min-height: 44px; }
+}

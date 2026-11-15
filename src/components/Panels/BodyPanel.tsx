@@ -1,41 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Check, ChevronRight, Crosshair, Eye as EyeIcon, EyeOff as EyeOffIcon, Link as LinkIcon, Pencil, Trash2, X } from 'lucide-react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { BODY_COLORS } from '../../utils/constants';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
-
-/** Eye open SVG icon */
-function EyeIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-      <circle cx="12" cy="12" r="3"/>
-    </svg>
-  );
-}
-
-/** Eye closed SVG icon */
-function EyeOffIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-      <line x1="1" y1="1" x2="23" y2="23"/>
-    </svg>
-  );
-}
-
-/** Chevron icon for collapse/expand */
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-      style={{ transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}
-    >
-      <polyline points="9 18 15 12 9 6"/>
-    </svg>
-  );
-}
+import './BodyPanel.css';
 
 export function BodyPanel() {
   const mode = useEditorStore(s => s.mode);
@@ -46,6 +15,7 @@ export function BodyPanel() {
   const baseBodyId = useMechanismStore((s) => s.baseBodyId);
   const removeBody = useMechanismStore((s) => s.removeBody);
   const renameBody = useMechanismStore((s) => s.renameBody);
+  const pushHistory = useMechanismStore((s) => s.pushHistory);
   const setBodyColor = useMechanismStore((s) => s.setBodyColor);
   const addJointToBody = useMechanismStore((s) => s.addJointToBody);
   const removeJointFromBody = useMechanismStore((s) => s.removeJointFromBody);
@@ -68,6 +38,9 @@ export function BodyPanel() {
   const updateFrozenOutline = useEditorStore((s) => s.updateFrozenOutline);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [bodyRename, setBodyRename] = useState<{ id: string; name: string } | null>(null);
+  const renameDraft = useRef(bodyRename);
+  const renameTrigger = useRef<HTMLButtonElement | null>(null);
   const [collapsedBodies, setCollapsedBodies] = useState<Set<string>>(new Set());
 
   const tracers = useMechanismStore((s) => s.tracers);
@@ -100,8 +73,22 @@ export function BodyPanel() {
     });
   };
 
+  const finishRename = (commit: boolean) => {
+    // Clear synchronously: Enter/Escape can also cause blur before React renders.
+    const draft = renameDraft.current;
+    renameDraft.current = null;
+    setBodyRename(null);
+    if (commit && draft && mode !== 'simulate') {
+      const name = draft.name.trim();
+      if (name && bodies[draft.id] && name !== bodies[draft.id].name) {
+        pushHistory();
+        renameBody(draft.id, name);
+      }
+    }
+  };
+
   return (
-    <div className="panel-content" inert={mode === 'simulate'}>
+    <div className="panel-content body-panel" inert={mode === 'simulate'}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="panel-title" style={{ margin: 0 }}>Bodies</div>
         <button
@@ -112,10 +99,14 @@ export function BodyPanel() {
           + Add Body
         </button>
       </div>
+      <div className="body-context">
+        {isOutlineMode || (!selectedJointId && !selectedColliderId) ? 'Creation bodies'
+          : selectedColliderId ? 'Collider membership' : 'Joint membership'}
+      </div>
       {bodyList.map((body) => {
         const isActive = activeBodyIds.has(body.id);
         const isBase = body.id === baseBodyId;
-        const isEditing = editingId === body.id;
+        const isEditing = bodyRename?.id === body.id;
         const jointInBody = selectedJointId ? body.jointIds.includes(selectedJointId) : false;
         const colliderHasBody = selectedCollider ? selectedCollider.bodyIds.includes(body.id) : false;
         const bodyOutlines = Object.values(outlines).filter((o) => o.bodyId === body.id);
@@ -128,52 +119,38 @@ export function BodyPanel() {
           <div key={body.id}>
             {/* Body row */}
             <div
-              style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '3px 6px', marginBottom: 1, borderRadius: 4,
-                backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-                cursor: 'pointer',
-              }}
-              onClick={() => {
-                if (isOutlineMode) setActiveBody(body.id);
-                else if (selectedColliderId) {
-                  if (colliderHasBody) removeBodyFromCollider(selectedColliderId, body.id);
-                  else addBodyToCollider(selectedColliderId, body.id);
-                } else if (selectedJointId) {
-                  if (jointInBody) removeJointFromBody(selectedJointId, body.id);
-                  else addJointToBody(selectedJointId, body.id);
-                } else toggleActiveBody(body.id);
-              }}
+              className={`body-row${isActive ? ' body-row-active' : ''}`}
+              data-body-id={body.id}
             >
               {/* Collapse chevron */}
               {hasChildren ? (
-                <span
-                  onClick={(e) => { e.stopPropagation(); toggleCollapsed(body.id); }}
-                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#777' }}
+                <button
+                  type="button"
+                  className="body-icon-btn"
+                  onClick={() => toggleCollapsed(body.id)}
+                  aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${body.name}`}
+                  title={`${isCollapsed ? 'Expand' : 'Collapse'} ${body.name}`}
+                  aria-expanded={!isCollapsed}
+                  aria-controls={`body-children-${body.id}`}
                 >
-                  <ChevronIcon expanded={!isCollapsed} />
-                </span>
+                  <ChevronRight size={14} style={{ transform: isCollapsed ? undefined : 'rotate(90deg)' }} />
+                </button>
               ) : (
-                <span style={{ width: 10, flexShrink: 0 }} />
+                <span className="body-collapse-spacer" />
               )}
 
               {/* Selection control */}
-              {isOutlineMode ? (
+              <label className="body-selection" title={isOutlineMode || (!selectedJointId && !selectedColliderId)
+                ? `Use ${body.name} for new objects` : `Change selected ${selectedColliderId ? 'collider' : 'joint'} membership in ${body.name}`}>
                 <input
-                  type="radio"
-                  name="activeBody"
-                  checked={isActive}
-                  onChange={() => setActiveBody(body.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ flexShrink: 0, cursor: 'pointer' }}
-                />
-              ) : (
-                <input
-                  type="checkbox"
-                  checked={selectedColliderId ? colliderHasBody : selectedJointId ? jointInBody : isActive}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    if (selectedColliderId) {
+                  type={isOutlineMode ? 'radio' : 'checkbox'}
+                  name={isOutlineMode ? 'activeBody' : undefined}
+                  aria-label={isOutlineMode || (!selectedJointId && !selectedColliderId)
+                    ? `Use ${body.name} for new objects` : `Selected ${selectedColliderId ? 'collider' : 'joint'} belongs to ${body.name}`}
+                  checked={isOutlineMode ? isActive : selectedColliderId ? colliderHasBody : selectedJointId ? jointInBody : isActive}
+                  onChange={() => {
+                    if (isOutlineMode) setActiveBody(body.id);
+                    else if (selectedColliderId) {
                       if (colliderHasBody) removeBodyFromCollider(selectedColliderId, body.id);
                       else addBodyToCollider(selectedColliderId, body.id);
                     } else if (selectedJointId) {
@@ -183,103 +160,115 @@ export function BodyPanel() {
                       toggleActiveBody(body.id);
                     }
                   }}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ flexShrink: 0, cursor: 'pointer' }}
                 />
-              )}
+                <span className="body-name" style={{ fontWeight: isBase ? 600 : 400 }} title={body.name}>
+                  {body.name}
+                </span>
+              </label>
 
               {/* Color swatch */}
-              <span
-                style={{
-                  display: 'inline-block', width: 14, height: 14, borderRadius: '50%',
-                  backgroundColor: body.color, flexShrink: 0,
-                  border: isActive ? '2px solid #fff' : '2px solid transparent',
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isBase) return;
+              <button
+                type="button"
+                className="body-icon-btn body-color-btn"
+                disabled={isBase}
+                aria-label={isBase ? 'Base body color' : `Change color of ${body.name}`}
+                onClick={() => {
                   const available = BODY_COLORS.filter((c) => !usedColors.has(c) || c === body.color);
                   const idx = available.indexOf(body.color);
                   const next = available[(idx + 1) % available.length];
-                  if (next !== body.color) setBodyColor(body.id, next);
+                  if (next && next !== body.color) { pushHistory(); setBodyColor(body.id, next); }
                 }}
                 title={isBase ? 'Base body color' : 'Click to change color'}
-              />
+              >
+                <span className="body-color-swatch" style={{ backgroundColor: body.color }} />
+              </button>
 
-              {/* Name (double-click to edit) */}
+              <div className="body-actions">
+                {!isBase && (
+                  <button type="button" className="body-icon-btn"
+                    aria-label={`Rename ${body.name}`} title={`Rename ${body.name}`}
+                    onClick={(e) => {
+                      finishRename(true);
+                      const draft = { id: body.id, name: body.name };
+                      renameDraft.current = draft;
+                      setBodyRename(draft);
+                      renameTrigger.current = e.currentTarget;
+                    }}>
+                    <Pencil size={14} />
+                  </button>
+                )}
+
+                {bodyOutlines.length > 0 && (
+                  <button type="button" className="body-icon-btn"
+                    aria-label={`Use outline center of area for ${body.name}`}
+                    aria-pressed={body.useOutlineCOM}
+                    title={body.useOutlineCOM ? 'Using outline center of area for gravity' : 'Using joint centroid for gravity'}
+                    onClick={() => toggleOutlineCOM(body.id)}>
+                    <Crosshair size={14} />
+                  </button>
+                )}
+
+                {!isBase && body.jointIds.length >= 2 && (
+                  <button type="button" className="body-icon-btn"
+                    aria-label={`${body.showLinks ? 'Hide' : 'Show'} links for ${body.name}`}
+                    aria-pressed={body.showLinks}
+                    title={body.showLinks ? 'Hide links for this body' : 'Show links for this body'}
+                    onClick={() => toggleBodyShowLinks(body.id)}>
+                    <LinkIcon size={14} />
+                  </button>
+                )}
+
+                {!isBase && (
+                  <button type="button" className="tool-btn body-icon-btn"
+                    onClick={() => removeBody(body.id)}
+                    aria-label={`Delete body ${body.name}`} title="Delete body">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+
               {isEditing ? (
+                <div className="body-rename">
                 <input
                   autoFocus
-                  value={body.name}
-                  onChange={(e) => renameBody(body.id, e.target.value)}
-                  onBlur={() => setEditingId(null)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') setEditingId(null); }}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    flex: 1, fontSize: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid #666',
-                    color: 'inherit', outline: 'none', padding: '0 4px', borderRadius: 2,
+                  aria-label={`Body name for ${body.name}`}
+                  value={bodyRename.name}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onChange={(e) => {
+                    const draft = { id: body.id, name: e.target.value };
+                    renameDraft.current = draft;
+                    setBodyRename(draft);
+                  }}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.parentElement?.contains(e.relatedTarget)) finishRename(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      finishRename(e.key === 'Enter');
+                      renameTrigger.current?.focus();
+                    }
                   }}
                 />
-              ) : (
-                <span
-                  style={{ flex: 1, fontSize: 12, fontWeight: isBase ? 600 : 400 }}
-                  onDoubleClick={(e) => { e.stopPropagation(); if (!isBase) setEditingId(body.id); }}
-                >
-                  {body.name}
-                </span>
-              )}
-
-
-              {/* CoA toggle */}
-              {bodyOutlines.length > 0 && (
-                <span
-                  title={body.useOutlineCOM ? 'Using outline center of area for gravity' : 'Using joint centroid for gravity'}
-                  style={{
-                    fontSize: 9, padding: '0 3px', borderRadius: 2, cursor: 'pointer',
-                    backgroundColor: body.useOutlineCOM ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.05)',
-                    color: body.useOutlineCOM ? '#4CAF50' : 'inherit',
-                  }}
-                  onClick={(e) => { e.stopPropagation(); toggleOutlineCOM(body.id); }}
-                >
-                  CoA
-                </span>
-              )}
-
-              {/* Link visibility toggle */}
-              {!isBase && body.jointIds.length >= 2 && (
-                <span
-                  title={body.showLinks ? 'Hide links for this body' : 'Show links for this body'}
-                  style={{
-                    fontSize: 9, padding: '0 3px', borderRadius: 2, cursor: 'pointer',
-                    backgroundColor: body.showLinks ? 'rgba(255,255,255,0.05)' : 'rgba(255,100,100,0.2)',
-                    color: body.showLinks ? 'inherit' : '#f66',
-                    opacity: body.showLinks ? 0.6 : 1,
-                  }}
-                  onClick={(e) => { e.stopPropagation(); toggleBodyShowLinks(body.id); }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                  </svg>
-                </span>
-              )}
-
-              {/* Delete */}
-              {!isBase && (
-                <button
-                  className="tool-btn"
-                  style={{ fontSize: 10, padding: '1px 4px' }}
-                  onClick={(e) => { e.stopPropagation(); removeBody(body.id); }}
-                  title="Delete body"
-                >
-                  x
+                <button type="button" className="body-icon-btn" aria-label="Save body name" title="Save body name"
+                  // Safari may blur with no relatedTarget before the command click.
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => { finishRename(true); renameTrigger.current?.focus(); }}>
+                  <Check size={14} />
                 </button>
-              )}
+                <button type="button" className="body-icon-btn" aria-label="Cancel body rename" title="Cancel body rename"
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => { finishRename(false); renameTrigger.current?.focus(); }}>
+                  <X size={14} />
+                </button>
+                </div>
+              ) : null}
             </div>
 
             {/* Collapsible children: outlines + images */}
             {hasChildren && !isCollapsed && (
-              <div style={{ marginLeft: 14 }}>
+              <div id={`body-children-${body.id}`} style={{ marginLeft: 14 }}>
                 {/* Outlines */}
                 {bodyOutlines.map((outline) => {
                   const isOutlineEditing = editingId === outline.id;

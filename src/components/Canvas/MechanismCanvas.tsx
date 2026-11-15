@@ -11,28 +11,43 @@ import { hitTestAny, hitTestOutlineFilled } from '../../interaction/hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../../renderer/draw-images';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import type { Vec2 } from '../../types';
-
-// --- Touch gesture state (module-level, survives re-renders) ---
-const activePointers: Map<number, Vec2> = new Map();
-// none     = idle
-// pending  = finger down on empty space, waiting to see if tap or pan
-// interact = finger down on a component, forwarding to tool-manager (drag joint, sim drag, etc.)
-// pan      = single finger dragging on empty space
-// pinch    = two finger zoom + pan
-let gestureState: 'none' | 'pending' | 'interact' | 'pan' | 'pinch' = 'none';
-let lastPinchDist: number | null = null;
-let lastPinchCenter: Vec2 | null = null;
-let touchStartPos: Vec2 | null = null; // where the first finger landed
-let touchStartPointerId: number | null = null;
-let lastTouchScreen: Vec2 | null = null; // last position for single-finger pan
+import { createPointerRuntime } from '../../interaction/pointer-runtime';
+import { snapshotMechanism } from '../../core/compile-mechanism';
+import { registerInteractionCancellation } from '../../interaction/session';
 
 const PAN_THRESHOLD = 8; // px movement before a touch becomes a pan drag
+
+function interactionCheckpoint() {
+  const m = useMechanismStore.getState(), e = useEditorStore.getState();
+  return {
+    mechanism: { ...snapshotMechanism(m), angleConstraints: structuredClone(m.angleConstraints), past: m.past, future: m.future },
+    editor: structuredClone({ selectedIds: e.selectedIds, outlinePoints: e.outlinePoints, frozenOutlineWorldPoints: e.frozenOutlineWorldPoints, arcSelector: e.arcSelector,
+      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture }),
+  };
+}
 
 
 export function MechanismCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorWorldRef = useRef<Vec2 | null>(null);
   const rafRef = useRef<number>(0);
+  const gesture = useRef(createPointerRuntime());
+  const checkpoint = useRef<ReturnType<typeof interactionCheckpoint> | null>(null);
+  const beginTool = useCallback((event: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) => {
+    if (useEditorStore.getState().mode === 'create') checkpoint.current = interactionCheckpoint();
+    handleMouseDown(event, canvas);
+  }, []);
+  const endTool = useCallback((event: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) => {
+    handleMouseUp(event, canvas); checkpoint.current = null;
+  }, []);
+  const cancelTool = useCallback(() => {
+    handleMouseUp();
+    if (checkpoint.current && useEditorStore.getState().mode === 'create') {
+      useMechanismStore.setState(checkpoint.current.mechanism);
+      useEditorStore.setState(checkpoint.current.editor);
+    }
+    checkpoint.current = null;
+  }, []);
 
   const renderLoop = useCallback(function drawFrame() {
     const canvas = canvasRef.current;
@@ -42,9 +57,11 @@ export function MechanismCanvas() {
 
     // Resize canvas to fill container
     const rect = canvas.parentElement!.getBoundingClientRect();
-    if (canvas.width !== rect.width || canvas.height !== rect.height) {
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+    const pixelRatio = Math.min(3, Math.max(.5, window.devicePixelRatio || 1));
+    const width = Math.max(1, Math.round(rect.width * pixelRatio)), height = Math.max(1, Math.round(rect.height * pixelRatio));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
     }
 
     const mechanism = useMechanismStore.getState();
@@ -110,7 +127,17 @@ export function MechanismCanvas() {
         editingOutlineId: editor.editingOutlineId,
         editingVertexIndex: editor.editingVertexIndex,
         arcSelector: editor.arcSelector ? { jointId: editor.arcSelector.jointId, colliderId: editor.arcSelector.colliderId, tracerId: editor.arcSelector.tracerId, position: editor.arcSelector.position, showTime: editor.arcSelector.showTime, collapseTime: editor.arcSelector.collapseTime, createdBodyId: editor.arcSelector.createdBodyId } : null,
-      });
+      }, { width: rect.width, height: rect.height, pixelRatio });
+      const selection = editor.selectionGesture;
+      if (selection) {
+        const points = selection.kind === 'box'
+          ? [selection.start, { x: selection.end.x, y: selection.start.y }, selection.end, { x: selection.start.x, y: selection.end.y }]
+          : selection.points;
+        ctx.save(); ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        ctx.beginPath();
+        points.forEach((point, index) => { const x = point.x * editor.camera.zoom + editor.camera.pan.x, y = point.y * editor.camera.zoom + editor.camera.pan.y; if (index) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+        ctx.closePath(); ctx.fillStyle = 'rgba(0,120,150,0.10)'; ctx.strokeStyle = '#007896'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]); ctx.fill(); ctx.stroke(); ctx.restore();
+      }
     } catch (e) {
       console.error('Render error:', e);
     }
@@ -181,6 +208,7 @@ export function MechanismCanvas() {
   }, []);
 
   const mode = useEditorStore((s) => s.mode);
+  const activeTool = useEditorStore((s) => s.activeTool);
   const simDrag = useEditorStore((s) => s.simDrag);
   const hoveredId = useEditorStore((s) => s.hoveredId);
 
@@ -188,13 +216,13 @@ export function MechanismCanvas() {
   // renders white/invisible on some OS/browser combinations.
   const CROSSHAIR_CURSOR = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='12' y1='2' x2='12' y2='22' stroke='%23333' stroke-width='1.5'/%3E%3Cline x1='2' y1='12' x2='22' y2='12' stroke='%23333' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='%23333' stroke-width='1'/%3E%3C/svg%3E") 12 12, crosshair`;
 
-  const cursor = mode === 'simulate'
+  const cursor = activeTool === 'pan' ? 'grab' : activeTool === 'select' && mode === 'create' ? 'default' : mode === 'simulate'
     ? (simDrag?.active ? 'grabbing' : 'grab')
     : (hoveredId ? 'pointer' : CROSSHAIR_CURSOR);
 
   const handlePinchMove = useCallback(() => {
-    if (activePointers.size < 2) return;
-    const pts = Array.from(activePointers.values());
+    if (gesture.current.activePointers.size < 2) return;
+    const pts = Array.from(gesture.current.activePointers.values());
     const dx = pts[1].x - pts[0].x;
     const dy = pts[1].y - pts[0].y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -204,70 +232,118 @@ export function MechanismCanvas() {
     };
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const screenCenter: Vec2 = { x: center.x - rect.left, y: center.y - rect.top };
 
-    if (lastPinchDist !== null && lastPinchCenter !== null) {
-      const factor = dist / lastPinchDist;
-      useEditorStore.getState().zoomCamera(factor, screenCenter);
-      const panDx = center.x - lastPinchCenter.x;
-      const panDy = center.y - lastPinchCenter.y;
+    if (gesture.current.lastPinchDist !== null && gesture.current.lastPinchCenter !== null) {
+      const factor = dist / gesture.current.lastPinchDist;
+      useEditorStore.getState().zoomCamera(factor, { x: gesture.current.lastPinchCenter.x - rect.left, y: gesture.current.lastPinchCenter.y - rect.top });
+      const panDx = center.x - gesture.current.lastPinchCenter.x;
+      const panDy = center.y - gesture.current.lastPinchCenter.y;
       useEditorStore.getState().panCamera({ x: panDx, y: panDy });
     }
-    lastPinchDist = dist;
-    lastPinchCenter = center;
+    gesture.current.lastPinchDist = dist;
+    gesture.current.lastPinchCenter = center;
   }, []);
 
   // Reset all touch gesture state
   const resetGesture = useCallback(() => {
-    gestureState = 'none';
-    lastPinchDist = null;
-    lastPinchCenter = null;
-    touchStartPos = null;
-    touchStartPointerId = null;
-    lastTouchScreen = null;
+    gesture.current.reset();
   }, []);
+
+  const cancelGesture = useCallback(() => {
+    const state = gesture.current;
+    const ids = [...state.activePointers.keys(), state.penId, state.mouseId].filter((id): id is number => id !== null);
+    state.reset(); cancelTool();
+    cursorWorldRef.current = null;
+    for (const id of ids) {
+      try { if (canvasRef.current?.hasPointerCapture(id)) canvasRef.current.releasePointerCapture(id); } catch { /* Capture may already be gone. */ }
+    }
+  }, [cancelTool]);
+  useEffect(() => registerInteractionCancellation(cancelGesture), [cancelGesture]);
+
+  useEffect(() => {
+    const blur = () => { cancelGesture(); if (useEditorStore.getState().mode === 'simulate') useSimulationStore.getState().pause(); };
+    const hidden = () => { if (document.hidden) blur(); };
+    const palm = (event: PointerEvent) => {
+      if (gesture.current.penId !== null && event.pointerType === 'touch') { event.preventDefault(); event.stopPropagation(); }
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && (gesture.current.mouseId !== null || gesture.current.penId !== null || gesture.current.activePointers.size)) {
+        event.preventDefault(); event.stopImmediatePropagation(); cancelGesture();
+      }
+    };
+    window.addEventListener('blur', blur);
+    document.addEventListener('visibilitychange', hidden);
+    document.addEventListener('pointerdown', palm, { capture: true, passive: false });
+    window.addEventListener('keydown', escape, true);
+    return () => {
+      window.removeEventListener('blur', blur); document.removeEventListener('visibilitychange', hidden);
+      document.removeEventListener('pointerdown', palm, true); window.removeEventListener('keydown', escape, true); cancelGesture();
+    };
+  }, [cancelGesture]);
+
+  useEffect(() => {
+    const parent = canvasRef.current?.parentElement;
+    if (!parent) return;
+    let previous = parent.getBoundingClientRect();
+    const observer = new ResizeObserver(() => {
+      const next = parent.getBoundingClientRect();
+      if (Math.abs(next.width - previous.width) > .5 || Math.abs(next.height - previous.height) > .5) cancelGesture();
+      previous = next;
+    });
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, [cancelGesture]);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: '100%', height: '100%', cursor, userSelect: 'none', touchAction: 'none' }}
+      aria-label="Mechanism canvas"
+      tabIndex={0}
+      style={{ display: 'block', width: '100%', height: '100%', cursor, userSelect: 'none', touchAction: 'none' }}
       onPointerDown={(e) => {
         const canvas = canvasRef.current!;
+        if (!gesture.current.accepts(e.pointerId, e.pointerType, 'down')) return;
 
         // --- MOUSE: pass through directly (no gesture detection needed) ---
         if (e.pointerType === 'mouse') {
-          handleMouseDown(e.nativeEvent as PointerEvent, canvas);
+          if (e.button !== 0 && e.button !== 1) return;
+          gesture.current.mouseId = e.pointerId;
+          canvas.setPointerCapture(e.pointerId);
+          beginTool(e.nativeEvent, canvas);
           return;
         }
 
         // --- PEN (Apple Pencil): pass through directly, like mouse ---
         // Pen has precise intent and can't pinch, so no gesture detection needed.
         if (e.pointerType === 'pen') {
+          cancelGesture();
+          gesture.current.penId = e.pointerId;
           e.preventDefault();
           canvas.setPointerCapture(e.pointerId);
-          gestureState = 'interact';
-          touchStartPointerId = e.pointerId;
+          gesture.current.mode = 'interact';
+          gesture.current.touchStartPointerId = e.pointerId;
           // Update cursor world pos for outline ghost/preview
           const rect = canvas.getBoundingClientRect();
           const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
           cursorWorldRef.current = screenToWorld(screen, useEditorStore.getState().camera);
-          handleMouseDown(e.nativeEvent as PointerEvent, canvas);
+          beginTool(e.nativeEvent, canvas);
           return;
         }
 
         // --- TOUCH (finger) ---
         e.preventDefault();
         canvas.setPointerCapture(e.pointerId);
-        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        gesture.current.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-        if (activePointers.size >= 2) {
+        if (gesture.current.activePointers.size >= 2) {
           // Transition to pinch: cancel any in-progress single-pointer interaction
-          if (gestureState === 'interact') {
-            handleMouseUp(e.nativeEvent as PointerEvent, canvasRef.current!);
+          if (gesture.current.mode === 'interact') {
+            cancelTool();
           }
-          gestureState = 'pinch';
-          lastPinchDist = null;
-          lastPinchCenter = null;
+          gesture.current.mode = 'pinch';
+          gesture.current.lastPinchDist = null;
+          gesture.current.lastPinchCenter = null;
+          handlePinchMove();
           return;
         }
 
@@ -304,26 +380,27 @@ export function MechanismCanvas() {
           }
         }
 
-        if (componentHit) {
+        if (componentHit || editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single')) {
           // Finger landed on a component → forward to tool-manager immediately for drag interaction
-          gestureState = 'interact';
-          touchStartPointerId = e.pointerId;
-          handleMouseDown(e.nativeEvent as PointerEvent, canvas);
+          gesture.current.mode = 'interact';
+          gesture.current.touchStartPointerId = e.pointerId;
+          beginTool(e.nativeEvent, canvas);
         } else {
           // Finger landed on empty space → wait to distinguish tap from pan
-          gestureState = 'pending';
-          touchStartPos = { x: e.clientX, y: e.clientY };
-          touchStartPointerId = e.pointerId;
-          lastTouchScreen = { x: e.clientX, y: e.clientY };
+          gesture.current.mode = 'pending';
+          gesture.current.touchStartPos = { x: e.clientX, y: e.clientY };
+          gesture.current.touchStartPointerId = e.pointerId;
+          gesture.current.lastTouchScreen = { x: e.clientX, y: e.clientY };
         }
       }}
       onDoubleClick={(e) => {
-        if (gestureState !== 'pinch') {
+        if (gesture.current.mode !== 'pinch') {
           handleDoubleClick(e.nativeEvent, canvasRef.current!);
         }
       }}
       onPointerMove={(e) => {
         const canvas = canvasRef.current!;
+        if (!gesture.current.accepts(e.pointerId, e.pointerType, 'move')) return;
 
         // --- MOUSE: pass through directly ---
         if (e.pointerType === 'mouse') {
@@ -346,18 +423,18 @@ export function MechanismCanvas() {
 
         // --- TOUCH (finger) ---
         e.preventDefault();
-        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        gesture.current.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         // Pinch mode: zoom + pan with two fingers
-        if (gestureState === 'pinch') {
-          if (activePointers.size >= 2) {
+        if (gesture.current.mode === 'pinch') {
+          if (gesture.current.activePointers.size >= 2) {
             handlePinchMove();
           }
           return;
         }
 
         // Interact: forward moves to tool-manager (dragging a joint, sim drag, etc.)
-        if (gestureState === 'interact') {
+        if (gesture.current.mode === 'interact') {
           const rect = canvas.getBoundingClientRect();
           const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
           cursorWorldRef.current = screenToWorld(screen, useEditorStore.getState().camera);
@@ -366,53 +443,58 @@ export function MechanismCanvas() {
         }
 
         // Pending: check if finger moved enough to become a pan
-        if (gestureState === 'pending' && touchStartPos) {
-          const dx = e.clientX - touchStartPos.x;
-          const dy = e.clientY - touchStartPos.y;
+        if (gesture.current.mode === 'pending' && gesture.current.touchStartPos) {
+          const dx = e.clientX - gesture.current.touchStartPos.x;
+          const dy = e.clientY - gesture.current.touchStartPos.y;
           if (dx * dx + dy * dy > PAN_THRESHOLD * PAN_THRESHOLD) {
-            gestureState = 'pan';
-            lastTouchScreen = { x: e.clientX, y: e.clientY };
+            gesture.current.mode = 'pan';
+            useEditorStore.getState().panCamera({ x: dx, y: dy });
+            gesture.current.lastTouchScreen = { x: e.clientX, y: e.clientY };
           }
           return; // Don't do anything else while pending
         }
 
         // Single-finger pan
-        if (gestureState === 'pan' && lastTouchScreen) {
-          const dx = e.clientX - lastTouchScreen.x;
-          const dy = e.clientY - lastTouchScreen.y;
+        if (gesture.current.mode === 'pan' && gesture.current.lastTouchScreen) {
+          const dx = e.clientX - gesture.current.lastTouchScreen.x;
+          const dy = e.clientY - gesture.current.lastTouchScreen.y;
           useEditorStore.getState().panCamera({ x: dx, y: dy });
-          lastTouchScreen = { x: e.clientX, y: e.clientY };
+          gesture.current.lastTouchScreen = { x: e.clientX, y: e.clientY };
           return;
         }
       }}
       onPointerUp={(e) => {
         const canvas = canvasRef.current!;
+        if (!gesture.current.accepts(e.pointerId, e.pointerType, 'up')) return;
 
         // --- MOUSE: pass through directly ---
         if (e.pointerType === 'mouse') {
-          handleMouseUp(e.nativeEvent as PointerEvent, canvasRef.current!);
+          gesture.current.mouseId = null;
+          if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+          endTool(e.nativeEvent, canvas);
           return;
         }
 
         // --- PEN: pass through directly (like mouse) ---
         if (e.pointerType === 'pen') {
+          gesture.current.penId = null;
           try { canvas.releasePointerCapture(e.pointerId); } catch (_) { /* already released */ }
-          handleMouseUp(e.nativeEvent as PointerEvent, canvasRef.current!);
+          endTool(e.nativeEvent, canvas);
           resetGesture();
           return;
         }
 
         // --- TOUCH (finger) ---
+        gesture.current.activePointers.delete(e.pointerId);
         try { canvas.releasePointerCapture(e.pointerId); } catch (_) { /* already released */ }
-        activePointers.delete(e.pointerId);
 
-        if (gestureState === 'pinch') {
+        if (gesture.current.mode === 'pinch') {
           // Still have 2+ fingers? Stay in pinch. Otherwise wait for all fingers to lift.
-          if (activePointers.size >= 2) {
+          if (gesture.current.activePointers.size >= 2) {
             // Reset pinch baseline for remaining fingers
-            lastPinchDist = null;
-            lastPinchCenter = null;
-          } else if (activePointers.size === 0) {
+            gesture.current.lastPinchDist = null;
+            gesture.current.lastPinchCenter = null;
+          } else if (gesture.current.activePointers.size === 0) {
             resetGesture();
           }
           // Don't fire any interaction when coming out of pinch
@@ -420,29 +502,29 @@ export function MechanismCanvas() {
         }
 
         // Interact: finger lifted off a component drag → forward mouseUp to tool-manager
-        if (gestureState === 'interact' && e.pointerId === touchStartPointerId) {
-          handleMouseUp(e.nativeEvent as PointerEvent, canvasRef.current!);
+        if (gesture.current.mode === 'interact' && e.pointerId === gesture.current.touchStartPointerId) {
+          endTool(e.nativeEvent, canvas);
           resetGesture();
-          activePointers.clear();
+          gesture.current.activePointers.clear();
           return;
         }
 
-        if (gestureState === 'pending' && touchStartPos && e.pointerId === touchStartPointerId) {
+        if (gesture.current.mode === 'pending' && gesture.current.touchStartPos && e.pointerId === gesture.current.touchStartPointerId) {
           // Finger lifted without significant movement → TAP
           // Update cursor world position so outline ghost draws correctly
           const rect = canvas.getBoundingClientRect();
           const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
           cursorWorldRef.current = screenToWorld(screen, useEditorStore.getState().camera);
           // Fire down + up at the touch position to trigger the action (place joint, select, etc.)
-          handleMouseDown(e.nativeEvent as PointerEvent, canvas);
-          handleMouseUp(e.nativeEvent as PointerEvent, canvasRef.current!);
+          beginTool(e.nativeEvent, canvas);
+          endTool(e.nativeEvent, canvas);
           resetGesture();
-          activePointers.clear();
+          gesture.current.activePointers.clear();
           return;
         }
 
         // End of pan or other gesture
-        if (activePointers.size === 0) {
+        if (gesture.current.activePointers.size === 0) {
           resetGesture();
         }
       }}
@@ -453,18 +535,9 @@ export function MechanismCanvas() {
         }
       }}
       onPointerCancel={(e) => {
-        const canvas = canvasRef.current!;
-        try { canvas.releasePointerCapture(e.pointerId); } catch (_) { /* already released */ }
-        activePointers.delete(e.pointerId);
-
-        if (activePointers.size === 0) {
-          if (gestureState === 'interact') {
-            handleMouseUp(e.nativeEvent as PointerEvent, canvasRef.current!);
-          }
-          resetGesture();
-          activePointers.clear();
-        }
+        if (gesture.current.accepts(e.pointerId, e.pointerType, 'cancel')) cancelGesture();
       }}
+      onLostPointerCapture={(e) => { if (gesture.current.accepts(e.pointerId, e.pointerType, 'cancel')) cancelGesture(); }}
       onContextMenu={(e) => e.preventDefault()}
     />
   );

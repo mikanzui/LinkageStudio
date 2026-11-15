@@ -51,12 +51,12 @@ export function render(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   state: RenderState,
+  surface = { width: canvas.width, height: canvas.height, pixelRatio: 1 },
 ) {
-  const w = canvas.width;
-  const h = canvas.height;
+  const { width: w, height: h, pixelRatio } = surface;
 
-  clearCanvas(ctx, w, h);
-  applyCamera(ctx, state.camera);
+  clearCanvas(ctx, w, h, pixelRatio);
+  applyCamera(ctx, state.camera, pixelRatio);
 
   if (state.gridEnabled) {
     drawGrid(ctx, state.camera, w, h, state.gridSize);
@@ -156,14 +156,14 @@ export function render(
     drawDragInteraction(ctx, state.simDrag, grabWorldPos, state.camera.zoom);
   }
 
-  resetCamera(ctx);
+  resetCamera(ctx, pixelRatio);
 
   // Rulers are drawn in screen-space, pinned to viewport edges
   if (state.showRulers) {
-    drawRulers(ctx, state.camera, w, h);
+    drawRulers(ctx, state.camera, w, h, pixelRatio);
   }
 
-  drawHUD(ctx, w, h, state.dof, state.cursorWorld);
+  drawHUD(ctx, w, h - 70, state.dof, state.cursorWorld);
   drawModeBadge(ctx, w, state.mode);
 
   // Arc body selector (screen-space, after resetCamera)
@@ -190,6 +190,6 @@ export function render(
       selected = bodies.map((b) => joint ? b.jointIds.includes(state.arcSelector!.jointId!) : false);
     }
     const addBtnPos = getArcAddButtonPosition(state.arcSelector.position, bodies.length, state.camera);
-    drawArcSelector(ctx, positions, colors, selected, names, state.arcSelector.showTime, state.arcSelector.collapseTime, addBtnPos, !!state.arcSelector.createdBodyId);
+    drawArcSelector(ctx, positions, colors, selected, names, state.arcSelector.showTime, state.arcSelector.collapseTime, addBtnPos, !!state.arcSelector.createdBodyId, pixelRatio);
   }
 }

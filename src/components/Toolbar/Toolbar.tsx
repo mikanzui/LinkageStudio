@@ -1,3 +1,4 @@
+import { deleteSelectedEntities } from '../../utils/delete-selection';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import type { AppMode } from '../../types';
@@ -59,24 +60,15 @@ const IconImage = () => (
 export function Toolbar() {
   const mode = useEditorStore((s) => s.mode);
   const createTool = useEditorStore((s) => s.createTool);
+  const drawing = useEditorStore((s) => s.activeTool === 'joint');
   const setCreateTool = useEditorStore((s) => s.setCreateTool);
-  const removeJoint = useMechanismStore((s) => s.removeJoint);
-  const removeOutline = useMechanismStore((s) => s.removeOutline);
-  const removeImage = useMechanismStore((s) => s.removeImage);
-  const removeTracer = useMechanismStore((s) => s.removeTracer);
-  const joints = useMechanismStore((s) => s.joints);
   const outlines = useMechanismStore((s) => s.outlines);
-  const tracers = useMechanismStore((s) => s.tracers);
-  const images = useMechanismStore((s) => s.images);
   const selectedIds = useEditorStore((s) => s.selectedIds);
-  const clearSelection = useEditorStore((s) => s.clearSelection);
   const addImage = useMechanismStore((s) => s.addImage);
   const baseBodyId = useMechanismStore((s) => s.baseBodyId);
 
   const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
-  const removeOutlineVertex = useMechanismStore((s) => s.removeOutlineVertex);
-  const setEditingVertexIndex = useEditorStore((s) => s.setEditingVertexIndex);
 
   const hasSelection = selectedIds.size > 0;
   const hasVertexSelection = editingOutlineId !== null && editingVertexIndex !== null;
@@ -85,20 +77,7 @@ export function Toolbar() {
     return outline && outline.points.length > 3;
   })();
 
-  const handleDeleteSelected = () => {
-    if (hasVertexSelection && canDeleteVertex) {
-      removeOutlineVertex(editingOutlineId!, editingVertexIndex!);
-      setEditingVertexIndex(null);
-      return;
-    }
-    for (const id of selectedIds) {
-      if (joints[id]) removeJoint(id);
-      else if (outlines[id]) removeOutline(id);
-      else if (images[id]) removeImage(id);
-      else if (tracers[id]) removeTracer(id);
-    }
-    clearSelection();
-  };
+
 
   const handleModeSwitch = (newMode: AppMode) => switchMode(newMode);
 
@@ -143,69 +122,11 @@ export function Toolbar() {
     input.click();
   };
 
-  const isPivotTool = createTool === 'joints';
-  const isSliderTool = createTool === 'slider';
-  const isColliderTool = createTool === 'collider';
-  const isTracerTool = createTool === 'tracer';
+  const isPivotTool = drawing && createTool === 'joints';
+  const isSliderTool = drawing && createTool === 'slider';
+  const isColliderTool = drawing && createTool === 'collider';
+  const isTracerTool = drawing && createTool === 'tracer';
 
-  const renderHints = () => {
-    if (isPivotTool) {
-      return (
-        <>
-          <div className="sim-hint">Click to add pivot joint</div>
-          <div className="sim-hint">Hold to assign bodies</div>
-          <div className="sim-hint">Double-click to toggle fixed</div>
-        </>
-      );
-    }
-    if (isSliderTool) {
-      return (
-        <>
-          <div className="sim-hint">Click to place end A</div>
-          <div className="sim-hint">Click again to place end C</div>
-          <div className="sim-hint">Slider B auto-placed at midpoint</div>
-          <div className="sim-hint">Escape to cancel</div>
-        </>
-      );
-    }
-    if (isTracerTool) {
-      return (
-        <>
-          <div className="sim-hint">Select a body, then click to place</div>
-          <div className="sim-hint">Traces path during simulation</div>
-          <div className="sim-hint">Hold on tracer to change body</div>
-        </>
-      );
-    }
-    if (isColliderTool) {
-      return (
-        <>
-          <div className="sim-hint">Click to place end A</div>
-          <div className="sim-hint">Click again to place end C</div>
-          <div className="sim-hint">Select barrier line to assign bodies</div>
-          <div className="sim-hint">Escape to cancel</div>
-        </>
-      );
-    }
-    if (createTool === 'outline') {
-      return (
-        <>
-          <div className="sim-hint">Click to place outline points</div>
-          <div className="sim-hint">Click first point to close</div>
-          <div className="sim-hint">Escape to cancel</div>
-        </>
-      );
-    }
-    // image
-    return (
-      <>
-        <div className="sim-hint">Click image to select</div>
-        <div className="sim-hint">Drag to move</div>
-        <div className="sim-hint">Drag corners to scale</div>
-        <div className="sim-hint">Drag top handle to rotate</div>
-      </>
-    );
-  };
 
   return (
     <div className="toolbar">
@@ -260,7 +181,7 @@ export function Toolbar() {
             <div className="toolbar-group-label">Shapes</div>
 
             <button
-              className={`tool-btn ${createTool === 'outline' ? 'active' : ''}`}
+              className={`tool-btn ${drawing && createTool === 'outline' ? 'active' : ''}`}
               onClick={() => setCreateTool('outline')}
             >
               <IconOutline />
@@ -268,7 +189,7 @@ export function Toolbar() {
             </button>
 
             <button
-              className={`tool-btn ${createTool === 'image' ? 'active' : ''}`}
+              className={`tool-btn ${drawing && createTool === 'image' ? 'active' : ''}`}
               onClick={() => {
                 if (createTool === 'image') {
                   handleImportImage();
@@ -299,7 +220,7 @@ export function Toolbar() {
             <div className="toolbar-section">
               <button
                 className="tool-btn"
-                onClick={handleDeleteSelected}
+                onClick={deleteSelectedEntities}
                 title={hasVertexSelection ? 'Delete vertex (Backspace)' : 'Delete selected (Backspace)'}
                 style={{ color: '#E53935' }}
                 disabled={hasVertexSelection && !canDeleteVertex}
@@ -309,22 +230,12 @@ export function Toolbar() {
             </div>
           )}
 
-          <div className="toolbar-section">
-            {renderHints()}
-          </div>
         </>
-      ) : (
-        <div className="toolbar-section">
-          <div className="toolbar-label">Interact</div>
-          <div className="sim-hint">Click & drag joints, links, or shapes to apply force</div>
-          <div className="sim-hint">Middle-click to pan</div>
-          <div className="sim-hint">Scroll to zoom</div>
-        </div>
-      )}
+      ) : null}
 
       <div style={{ marginTop: 'auto', padding: '8px', borderTop: '1px solid #333' }}>
-        <div style={{ fontSize: 9, color: '#555', lineHeight: 1.4 }}>
-          VibeCoded by Hugo Wilson
+        <div style={{ fontSize: 10, color: '#999', lineHeight: 1.4 }}>
+          VibeCoded by <a href="https://github.com/Huggabiz/linkage-studio" target="_blank" rel="noreferrer" style={{ color: '#a3cce8' }}>Hugo Wilson</a>
         </div>
         <div style={{ fontSize: 9, color: '#555', lineHeight: 1.4 }}>
           Claude Opus 4.6

@@ -14,10 +14,10 @@ export function worldToScreen(world: Vec2, camera: CameraState): Vec2 {
   };
 }
 
-export function applyCamera(ctx: CanvasRenderingContext2D, camera: CameraState) {
-  ctx.setTransform(camera.zoom, 0, 0, camera.zoom, camera.pan.x, camera.pan.y);
+export function applyCamera(ctx: CanvasRenderingContext2D, camera: CameraState, pixelRatio = 1) {
+  ctx.setTransform(camera.zoom * pixelRatio, 0, 0, camera.zoom * pixelRatio, camera.pan.x * pixelRatio, camera.pan.y * pixelRatio);
 }
 
-export function resetCamera(ctx: CanvasRenderingContext2D) {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+export function resetCamera(ctx: CanvasRenderingContext2D, pixelRatio = 1) {
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }

@@ -6,6 +6,7 @@ import { generateBodyLinks } from '../core/body-links';
 import { computeBodyTransform, localToWorld, worldToLocal } from '../core/body-transform';
 import { BASE_BODY_COLOR, BODY_COLORS } from '../utils/constants';
 import type { DocumentContext } from '../document/codec';
+import { cancelInteractions } from '../interaction/session';
 
 interface HistorySnapshot {
   documentContext?: DocumentContext;
@@ -164,11 +165,13 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   removeSlider(id) {
-    set((s) => {
-      const newSliders = { ...s.sliders };
-      delete newSliders[id];
-      return { sliders: newSliders };
-    });
+    if (!get().sliders[id]) return;
+    get().pushHistory();
+    const sliders = { ...get().sliders }, joints = structuredClone(get().joints);
+    delete sliders[id];
+    const { newLinks: links, angleConstraints } = regenConstraints(get().bodies, joints, sliders);
+    updateJointConnections(joints, links);
+    set({ sliders, joints, links, angleConstraints });
   },
 
   updateSliderT(id, t) {
@@ -363,6 +366,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   clearAll() {
+    cancelInteractions();
     get().pushHistory();
     set({
       documentContext: undefined,
@@ -385,6 +389,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   loadState(state) {
+    cancelInteractions();
     state = structuredClone(state);
     const sliders = state.sliders || {};
     const { angleConstraints: ac } = generateBodyLinks(state.bodies, state.joints, sliders);
@@ -413,6 +418,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   undo() {
+    cancelInteractions();
     const { past } = get();
     if (past.length === 0) return;
     const prev = past[past.length - 1];
@@ -433,6 +439,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   redo() {
+    cancelInteractions();
     const { future } = get();
     if (future.length === 0) return;
     const next = future[0];
@@ -513,30 +520,20 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
 
     delete newJoints[id];
 
-    // Remove sliders that reference this joint, and remove their other joints too
+    // Remove incident constraints, not their independently editable other endpoints.
     const newSliders = { ...get().sliders };
     for (const [sid, slider] of Object.entries(newSliders)) {
       if (slider.jointIdA === id || slider.jointIdB === id || slider.jointIdC === id) {
-        for (const jid of [slider.jointIdA, slider.jointIdB, slider.jointIdC]) {
-          if (jid !== id && newJoints[jid]) {
-            for (const bodyId of Object.keys(newBodies)) {
-              const body = newBodies[bodyId];
-              if (body.jointIds.includes(jid)) {
-                newBodies[bodyId] = { ...body, jointIds: body.jointIds.filter((j) => j !== jid) };
-              }
-            }
-            delete newJoints[jid];
-          }
-        }
         delete newSliders[sid];
       }
     }
+    const colliders = Object.fromEntries(Object.entries(get().colliders).filter(([, c]) => c.jointIdA !== id && c.jointIdC !== id));
 
     // Regenerate links
-    const { newLinks, angleConstraints: newAngle } = regenConstraints(newBodies, newJoints, get().sliders);
+    const { newLinks, angleConstraints: newAngle } = regenConstraints(newBodies, newJoints, newSliders);
     updateJointConnections(newJoints, newLinks);
 
-    set({ joints: newJoints, links: newLinks, bodies: newBodies, outlines: newOutlines, tracers: newTracers, sliders: newSliders, angleConstraints: newAngle });
+    set({ joints: newJoints, links: newLinks, bodies: newBodies, outlines: newOutlines, tracers: newTracers, sliders: newSliders, colliders, angleConstraints: newAngle });
   },
 
   moveJoint(id, position) {

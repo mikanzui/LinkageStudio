@@ -22,7 +22,7 @@
   text-transform: uppercase;
   color: #888;
   padding: 4px 8px 2px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .tool-btn {
@@ -83,7 +83,7 @@
   text-transform: uppercase;
   color: #666;
   padding: 6px 8px 1px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .mode-toggle {

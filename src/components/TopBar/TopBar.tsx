@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Save, FolderOpen, Undo2, Redo2, FileDown, Trash2, Pause, Play, RotateCcw } from 'lucide-react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { useSimulationStore } from '../../store/simulation-store';
@@ -17,21 +18,27 @@ function ProjectNameInput() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(projectName);
   const inputRef = useRef<HTMLInputElement>(null);
+  const draftRef = useRef(projectName);
+  const editingRef = useRef(false);
+  const begin = () => { draftRef.current = projectName; editingRef.current = true; setDraft(projectName); setEditing(true); };
+  const finish = (commit: boolean) => {
+    if (!editingRef.current) return;
+    editingRef.current = false;
+    if (commit && draftRef.current.trim()) setProjectName(draftRef.current.trim());
+    setEditing(false);
+  };
 
   useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
 
   if (!editing) {
     return (
-      <span
+      <button type="button"
         className="project-name"
-        onClick={() => { setDraft(projectName); setEditing(true); }}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter') { setDraft(projectName); setEditing(true); } }}
-        title="Click to rename project"
+        onClick={begin}
+        title="Rename project"
       >
         {projectName}
-      </span>
+      </button>
     );
   }
 
@@ -41,20 +48,13 @@ function ProjectNameInput() {
       aria-label="Project name"
       className="project-name-input"
       value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => {
-        const trimmed = draft.trim();
-        if (trimmed) setProjectName(trimmed);
-        setEditing(false);
-      }}
+      onChange={(e) => { draftRef.current = e.target.value; setDraft(e.target.value); }}
+      onBlur={() => finish(true)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
-          const trimmed = draft.trim();
-          if (trimmed) setProjectName(trimmed);
-          setEditing(false);
+          finish(true);
         } else if (e.key === 'Escape') {
-          setDraft(projectName);
-          setEditing(false);
+          finish(false);
         }
       }}
     />
@@ -77,8 +77,8 @@ export function TopBar() {
   const isPlaying = useSimulationStore(s => s.isPlaying);
   const stepError = useSimulationStore(s => s.stepError);
 
-  const handleSave = async () => {
-    if (busyRef.current) return;
+  const handleSave = useCallback(async () => {
+    if (busyRef.current || useEditorStore.getState().mode !== 'create') return;
     const editor = useEditorStore.getState();
 
     // If project is still "Untitled", prompt for a name
@@ -103,10 +103,10 @@ export function TopBar() {
       } else setProjectMessage(`Download started: ${outcome.name}. File storage is not confirmed.`);
     } catch (error) { setProjectMessage(`Save failed: ${error instanceof Error ? error.message : String(error)}`, 'alert'); }
     finally { busyRef.current = false; setBusy(false); }
-  };
+  }, []);
 
-  const handleOpen = async () => {
-    if (busyRef.current || (isProjectDirty() && !confirm('Discard unsaved changes and open another file?'))) return;
+  const handleOpen = useCallback(async () => {
+    if (useEditorStore.getState().mode !== 'create' || busyRef.current || (isProjectDirty() && !confirm('Discard unsaved changes and open another file?'))) return;
     busyRef.current = true; setBusy(true);
     try {
       const file = await openLocalFile();
@@ -117,7 +117,18 @@ export function TopBar() {
       else setProjectMessage(result.issues.length ? `Opened ${file.name}. ${result.issues.length} saved barrier references are unresolved; data retained.` : `Opened ${file.name}.`);
     } catch (error) { setProjectMessage(`Open failed: ${error instanceof Error ? error.message : String(error)}`, 'alert'); }
     finally { busyRef.current = false; setBusy(false); }
-  };
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || !['s', 'o'].includes(event.key.toLowerCase())) return;
+      event.preventDefault();
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      if (event.key.toLowerCase() === 's') void handleSave(); else void handleOpen();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSave, handleOpen]);
 
   return (
     <>
@@ -125,47 +136,35 @@ export function TopBar() {
       <ProjectNameInput />
 
       {!isCreate && <div className="top-bar-group">
-        <button className="top-bar-btn" onClick={() => isPlaying ? useSimulationStore.getState().pause() : useSimulationStore.getState().play()}>
-          {isPlaying ? 'Pause' : stepError ? 'Retry' : 'Resume'}
+        <button className="top-bar-btn" aria-label={isPlaying ? 'Pause' : stepError ? 'Retry' : 'Resume'} title={isPlaying ? 'Pause' : stepError ? 'Retry' : 'Resume'} onClick={() => isPlaying ? useSimulationStore.getState().pause() : useSimulationStore.getState().play()}>
+          {isPlaying ? <Pause size={16}/> : <Play size={16}/>}<span className="top-bar-label">{isPlaying ? 'Pause' : stepError ? 'Retry' : 'Resume'}</span>
         </button>
-        <button className="top-bar-btn" onClick={() => { switchMode('create'); switchMode('simulate'); }}>Restart</button>
+        <button className="top-bar-btn" aria-label="Restart" title="Restart" onClick={() => { switchMode('create'); switchMode('simulate'); }}><RotateCcw size={16}/><span className="top-bar-label">Restart</span></button>
       </div>}
 
       <div className="top-bar-separator" />
 
       <div className="top-bar-group">
-        <button className="top-bar-btn" onClick={handleSave} title="Save file" disabled={!isCreate || busy}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-            <polyline points="17 21 17 13 7 13 7 21"/>
-            <polyline points="7 3 7 8 15 8"/>
-          </svg>
-          Save
+        <button className="top-bar-btn" aria-label="Save" onClick={handleSave} title="Save file" disabled={!isCreate || busy}>
+          <Save size={16}/>
+          <span className="top-bar-label">Save</span>
         </button>
-        <button className="top-bar-btn" onClick={handleOpen} title="Open file" disabled={!isCreate || busy}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-          </svg>
-          Open
+        <button className="top-bar-btn" aria-label="Open" onClick={handleOpen} title="Open file" disabled={!isCreate || busy}>
+          <FolderOpen size={16}/>
+          <span className="top-bar-label">Open</span>
         </button>
       </div>
 
       <div className="top-bar-separator" />
 
       <div className="top-bar-group">
-        <button className="top-bar-btn" onClick={undo} title="Undo (Ctrl+Z)" disabled={!isCreate || !pastLength || busy}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="1 4 1 10 7 10"/>
-            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-          </svg>
-          Undo
+        <button className="top-bar-btn" aria-label="Undo" onClick={undo} title="Undo (Ctrl+Z)" disabled={!isCreate || !pastLength || busy}>
+          <Undo2 size={16}/>
+          <span className="top-bar-label">Undo</span>
         </button>
-        <button className="top-bar-btn" onClick={redo} title="Redo (Ctrl+Y)" disabled={!isCreate || !futureLength || busy}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/>
-          </svg>
-          Redo
+        <button className="top-bar-btn" aria-label="Redo" onClick={redo} title="Redo (Ctrl+Y)" disabled={!isCreate || !futureLength || busy}>
+          <Redo2 size={16}/>
+          <span className="top-bar-label">Redo</span>
         </button>
       </div>
 
@@ -176,9 +175,10 @@ export function TopBar() {
           className="top-bar-btn danger"
           onClick={() => { if (confirm('Clear everything?')) { clearAll(); clearSelection(); } }}
           title="Clear all"
+          aria-label="Clear All"
           disabled={!isCreate || busy}
         >
-          Clear All
+          <Trash2 size={16}/><span className="top-bar-label">Clear All</span>
         </button>
       </div>
 
@@ -198,14 +198,11 @@ export function TopBar() {
             downloadFile(dxf, `${name}.dxf`);
           }}
           title="Export as DXF"
+          aria-label="Export DXF"
           disabled={!isCreate}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Export DXF
+          <FileDown size={16}/>
+          <span className="top-bar-label">Export DXF</span>
         </button>
       </div>
 

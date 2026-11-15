@@ -3,6 +3,10 @@ import type { AppMode, ToolType, JointSubType, CreateTool, JointMode, CameraStat
 import type { Vec2 } from '../types';
 import type { MechanismState } from '../types';
 import { DEFAULT_GRID_SIZE } from '../utils/constants';
+import { clampZoom } from '../renderer/viewport';
+import { useMechanismStore } from './mechanism-store';
+import { resetHitTesting } from '../interaction/hit-test';
+import type { SelectMode, SelectionGesture } from '../types/editor';
 
 const GRID_DIVISOR: Record<GridLevel, number> = {
   normal: 1,
@@ -20,6 +24,11 @@ const GRID_CYCLE: GridLevel[] = ['normal', 'fine', 'ultrafine', 'off'];
 interface EditorStore {
   mode: AppMode;
   activeTool: ToolType;
+  selectMode: SelectMode;
+  selectionGesture: SelectionGesture | null;
+  excludedBodies: Set<string>;
+  setSelectMode(mode: SelectMode): void;
+  toggleExcludedBody(id: string): void;
   jointSubType: JointSubType;
   selectedIds: Set<string>;
   hoveredId: string | null;
@@ -45,6 +54,9 @@ interface EditorStore {
   frozenOutlineWorldPoints: Map<string, Vec2[]>;
   leftCollapsed: boolean;
   rightCollapsed: boolean;
+  leftWidth: number;
+  rightWidth: number;
+  setPanelWidth(side: 'left' | 'right', width: number): void;
   imageDragMode: 'move' | 'rotate' | 'scale' | null;
   sliderPointA: { position: Vec2; jointId: string } | null;
   colliderPointA: { position: Vec2; jointId: string } | null;
@@ -108,9 +120,14 @@ interface EditorStore {
   updateFrozenOutline(outlineId: string, worldPoints: Vec2[]): void;
 }
 
-export const useEditorStore = create<EditorStore>((set) => ({
+export const useEditorStore = create<EditorStore>((set, get) => ({
   mode: 'create',
-  activeTool: 'select',
+  activeTool: 'joint',
+  selectMode: 'single',
+  selectionGesture: null,
+  excludedBodies: new Set(),
+  setSelectMode(selectMode) { get().setTool('select'); set({ selectMode, selectionGesture: null }); },
+  toggleExcludedBody(id) { set(s => { const excludedBodies = new Set(s.excludedBodies); if (excludedBodies.has(id)) excludedBodies.delete(id); else excludedBodies.add(id); return { excludedBodies }; }); },
   jointSubType: 'revolute',
   selectedIds: new Set(),
   hoveredId: null,
@@ -136,6 +153,12 @@ export const useEditorStore = create<EditorStore>((set) => ({
   frozenOutlineWorldPoints: new Map(),
   leftCollapsed: false,
   rightCollapsed: false,
+  leftWidth: 140,
+  rightWidth: 260,
+  setPanelWidth(side, width) {
+    if (!Number.isFinite(width)) return;
+    set(side === 'left' ? { leftWidth: Math.max(120, Math.min(300, width)) } : { rightWidth: Math.max(220, Math.min(480, width)) });
+  },
   imageDragMode: null,
   sliderPointA: null,
   colliderPointA: null,
@@ -144,10 +167,16 @@ export const useEditorStore = create<EditorStore>((set) => ({
   arcSelector: null,
 
   setMode(mode) {
+    set({ selectMode: 'single', selectionGesture: null, excludedBodies: new Set() });
+    resetHitTesting();
+    set({ activeTool: mode === 'create' ? 'joint' : 'select' });
     set({ mode, simDrag: null, linkStartJointId: null, selectedIds: new Set(), outlinePoints: [], createTool: 'joints' as CreateTool, jointMode: 'manual' as JointMode, autoChainLastBodyId: null, lockOutlines: true, frozenOutlineWorldPoints: new Map(), sliderPointA: null, colliderPointA: null, editingOutlineId: null, editingVertexIndex: null });
   },
 
   setTool(tool) {
+    set({ selectionGesture: null });
+    if (get().mode === 'create') get().setCreateTool('joints');
+    resetHitTesting();
     set({ activeTool: tool, linkStartJointId: null });
   },
 
@@ -187,7 +216,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
 
   zoomCamera(factor, center) {
     set((s) => {
-      const newZoom = Math.max(0.1, Math.min(10, s.camera.zoom * factor));
+      if (!Number.isFinite(factor) || factor <= 0) return s;
+      const newZoom = clampZoom(s.camera.zoom * factor);
       const zoomRatio = newZoom / s.camera.zoom;
       return {
         camera: {
@@ -259,6 +289,11 @@ export const useEditorStore = create<EditorStore>((set) => ({
   },
 
   setCreateTool(tool) {
+    const previous = get();
+    const pending = previous.sliderPointA ?? previous.colliderPointA;
+    if (pending) useMechanismStore.getState().removeJoint(pending.jointId);
+    resetHitTesting();
+    set({ activeTool: 'joint' });
     set({ createTool: tool, outlinePoints: [], jointMode: 'manual' as JointMode, autoChainLastBodyId: null, sliderPointA: null, colliderPointA: null, editingOutlineId: null, editingVertexIndex: null });
   },
 

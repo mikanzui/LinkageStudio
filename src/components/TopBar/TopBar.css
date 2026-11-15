@@ -67,6 +67,10 @@
 }
 
 .project-name {
+  background: transparent;
+  border: 0;
+  min-width: 96px;
+  flex-shrink: 0;
   font-size: 13px;
   font-weight: 600;
   color: #e0e0e0;
@@ -107,6 +111,8 @@
 }
 
 .top-bar-brand {
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 9px;
   color: #555;
   padding-right: 4px;
@@ -128,4 +134,10 @@
 @media (pointer: coarse) {
   .top-bar { min-height: 48px; height: auto; }
   .top-bar-btn { min-height: 44px; min-width: 44px; }
+}
+@media (max-width: 1099px) {
+  .top-bar-label, .top-bar-brand, .top-bar-separator { display: none; }
+  .project-name { max-width: 160px; min-width: 96px; }
+  .top-bar-btn { justify-content: center; width: 44px; min-width: 44px; padding: 0; }
+  .top-bar-group { flex-shrink: 0; }
 }

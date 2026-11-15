@@ -5,6 +5,7 @@ import { useSimulationStore } from '../store/simulation-store';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import { exitOutlineEditMode } from '../interaction/tool-manager';
 import { compileMechanism, snapshotMechanism } from '../core/compile-mechanism';
+import { cancelInteractions } from '../interaction/session';
 
 /**
  * Shared mode switch logic used by both the expanded Toolbar and the
@@ -12,9 +13,10 @@ import { compileMechanism, snapshotMechanism } from '../core/compile-mechanism';
  * outline freeze/unfreeze, and temp joint cleanup.
  */
 export function switchMode(newMode: AppMode): void {
+  if (newMode === useEditorStore.getState().mode) return;
+  cancelInteractions();
   const editor = useEditorStore.getState();
   const mech = useMechanismStore.getState();
-  if (newMode === editor.mode) return;
 
   // Clean up any temp joint from sim drag
   if (editor.simDrag?.tempJointId) {
@@ -26,6 +28,7 @@ export function switchMode(newMode: AppMode): void {
   if (editor.editingOutlineId) {
     exitOutlineEditMode();
   }
+  if (editor.mode === 'create') editor.setCreateTool('joints');
   // Re-read editor state since exitOutlineEditMode may have modified frozen points
   const editorFresh = useEditorStore.getState();
 

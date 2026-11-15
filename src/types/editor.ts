@@ -2,6 +2,8 @@ import type { Vec2 } from './geometry';
 
 export type AppMode = 'create' | 'simulate';
 export type ToolType = 'select' | 'joint' | 'link' | 'pan';
+export type SelectMode = 'single' | 'box' | 'lasso';
+export type SelectionGesture = { kind: 'box'; start: Vec2; end: Vec2 } | { kind: 'lasso'; points: Vec2[] };
 export type JointSubType = 'revolute' | 'fixed';
 export type CreateTool = 'joints' | 'slider' | 'collider' | 'outline' | 'image' | 'tracer';
 export type JointMode = 'manual' | 'autochain';

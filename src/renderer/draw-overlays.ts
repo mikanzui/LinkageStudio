@@ -1,5 +1,6 @@
 import type { Vec2, CameraState, SimDragState, ForceVector } from '../types';
 import { GRID_COLOR, GRID_MAJOR_COLOR, BACKGROUND_COLOR } from '../utils/constants';
+import { visibleTicks } from './ticks';
 
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
@@ -9,6 +10,7 @@ export function drawGrid(
   gridSize: number,
 ) {
   const { pan, zoom } = camera;
+  if (!(zoom > 0) || !Number.isFinite(zoom) || !(gridSize > 0) || !Number.isFinite(gridSize)) return;
 
   // Determine visible world bounds
   const left = -pan.x / zoom;
@@ -26,7 +28,7 @@ export function drawGrid(
 
   ctx.lineWidth = 1 / zoom;
 
-  for (let x = startX; x <= right; x += step) {
+  for (const x of visibleTicks(startX, right, step, Math.ceil(canvasWidth / 8) + 2)) {
     ctx.beginPath();
     ctx.moveTo(x, top);
     ctx.lineTo(x, bottom);
@@ -34,7 +36,7 @@ export function drawGrid(
     ctx.stroke();
   }
 
-  for (let y = startY; y <= bottom; y += step) {
+  for (const y of visibleTicks(startY, bottom, step, Math.ceil(canvasHeight / 8) + 2)) {
     ctx.beginPath();
     ctx.moveTo(left, y);
     ctx.lineTo(right, y);
@@ -66,14 +68,16 @@ export function drawRulers(
   camera: CameraState,
   canvasWidth: number,
   canvasHeight: number,
+  pixelRatio = 1,
 ) {
   const { pan, zoom } = camera;
+  if (!(zoom > 0) || !Number.isFinite(zoom)) return;
   const PX_PER_CM = 25; // 1cm = 25 world units
   const RULER_SIZE = 20; // px height/width of ruler strip
 
   // Work in screen-space (identity transform assumed)
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
   // Visible world bounds
   const left = -pan.x / zoom;
@@ -105,7 +109,7 @@ export function drawRulers(
   const xStartCm = Math.floor((left / PX_PER_CM) / minorCm) * minorCm;
   const xEndCm = Math.ceil((right / PX_PER_CM) / minorCm) * minorCm;
 
-  for (let cm = xStartCm; cm <= xEndCm; cm += minorCm) {
+  for (const cm of visibleTicks(xStartCm, xEndCm, minorCm, Math.ceil(canvasWidth / 2) + 2)) {
     const worldX = cm * PX_PER_CM;
     const screenX = worldX * zoom + pan.x;
     if (screenX < RULER_SIZE || screenX > canvasWidth) continue;
@@ -143,7 +147,7 @@ export function drawRulers(
   const yStartCm = Math.floor((top / PX_PER_CM) / minorCm) * minorCm;
   const yEndCm = Math.ceil((bottom / PX_PER_CM) / minorCm) * minorCm;
 
-  for (let cm = yStartCm; cm <= yEndCm; cm += minorCm) {
+  for (const cm of visibleTicks(yStartCm, yEndCm, minorCm, Math.ceil(canvasHeight / 2) + 2)) {
     const worldY = cm * PX_PER_CM;
     const screenY = worldY * zoom + pan.y;
     if (screenY < RULER_SIZE || screenY > canvasHeight) continue;
@@ -415,6 +419,7 @@ export function drawArcSelector(
   collapseTime: number | null,
   addButtonPos?: { screenX: number; screenY: number; centerScreenX: number; centerScreenY: number },
   addButtonActive?: boolean,
+  pixelRatio = 1,
 ) {
   const now = Date.now();
   const CIRCLE_RADIUS = 12;
@@ -427,7 +432,7 @@ export function drawArcSelector(
   const LABEL_DELAY = 80; // ms delay after circle lands before text starts
 
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
   for (let i = 0; i < arcPositions.length; i++) {
     const { screenX, screenY, centerScreenX, centerScreenY } = arcPositions[i];
@@ -618,8 +623,9 @@ export function clearCanvas(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
+  pixelRatio = 1,
 ) {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.fillStyle = BACKGROUND_COLOR;
   ctx.fillRect(0, 0, width, height);
 }
