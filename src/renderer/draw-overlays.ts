@@ -245,7 +245,7 @@ export function drawHUD(
   ctx.textBaseline = 'bottom';
 
   // DOF badge
-  const dofText = `DOF: ${dof}`;
+  const dofText = `Design DOF: ${dof}`;
   ctx.fillStyle = dof === 1 ? '#4CAF50' : dof === 0 ? '#FF9800' : dof < 0 ? '#E53935' : '#2196F3';
   ctx.fillRect(8, canvasHeight - 28, ctx.measureText(dofText).width + 12, 22);
   ctx.fillStyle = '#fff';

@@ -1,5 +1,7 @@
 import type { Joint, Link, SliderConstraint, ColliderConstraint, AngleConstraint, Vec2, SolverResult, ForceVector } from '../../types';
 import { distanceConstraint, angleDriverConstraint } from './constraints';
+import { projectSlider } from './slider-projection';
+import { sweptBarrierCrossing } from './barrier-crossing';
 import { createMatrix, solveLU } from '../math/linalg';
 import { SOLVER_MAX_ITERATIONS, SOLVER_TOLERANCE, SOLVER_DAMPING } from '../../utils/constants';
 
@@ -111,7 +113,7 @@ export function resetVelocities() {
 
 const PULL_STRENGTH = 6;
 const NUM_SUBSTEPS = 10;
-const CONSTRAINT_PASSES = 6;
+const CONSTRAINT_PASSES = 512;
 
 /**
  * Physics simulation using substep PBD with explicit velocity tracking.
@@ -214,13 +216,15 @@ export function solveWithForce(
   }
 
   // --- Damping factor per substep (time-based) ---
-  const subDt = dt / NUM_SUBSTEPS;
+  const coupled = (sliders && Object.keys(sliders).length > 0) || (colliders && Object.keys(colliders).length > 0);
+  const substeps = coupled ? Math.max(24, Math.ceil(dt * 1440)) : NUM_SUBSTEPS;
+  const subDt = dt / substeps;
   const retentionPerSecond = damping < 0.001 ? 0.001 : damping;
   const dampPerSubstep = Math.pow(retentionPerSecond, subDt);
   const effectiveStrength = PULL_STRENGTH * dragMultiplier;
 
   // --- Substep loop ---
-  for (let sub = 0; sub < NUM_SUBSTEPS; sub++) {
+  for (let sub = 0; sub < substeps; sub++) {
     // 1. Compute per-substep acceleration: constant gravity + position-dependent drag
     for (let i = 0; i < freeJoints.length; i++) {
       let axi = gravAccX[i];
@@ -279,10 +283,12 @@ export function solveWithForce(
     // 3. Project distance constraints + slider constraints
     const sliderArray = sliders ? Object.values(sliders) : [];
     const passes = sliderArray.length || (colliders && Object.keys(colliders).length) ? CONSTRAINT_PASSES : 64;
+    const collidedJoints = new Map<number, { idx: number; nx: number; ny: number }>();
     for (let pass = 0; pass < passes; pass++) {
       for (const link of linkArray) {
         const idxI = jointIndex.get(link.jointIds[0]);
         const idxJ = jointIndex.get(link.jointIds[1]);
+        if (idxI === undefined && idxJ === undefined) continue;
         const ji = joints[link.jointIds[0]];
         const jj = joints[link.jointIds[1]];
         if (!ji || !jj) continue;
@@ -309,221 +315,90 @@ export function solveWithForce(
         if (isFreeJ) { predicted[idxJ!] -= cx; predicted[idxJ! + 1] -= cy; }
       }
 
-      // Slider constraints: B must lie on segment AC (between A and C).
-      // B acts as a sliding pivot — the body with A&C can both slide along
-      // the rail axis AND rotate around B. The perpendicular correction uses
-      // lever-arm weighting so A and C get different corrections based on
-      // their distance from B, naturally producing torque/rotation.
-      for (const slider of sliderArray) {
-        const idxA = jointIndex.get(slider.jointIdA);
-        const idxB = jointIndex.get(slider.jointIdB);
-        const idxC = jointIndex.get(slider.jointIdC);
-        const jA = joints[slider.jointIdA];
-        const jB = joints[slider.jointIdB];
-        const jC = joints[slider.jointIdC];
-        if (!jA || !jB || !jC) continue;
+      for (const slider of sliderArray) projectSlider(slider, joints, jointIndex, predicted);
 
-        const freeA = idxA !== undefined;
-        const freeB = idxB !== undefined;
-        const freeC = idxC !== undefined;
+      if (colliders && colliderSides) {
+        for (const collider of Object.values(colliders)) {
+          if (!joints[collider.jointIdA] || !joints[collider.jointIdC]) continue;
+          // Get barrier endpoints (may be fixed or free)
+          const idxA = jointIndex.get(collider.jointIdA);
+          const idxC = jointIndex.get(collider.jointIdC);
+          const ax = idxA !== undefined ? predicted[idxA] : (joints[collider.jointIdA]?.position.x ?? 0);
+          const ay = idxA !== undefined ? predicted[idxA + 1] : (joints[collider.jointIdA]?.position.y ?? 0);
+          const cx = idxC !== undefined ? predicted[idxC] : (joints[collider.jointIdC]?.position.x ?? 0);
+          const cy = idxC !== undefined ? predicted[idxC + 1] : (joints[collider.jointIdC]?.position.y ?? 0);
 
-        // Current predicted positions
-        let ax = freeA ? predicted[idxA!] : jA.position.x;
-        let ay = freeA ? predicted[idxA! + 1] : jA.position.y;
-        let bx = freeB ? predicted[idxB!] : jB.position.x;
-        let by = freeB ? predicted[idxB! + 1] : jB.position.y;
-        let cx2 = freeC ? predicted[idxC!] : jC.position.x;
-        let cy2 = freeC ? predicted[idxC! + 1] : jC.position.y;
+          const lineDx = cx - ax;
+          const lineDy = cy - ay;
+          const lineLenSq = lineDx * lineDx + lineDy * lineDy;
+          if (lineLenSq < 1e-10) continue;
+          const lineLen = Math.sqrt(lineLenSq);
+          // Unit normal (perpendicular to line, consistent direction)
+          const nx = -lineDy / lineLen;
+          const ny = lineDx / lineLen;
 
-        // Direction along AC
-        let acx = cx2 - ax;
-        let acy = cy2 - ay;
-        let acLenSq = acx * acx + acy * acy;
-        if (acLenSq < 1e-8) continue;
-        let acLen = Math.sqrt(acLenSq);
+          // Check each joint in the collider's assigned bodies
+          for (const bodyId of collider.bodyIds) {
+            const body = bodiesRef?.[bodyId];
+            if (!body) continue;
+            for (const jid of body.jointIds) {
+              // Skip the collider's own endpoints
+              if (jid === collider.jointIdA || jid === collider.jointIdC) continue;
+              const idx = jointIndex.get(jid);
+              if (idx === undefined) continue;
 
-        // Unit vectors: along AC and perpendicular
-        let ux = acx / acLen;
-        let uy = acy / acLen;
-        const perpX = -uy;
-        const perpY = ux;
+              const px = predicted[idx];
+              const py = predicted[idx + 1];
 
-        // B's position relative to A in (along, perp) coordinates
-        let abx = bx - ax;
-        let aby = by - ay;
-        const perpDist = abx * perpX + aby * perpY;
-        const alongDist = abx * ux + aby * uy;
+              // Parametric projection onto line segment
+              const apx = px - ax, apy = py - ay;
+              const t = (apx * lineDx + apy * lineDy) / lineLenSq;
 
-        // --- Sub-constraint 1: Perpendicular correction (rotation-aware) ---
-        //
-        // B is at parameter t along AC. To make line AC pass through B with
-        // minimum energy, we weight A and C's perpendicular corrections by
-        // their lever arm from B:
-        //   A moves by d*(1-t) / ((1-t)² + t²)  in perp direction
-        //   C moves by d*t     / ((1-t)² + t²)  in perp direction
-        // This naturally produces rotation around B:
-        //   - t≈0.5 (B centered): equal correction → pure translation
-        //   - t≈0   (B near A):   A moves a lot, C barely → rotation around A
-        //   - t≈1   (B near C):   C moves a lot, A barely → rotation around C
-        if (Math.abs(perpDist) > 1e-10) {
-          const hasBSide = freeB;
-          const hasACSide = freeA || freeC;
-          if (hasBSide || hasACSide) {
-            // Split between B-side and AC-side
-            const bFrac = hasBSide ? (hasACSide ? 0.5 : 1.0) : 0;
-            const acTotalFrac = hasACSide ? (hasBSide ? 0.5 : 1.0) : 0;
+              // Signed distance from line (positive = normal side, negative = opposite)
+              const signedDist = apx * nx + apy * ny;
+              const sideKey = `${collider.id}:${jid}`;
 
-            // B moves toward line
-            if (freeB) {
-              bx -= perpX * perpDist * bFrac;
-              by -= perpY * perpDist * bFrac;
-              predicted[idxB!] = bx;
-              predicted[idxB! + 1] = by;
-            }
+              const crossing = (pass === 0 || pass === passes - 1) ? sweptBarrierCrossing(
+                { x: q[idx], y: q[idx + 1] }, { x: px, y: py },
+                { x: idxA === undefined ? ax : q[idxA], y: idxA === undefined ? ay : q[idxA + 1] }, { x: ax, y: ay },
+                { x: idxC === undefined ? cx : q[idxC], y: idxC === undefined ? cy : q[idxC + 1] }, { x: cx, y: cy }) : null;
 
-            // A&C: lever-arm weighted perpendicular correction
-            if (hasACSide && acTotalFrac > 0) {
-              // Clamp t to [0,1] for lever arm computation
-              const tClamped = Math.max(0, Math.min(1, alongDist / acLen));
-              const wA = 1 - tClamped; // A's lever weight (large when B near C)
-              const wC = tClamped;     // C's lever weight (large when B near A)
-              const denom = wA * wA + wC * wC;
-              // Fallback to equal weights if B is at a degenerate position
-              const corrA = denom > 1e-10 ? acTotalFrac * perpDist * wA / denom : acTotalFrac * perpDist * 0.5;
-              const corrC = denom > 1e-10 ? acTotalFrac * perpDist * wC / denom : acTotalFrac * perpDist * 0.5;
-
-              if (freeA) {
-                ax += perpX * corrA;
-                ay += perpY * corrA;
-                predicted[idxA!] = ax;
-                predicted[idxA! + 1] = ay;
+              if ((t < 0 || t > 1) && !crossing) {
+                // Outside segment bounds — joint has gone around the endpoint.
+                // Update the recorded side so re-entering from this side is accepted.
+                const newSide = signedDist > 0 ? 1 : signedDist < 0 ? -1 : 0;
+                if (newSide !== 0 && pass === passes - 1) colliderSides.set(sideKey, newSide);
+                continue;
               }
-              if (freeC) {
-                cx2 += perpX * corrC;
-                cy2 += perpY * corrC;
-                predicted[idxC!] = cx2;
-                predicted[idxC! + 1] = cy2;
+
+              // Look up current recorded side
+              const initialSide = colliderSides.get(sideKey);
+              if (initialSide === undefined || initialSide === 0) continue;
+
+              // If joint has crossed (sign differs from initial), push it back
+              if (signedDist * initialSide < 0) {
+                // Project onto the line, then offset to original side by a small epsilon
+                const epsilon = 1e-5;
+                predicted[idx] = px - signedDist * nx + initialSide * epsilon * nx;
+                predicted[idx + 1] = py - signedDist * ny + initialSide * epsilon * ny;
+                collidedJoints.set(idx, { idx, nx, ny });
               }
             }
-          }
-        }
-
-        // --- Sub-constraint 2: Along-axis clamping (B between A and C) ---
-        // Recompute AC direction after perpendicular correction
-        acx = cx2 - ax;
-        acy = cy2 - ay;
-        acLenSq = acx * acx + acy * acy;
-        if (acLenSq < 1e-8) continue;
-        acLen = Math.sqrt(acLenSq);
-        ux = acx / acLen;
-        uy = acy / acLen;
-
-        abx = bx - ax;
-        aby = by - ay;
-        const tCorrected = (abx * ux + aby * uy) / acLen;
-
-        if (tCorrected < 0) {
-          // B is before A — slide entire segment so B ends up at A
-          const overshoot = -tCorrected * acLen;
-          if (freeB && (freeA || freeC)) {
-            if (freeB) { predicted[idxB!] += ux * overshoot * 0.5; predicted[idxB! + 1] += uy * overshoot * 0.5; }
-            if (freeA) { predicted[idxA!] -= ux * overshoot * 0.5; predicted[idxA! + 1] -= uy * overshoot * 0.5; }
-            if (freeC) { predicted[idxC!] -= ux * overshoot * 0.5; predicted[idxC! + 1] -= uy * overshoot * 0.5; }
-          } else if (freeB) {
-            predicted[idxB!] += ux * overshoot;
-            predicted[idxB! + 1] += uy * overshoot;
-          } else if (freeA || freeC) {
-            if (freeA) { predicted[idxA!] -= ux * overshoot; predicted[idxA! + 1] -= uy * overshoot; }
-            if (freeC) { predicted[idxC!] -= ux * overshoot; predicted[idxC! + 1] -= uy * overshoot; }
-          }
-        } else if (tCorrected > 1) {
-          // B is past C — slide entire segment so B ends up at C
-          const overshoot = (tCorrected - 1) * acLen;
-          if (freeB && (freeA || freeC)) {
-            if (freeB) { predicted[idxB!] -= ux * overshoot * 0.5; predicted[idxB! + 1] -= uy * overshoot * 0.5; }
-            if (freeA) { predicted[idxA!] += ux * overshoot * 0.5; predicted[idxA! + 1] += uy * overshoot * 0.5; }
-            if (freeC) { predicted[idxC!] += ux * overshoot * 0.5; predicted[idxC! + 1] += uy * overshoot * 0.5; }
-          } else if (freeB) {
-            predicted[idxB!] -= ux * overshoot;
-            predicted[idxB! + 1] -= uy * overshoot;
-          } else if (freeA || freeC) {
-            if (freeA) { predicted[idxA!] += ux * overshoot; predicted[idxA! + 1] += uy * overshoot; }
-            if (freeC) { predicted[idxC!] += ux * overshoot; predicted[idxC! + 1] += uy * overshoot; }
           }
         }
       }
-
-      // Note: angle constraints were tested but removed — they destabilize
-      // near-collinear configurations by fighting distance constraints.
-      // Full pairwise distance links provide sufficient rigidity.
-    }
-
-    // 3b. Collider wall enforcement: push joints back if they cross a barrier line.
-    // Each affected joint must stay on its initial side of the collider segment.
-    // Track collided joints for velocity damping in step 4b.
-    const collidedJoints: { idx: number; nx: number; ny: number }[] = [];
-    if (colliders && colliderSides) {
-      for (const collider of Object.values(colliders)) {
-        // Get barrier endpoints (may be fixed or free)
-        const idxA = jointIndex.get(collider.jointIdA);
-        const idxC = jointIndex.get(collider.jointIdC);
-        const ax = idxA !== undefined ? predicted[idxA] : (joints[collider.jointIdA]?.position.x ?? 0);
-        const ay = idxA !== undefined ? predicted[idxA + 1] : (joints[collider.jointIdA]?.position.y ?? 0);
-        const cx = idxC !== undefined ? predicted[idxC] : (joints[collider.jointIdC]?.position.x ?? 0);
-        const cy = idxC !== undefined ? predicted[idxC + 1] : (joints[collider.jointIdC]?.position.y ?? 0);
-
-        const lineDx = cx - ax;
-        const lineDy = cy - ay;
-        const lineLenSq = lineDx * lineDx + lineDy * lineDy;
-        if (lineLenSq < 1e-10) continue;
-        const lineLen = Math.sqrt(lineLenSq);
-        // Unit normal (perpendicular to line, consistent direction)
-        const nx = -lineDy / lineLen;
-        const ny = lineDx / lineLen;
-
-        // Check each joint in the collider's assigned bodies
-        for (const bodyId of collider.bodyIds) {
-          const body = bodiesRef?.[bodyId];
-          if (!body) continue;
-          for (const jid of body.jointIds) {
-            // Skip the collider's own endpoints
-            if (jid === collider.jointIdA || jid === collider.jointIdC) continue;
-            const idx = jointIndex.get(jid);
-            if (idx === undefined) continue;
-
-            const px = predicted[idx];
-            const py = predicted[idx + 1];
-
-            // Parametric projection onto line segment
-            const apx = px - ax, apy = py - ay;
-            const t = (apx * lineDx + apy * lineDy) / lineLenSq;
-
-            // Signed distance from line (positive = normal side, negative = opposite)
-            const signedDist = apx * nx + apy * ny;
-            const sideKey = `${collider.id}:${jid}`;
-
-            if (t < 0 || t > 1) {
-              // Outside segment bounds — joint has gone around the endpoint.
-              // Update the recorded side so re-entering from this side is accepted.
-              const newSide = signedDist > 0 ? 1 : signedDist < 0 ? -1 : 0;
-              if (newSide !== 0) colliderSides.set(sideKey, newSide);
-              continue;
-            }
-
-            // Look up current recorded side
-            const initialSide = colliderSides.get(sideKey);
-            if (initialSide === undefined || initialSide === 0) continue;
-
-            // If joint has crossed (sign differs from initial), push it back
-            if (signedDist * initialSide < 0) {
-              // Project onto the line, then offset to original side by a small epsilon
-              const epsilon = 0.5;
-              predicted[idx] = px - signedDist * nx + initialSide * epsilon * nx;
-              predicted[idx + 1] = py - signedDist * ny + initialSide * epsilon * ny;
-              collidedJoints.push({ idx, nx, ny });
-            }
-          }
+      if (pass % 16 === 15) {
+        let settled = true;
+        for (const link of linkArray) {
+          const ia = jointIndex.get(link.jointIds[0]), ib = jointIndex.get(link.jointIds[1]);
+          const a = joints[link.jointIds[0]], b = joints[link.jointIds[1]];
+          if (!a || !b) continue;
+          const ax = ia === undefined ? a.position.x : predicted[ia], ay = ia === undefined ? a.position.y : predicted[ia + 1];
+          const bx = ib === undefined ? b.position.x : predicted[ib], by = ib === undefined ? b.position.y : predicted[ib + 1];
+          const tolerance = coupled ? (link.restLength > 0 ? link.restLength * 1e-4 : 1e-3) : 1e-5;
+          if (Math.abs(Math.hypot(bx - ax, by - ay) - link.restLength) > tolerance) { settled = false; break; }
         }
+        if (settled) break;
       }
     }
 
@@ -536,7 +411,7 @@ export function solveWithForce(
     // 4b. Collider velocity damping: for joints that hit a wall,
     // remove normal velocity (no bounce) and apply friction to tangent.
     const WALL_FRICTION = 0.7; // tangent velocity retention (0 = full stop, 1 = frictionless)
-    for (const { idx, nx, ny } of collidedJoints) {
+    for (const { idx, nx, ny } of collidedJoints.values()) {
       const vx = v[idx], vy = v[idx + 1];
       // Normal component (into wall) — remove entirely
       const vn = vx * nx + vy * ny;

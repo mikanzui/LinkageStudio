@@ -47,11 +47,25 @@ export class SimulationSession {
       }
       const residual = maximumLinkError(joints, graph.links);
       if (!Number.isFinite(residual)) throw new Error('Incomplete or non-finite constraint result.');
-      // Ordinary-link accuracy is strict; coupled sliders/barriers qualify separately at G3.
       const coupled = Object.keys(graph.sliders).length > 0 || Object.keys(graph.colliders).length > 0;
       if (!coupled && residual > 1e-3) throw new Error(`Constraint error ${residual.toPrecision(4)} exceeds 0.001 world units.`);
+      if (coupled) {
+        for (const link of Object.values(graph.links)) {
+          const a = joints[link.jointIds[0]].position, b = joints[link.jointIds[1]].position;
+          const error = Math.abs(Math.hypot(a.x - b.x, a.y - b.y) - link.restLength);
+          if (error > (link.restLength > 0 ? link.restLength * 1e-3 : .1)) throw new Error(`Constraint error on ${link.id} exceeds the coupled-graph tolerance.`);
+        }
+        for (const slider of Object.values(graph.sliders)) {
+          const a = joints[slider.jointIdA].position, b = joints[slider.jointIdB].position, c = joints[slider.jointIdC].position;
+          const dx = c.x - a.x, dy = c.y - a.y, length = Math.hypot(dx, dy);
+          if (length < 1e-10) throw new Error(`Slider ${slider.id} has a degenerate rail.`);
+          const t = ((b.x - a.x) * dx + (b.y - a.y) * dy) / (length * length);
+          const error = Math.max(Math.abs((b.x - a.x) * dy - (b.y - a.y) * dx) / length, Math.max(0, -t, t - 1) * length);
+          if (error > .1) throw new Error(`Slider ${slider.id} exceeds 0.1 world units of rail/limit error.`);
+        }
+      }
       this.velocities = trialVelocities; this.sides = sides;
-      return { ok: true, joints, result: { ...result, residual, converged: residual <= 1e-3 } };
+      return { ok: true, joints, result: { ...result, residual, converged: true } };
     } catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) }; }
   }
 }

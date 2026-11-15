@@ -187,7 +187,7 @@ export function SimulationPanel() {
     return (
       <div className="panel-content">
         <div className="panel-title">Simulation</div>
-        <div className="panel-info">DOF: {dof}</div>
+        <div className="panel-info">Design DOF: {dof}</div>
         <div className="panel-info">Time: {time.toFixed(2)}s</div>
 
         <div className="sim-controls">
@@ -218,7 +218,7 @@ export function SimulationPanel() {
   return (
     <div className="panel-content">
       <div className="panel-title">Properties</div>
-      <div className="panel-info">DOF: {dof}</div>
+      <div className="panel-info">Design DOF: {dof}</div>
 
       {physicsSection}
 

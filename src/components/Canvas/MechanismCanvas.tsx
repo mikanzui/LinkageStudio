@@ -152,6 +152,14 @@ export function MechanismCanvas() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const wheel = (event: WheelEvent) => handleWheel(event, canvas);
+    canvas.addEventListener('wheel', wheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', wheel);
+  }, []);
+
   // Prevent Safari/iOS gesture zoom on the canvas.
   // IMPORTANT: Only intercept Safari's proprietary gesture* events.
   // Do NOT preventDefault on touchstart/touchmove — on newer iOS/Safari,
@@ -457,7 +465,6 @@ export function MechanismCanvas() {
           activePointers.clear();
         }
       }}
-      onWheel={(e) => handleWheel(e.nativeEvent, canvasRef.current!)}
       onContextMenu={(e) => e.preventDefault()}
     />
   );

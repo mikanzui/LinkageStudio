@@ -5,6 +5,8 @@ import { useSimulationStore } from './store/simulation-store';
 import { useEditorStore } from './store/editor-store';
 import { solve } from './core/solver/newton-raphson';
 import { SimulationSession } from './core/simulation-session';
+import { compileMechanism } from './core/compile-mechanism';
+import type { MechanismState } from './types';
 import { computeDOF } from './core/solver/dof';
 import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
@@ -15,6 +17,7 @@ import { isProjectDirty, markProjectSaved } from './document/project';
 function App() {
   const initialAngleRef = useRef<number | null>(null);
   const sessionRef = useRef<SimulationSession | null>(null);
+  const dofRef = useRef<{ graph: MechanismState; driver: boolean; value: number } | null>(null);
 
   useEffect(() => {
     markProjectSaved();
@@ -38,8 +41,15 @@ function App() {
       const fixedJointIds = new Set<string>(baseBody?.jointIds ?? []);
       for (const joint of Object.values(mech.joints)) if (joint.hidden && joint.type === 'fixed') fixedJointIds.add(joint.id);
 
-      // Always compute DOF
-      const dof = computeDOF(mech.joints, mech.links, !!sim.driverJointId, fixedJointIds, mech.sliders);
+      // Use the design graph, not approximate solver positions which can inflate rank.
+      const design = editor.simulationDesign ?? mech;
+      const previousDOF = dofRef.current;
+      if (!previousDOF || previousDOF.graph.joints !== design.joints || previousDOF.graph.links !== design.links
+        || previousDOF.graph.bodies !== design.bodies || previousDOF.graph.sliders !== design.sliders || previousDOF.driver !== !!sim.driverJointId) {
+        const compiled = compileMechanism(design);
+        dofRef.current = { graph: design, driver: !!sim.driverJointId, value: computeDOF(compiled.joints, compiled.links, !!sim.driverJointId, compiled.fixedIds, compiled.sliders) };
+      }
+      const dof = dofRef.current!.value;
       if (dof !== sim.dof) sim.setDof(dof);
 
       // --- SIMULATE MODE ---
