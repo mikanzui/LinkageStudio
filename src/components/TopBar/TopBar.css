@@ -7,6 +7,7 @@
   border-bottom: 1px solid #333;
   height: 32px;
   flex-shrink: 0;
+  overflow-x: auto;
 }
 
 .top-bar-group {
@@ -77,7 +78,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   border-bottom: 2px solid #444;
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
 }
 
 .project-name:hover {
@@ -97,7 +98,7 @@
   width: 180px;
   outline: none;
   font-family: inherit;
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
 }
 
 .project-name-input:focus {
@@ -109,4 +110,22 @@
   font-size: 9px;
   color: #555;
   padding-right: 4px;
+}
+
+.project-feedback {
+  flex-shrink: 0;
+  max-height: 92px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #d8e8d9;
+  background: #233329;
+  border-bottom: 1px solid #42614c;
+}
+.project-feedback.alert { color: #ffe0df; background: #492525; border-color: #864242; }
+@media (pointer: coarse) {
+  .top-bar { min-height: 48px; height: auto; }
+  .top-bar-btn { min-height: 44px; min-width: 44px; }
 }

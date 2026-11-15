@@ -1,5 +1,6 @@
 import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2 } from '../types';
-import type { GridLevel, CameraState } from '../types';
+import { decodeDocument, encodeDocument } from '../document/codec';
+import type { DocumentContext, DocumentIssue, JsonObject } from '../document/codec';
 
 declare const __APP_VERSION__: string;
 
@@ -52,6 +53,7 @@ export function serializeMechanism(
   projectName?: string,
   viewPreferences?: ViewPreferences,
   simulationSettings?: SimulationSettings,
+  documentContext?: DocumentContext,
 ): string {
   const data: SlinkerFile = {
     version: __APP_VERSION__,
@@ -81,7 +83,7 @@ export function serializeMechanism(
     data.outlines[id] = { id: o.id, bodyId: o.bodyId, name: o.name, visible: o.visible, points: o.points.map(p => ({ x: p.x, y: p.y })) };
   }
 
-  if (images && Object.keys(images).length > 0) {
+  if (images) {
     data.images = {};
     for (const [id, img] of Object.entries(images)) {
       data.images[id] = {
@@ -93,21 +95,21 @@ export function serializeMechanism(
     }
   }
 
-  if (sliders && Object.keys(sliders).length > 0) {
+  if (sliders) {
     data.sliders = {};
     for (const [id, s] of Object.entries(sliders)) {
       data.sliders[id] = { id: s.id, jointIdA: s.jointIdA, jointIdB: s.jointIdB, jointIdC: s.jointIdC, t: s.t };
     }
   }
 
-  if (colliders && Object.keys(colliders).length > 0) {
+  if (colliders) {
     data.colliders = {};
     for (const [id, c] of Object.entries(colliders)) {
       data.colliders[id] = { id: c.id, jointIdA: c.jointIdA, jointIdC: c.jointIdC, bodyIds: [...c.bodyIds] };
     }
   }
 
-  if (tracers && Object.keys(tracers).length > 0) {
+  if (tracers) {
     data.tracers = {};
     for (const [id, t] of Object.entries(tracers)) {
       data.tracers[id] = { id: t.id, bodyId: t.bodyId, localPosition: { x: t.localPosition.x, y: t.localPosition.y }, enabled: t.enabled };
@@ -118,7 +120,7 @@ export function serializeMechanism(
   if (viewPreferences) data.viewPreferences = viewPreferences;
   if (simulationSettings) data.simulationSettings = simulationSettings;
 
-  return JSON.stringify(data, null, 2);
+  return encodeDocument(JSON.parse(JSON.stringify(data)) as JsonObject, __APP_VERSION__, documentContext);
 }
 
 export function deserializeMechanism(json: string): {
@@ -134,10 +136,13 @@ export function deserializeMechanism(json: string): {
   projectName?: string;
   viewPreferences?: ViewPreferences;
   simulationSettings?: SimulationSettings;
+  documentContext: DocumentContext;
+  documentIssues: DocumentIssue[];
 } | null {
   try {
-    const data: SlinkerFile = JSON.parse(json);
-    if (!data.joints || !data.bodies || !data.baseBodyId) return null;
+    const decoded = decodeDocument(json);
+    if (!decoded.ok) return null;
+    const data = decoded.context.source as unknown as SlinkerFile;
 
     const joints: Record<string, Joint> = {};
     for (const [id, j] of Object.entries(data.joints)) {
@@ -220,6 +225,8 @@ export function deserializeMechanism(json: string): {
       projectName: data.projectName,
       viewPreferences: data.viewPreferences,
       simulationSettings: data.simulationSettings,
+      documentContext: decoded.context,
+      documentIssues: decoded.issues,
     };
   } catch {
     return null;
@@ -236,69 +243,3 @@ export function downloadFile(content: string, filename: string, mimeType = 'appl
   URL.revokeObjectURL(url);
 }
 
-/** Save with native file picker if available, otherwise download with prompt for name. */
-export async function saveFileAs(content: string, suggestedName: string): Promise<void> {
-  // Try File System Access API (Chrome/Edge desktop)
-  if ('showSaveFilePicker' in window) {
-    try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName,
-        types: [{
-          description: 'Slinker files',
-          accept: { 'application/json': ['.slinker'] },
-        }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(content);
-      await writable.close();
-      return;
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return; // user cancelled
-      // Fall through to prompt + download
-    }
-  }
-  // Fallback: prompt for name then download
-  const name = prompt('Save as:', suggestedName);
-  if (!name) return;
-  const finalName = name.endsWith('.slinker') ? name : name + '.slinker';
-  downloadFile(content, finalName);
-}
-
-export function openFilePicker(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.slinker,.json,application/json,*/*';
-    // Append to DOM for iOS Safari reliability (GC can collect detached inputs)
-    input.style.position = 'fixed';
-    input.style.top = '-9999px';
-    input.style.left = '-9999px';
-    document.body.appendChild(input);
-
-    let resolved = false;
-    const cleanup = () => {
-      if (input.parentNode) input.parentNode.removeChild(input);
-    };
-    const done = (result: string | null) => {
-      if (resolved) return;
-      resolved = true;
-      cleanup();
-      resolve(result);
-    };
-
-    input.addEventListener('change', () => {
-      const file = input.files?.[0];
-      if (!file) { done(null); return; }
-      const reader = new FileReader();
-      reader.onload = () => done(reader.result as string);
-      reader.onerror = () => done(null);
-      reader.readAsText(file);
-    });
-
-    // Use a long timeout as a safety net for cancel detection
-    // (iOS doesn't always fire change on cancel)
-    input.addEventListener('cancel', () => done(null));
-
-    input.click();
-  });
-}

@@ -60,7 +60,6 @@ export function Toolbar() {
   const mode = useEditorStore((s) => s.mode);
   const createTool = useEditorStore((s) => s.createTool);
   const setCreateTool = useEditorStore((s) => s.setCreateTool);
-  const setMode = useEditorStore((s) => s.setMode);
   const removeJoint = useMechanismStore((s) => s.removeJoint);
   const removeOutline = useMechanismStore((s) => s.removeOutline);
   const removeImage = useMechanismStore((s) => s.removeImage);
@@ -148,7 +147,6 @@ export function Toolbar() {
   const isSliderTool = createTool === 'slider';
   const isColliderTool = createTool === 'collider';
   const isTracerTool = createTool === 'tracer';
-  const isJointsTool = isPivotTool || isSliderTool || isColliderTool;
 
   const renderHints = () => {
     if (isPivotTool) {

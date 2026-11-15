@@ -2,7 +2,7 @@
  * Rigidity validation: test that bodies with various joint configurations
  * remain stable under gravity. Run: npx tsx test-rigidity.ts
  */
-import type { Joint, Link, Body, AngleConstraint } from './src/types';
+import type { Joint, Link, Body } from './src/types';
 import { solveWithForce, resetVelocities } from './src/core/solver/newton-raphson';
 import { generateBodyLinks } from './src/core/body-links';
 import { distance } from './src/core/math/vec2';
@@ -48,7 +48,6 @@ function runTest(opts: TestOpts): boolean {
 
   let failed = false;
   let maxDistError = 0;
-  let maxSpeed = 0;
 
   for (let step = 0; step < steps; step++) {
     const result = solveWithForce(
@@ -78,7 +77,6 @@ function runTest(opts: TestOpts): boolean {
     if (stepMaxError > maxDistError) maxDistError = stepMaxError;
 
     // Check for runaway velocities (spinning)
-    let stepMaxSpeed = 0;
     for (const jid of jointIds) {
       if (fixedIds.has(jid)) continue;
       const p = joints[jid].position;

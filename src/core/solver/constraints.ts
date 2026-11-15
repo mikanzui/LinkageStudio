@@ -59,7 +59,7 @@ export function angleDriverConstraint(
 } {
   const dx = pDriven.x - pFixed.x;
   const dy = pDriven.y - pFixed.y;
-  let angle = Math.atan2(dy, dx);
+  const angle = Math.atan2(dy, dx);
 
   // Normalize residual to [-pi, pi]
   let residual = angle - targetAngle;

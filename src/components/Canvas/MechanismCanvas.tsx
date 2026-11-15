@@ -34,7 +34,7 @@ export function MechanismCanvas() {
   const cursorWorldRef = useRef<Vec2 | null>(null);
   const rafRef = useRef<number>(0);
 
-  const renderLoop = useCallback(() => {
+  const renderLoop = useCallback(function drawFrame() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -115,7 +115,7 @@ export function MechanismCanvas() {
       console.error('Render error:', e);
     }
 
-    rafRef.current = requestAnimationFrame(renderLoop);
+    rafRef.current = requestAnimationFrame(drawFrame);
   }, []);
 
   useEffect(() => {

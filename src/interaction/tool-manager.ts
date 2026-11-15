@@ -47,6 +47,7 @@ function startColliderArcTimer(colliderId: string, worldPos: Vec2, screenX: numb
       useEditorStore.getState().setArcSelector({
         jointId: null,
         colliderId,
+        tracerId: null,
         position: { ...worldPos },
         showTime: Date.now(),
         collapseTime: null,
@@ -73,7 +74,7 @@ function startTracerArcTimer(tracerId: string, screenX: number, screenY: number)
         const worldPt = localToWorld(tracer.localPosition, transform);
         useEditorStore.getState().setArcSelector({
           jointId: null,
-          colliderId: null, tracerId: null,
+          colliderId: null,
           tracerId,
           position: { ...worldPt },
           showTime: Date.now(),
@@ -1084,7 +1085,7 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
   lastMouse = screenPos;
 }
 
-export function handleMouseUp(_e: PointerEvent | MouseEvent, canvas?: HTMLCanvasElement) {
+export function handleMouseUp(_e: PointerEvent | MouseEvent, _canvas?: HTMLCanvasElement) {
   const editor = useEditorStore.getState();
 
   // Cancel long-press timer
@@ -1153,6 +1154,8 @@ export function handleWheel(e: WheelEvent, canvas: HTMLCanvasElement) {
 }
 
 export function handleKeyDown(e: KeyboardEvent) {
+  const target = e.target;
+  if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
   const editor = useEditorStore.getState();
   const mechanism = useMechanismStore.getState();
 
@@ -1217,10 +1220,12 @@ export function handleKeyDown(e: KeyboardEvent) {
   }
 
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
     if (e.shiftKey) mechanism.redo();
     else mechanism.undo();
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+    e.preventDefault();
     mechanism.redo();
   }
 }

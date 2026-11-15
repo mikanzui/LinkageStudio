@@ -30,45 +30,6 @@ function solveSystem(J: number[][], phi: number[], m: number, n: number): number
   return Jtphi;
 }
 
-function projectConstraints(
-  q: number[], joints: Record<string, Joint>, links: Record<string, Link>,
-  jointIndex: Map<string, number>, freeJoints: Joint[], n: number,
-): { residual: number; iterations: number; converged: boolean } {
-  const linkArray = Object.values(links);
-  const numConstraints = linkArray.length;
-  if (numConstraints === 0) return { residual: 0, iterations: 0, converged: true };
-
-  let residual = Infinity;
-  let iter = 0;
-
-  for (; iter < SOLVER_MAX_ITERATIONS; iter++) {
-    const phi = new Array<number>(numConstraints).fill(0);
-    const J = createMatrix(numConstraints, n);
-    let row = 0;
-    for (const link of linkArray) {
-      const idxI = jointIndex.get(link.jointIds[0]);
-      const idxJ = jointIndex.get(link.jointIds[1]);
-      const ji = joints[link.jointIds[0]]; const jj = joints[link.jointIds[1]];
-      if (!ji || !jj) { row++; continue; }
-      const pi: Vec2 = idxI !== undefined ? { x: q[idxI], y: q[idxI + 1] } : ji.position;
-      const pj: Vec2 = idxJ !== undefined ? { x: q[idxJ], y: q[idxJ + 1] } : jj.position;
-      const c = distanceConstraint(pi, pj, link.restLength);
-      phi[row] = c.residual;
-      if (idxI !== undefined) { J[row][idxI] = c.dxi; J[row][idxI + 1] = c.dyi; }
-      if (idxJ !== undefined) { J[row][idxJ] = c.dxj; J[row][idxJ + 1] = c.dyj; }
-      row++;
-    }
-    residual = 0;
-    for (let i = 0; i < numConstraints; i++) residual += phi[i] * phi[i];
-    residual = Math.sqrt(residual);
-    if (residual < SOLVER_TOLERANCE) break;
-    const dq = solveSystem(J, phi, numConstraints, n);
-    if (!dq) break;
-    for (let i = 0; i < n; i++) q[i] += SOLVER_DAMPING * dq[i];
-  }
-  return { residual, iterations: iter, converged: residual < SOLVER_TOLERANCE };
-}
-
 /**
  * Kinematic solver (create mode motor drivers).
  */
@@ -174,7 +135,7 @@ export function solveWithForce(
   fixedJointIds?: Set<string>,
   jointGravityWeights?: Map<string, number>,
   sliders?: Record<string, SliderConstraint>,
-  angleConstraints?: AngleConstraint[],
+  _angleConstraints?: AngleConstraint[],
   colliders?: Record<string, ColliderConstraint>,
   colliderSides?: Map<string, number>,
   bodiesRef?: Record<string, { jointIds: string[] }>,
@@ -390,14 +351,14 @@ export function solveWithForce(
         // Unit vectors: along AC and perpendicular
         let ux = acx / acLen;
         let uy = acy / acLen;
-        let perpX = -uy;
-        let perpY = ux;
+        const perpX = -uy;
+        const perpY = ux;
 
         // B's position relative to A in (along, perp) coordinates
         let abx = bx - ax;
         let aby = by - ay;
-        let perpDist = abx * perpX + aby * perpY;
-        let alongDist = abx * ux + aby * uy;
+        const perpDist = abx * perpX + aby * perpY;
+        const alongDist = abx * ux + aby * uy;
 
         // --- Sub-constraint 1: Perpendicular correction (rotation-aware) ---
         //
@@ -528,7 +489,7 @@ export function solveWithForce(
 
         // Check each joint in the collider's assigned bodies
         for (const bodyId of collider.bodyIds) {
-          const body = bodiesRef[bodyId];
+          const body = bodiesRef?.[bodyId];
           if (!body) continue;
           for (const jid of body.jointIds) {
             // Skip the collider's own endpoints

@@ -20,10 +20,6 @@ function perpDist(ax: number, ay: number, bx: number, by: number, cx: number, cy
   return (bx - ax) * (-acy / acLen) + (by - ay) * (acx / acLen);
 }
 
-function dist(x1: number, y1: number, x2: number, y2: number): number {
-  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-}
-
 function angle(ax: number, ay: number, cx: number, cy: number): number {
   return Math.atan2(cy - ay, cx - ax) * 180 / Math.PI;
 }

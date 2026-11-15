@@ -1,6 +1,25 @@
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import type { Joint, Outline, CanvasImage } from '../../types';
+import { useRef, useState } from 'react';
+
+function JointCoordinate({ joint, axis }: { joint: Joint; axis: 'x' | 'y' }) {
+  const [draft, setDraft] = useState(joint.position[axis].toFixed(1));
+  const cancelled = useRef(false);
+  return <input type="number" aria-label={`Joint ${axis.toUpperCase()}`} value={draft}
+    onFocus={() => { cancelled.current = false; }}
+    onChange={event => setDraft(event.target.value)}
+    onBlur={() => {
+      if (!cancelled.current && draft.trim() && Number.isFinite(Number(draft))) {
+        useMechanismStore.getState().editJoint(joint.id, { ...joint.position, [axis]: Number(draft) });
+      }
+      setDraft(joint.position[axis].toFixed(1));
+    }}
+    onKeyDown={event => {
+      if (event.key === 'Escape') { cancelled.current = true; event.currentTarget.blur(); }
+      else if (event.key === 'Enter') event.currentTarget.blur();
+    }} />;
+}
 
 export function PropertyPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
@@ -8,7 +27,6 @@ export function PropertyPanel() {
   const outlines = useMechanismStore((s) => s.outlines);
   const images = useMechanismStore((s) => s.images);
   const bodies = useMechanismStore((s) => s.bodies);
-  const moveJoint = useMechanismStore((s) => s.moveJoint);
   const updateImage = useMechanismStore((s) => s.updateImage);
 
   if (selectedIds.size === 0) {
@@ -29,19 +47,11 @@ export function PropertyPanel() {
         </div>
         <label>
           X
-          <input
-            type="number"
-            value={joint.position.x.toFixed(1)}
-            onChange={(e) => moveJoint(joint.id, { x: +e.target.value, y: joint.position.y })}
-          />
+          <JointCoordinate key={`${joint.id}-${joint.position.x}`} joint={joint} axis="x" />
         </label>
         <label>
           Y
-          <input
-            type="number"
-            value={joint.position.y.toFixed(1)}
-            onChange={(e) => moveJoint(joint.id, { x: joint.position.x, y: +e.target.value })}
-          />
+          <JointCoordinate key={`${joint.id}-${joint.position.y}`} joint={joint} axis="y" />
         </label>
       </div>
     );

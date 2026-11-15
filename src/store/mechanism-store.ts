@@ -5,8 +5,11 @@ import { createId } from '../utils/id';
 import { generateBodyLinks } from '../core/body-links';
 import { computeBodyTransform, localToWorld, worldToLocal } from '../core/body-transform';
 import { BASE_BODY_COLOR, BODY_COLORS } from '../utils/constants';
+import type { DocumentContext } from '../document/codec';
 
 interface HistorySnapshot {
+  documentContext?: DocumentContext;
+  angleConstraints: AngleConstraint[];
   joints: Record<string, Joint>;
   links: Record<string, Link>;
   bodies: Record<string, Body>;
@@ -25,6 +28,7 @@ function createBaseBody(): Body {
 }
 
 interface MechanismStore {
+  documentContext?: DocumentContext;
   joints: Record<string, Joint>;
   links: Record<string, Link>;
   bodies: Record<string, Body>;
@@ -42,6 +46,7 @@ interface MechanismStore {
   addJoint(type: JointType, position: Vec2, bodyIds?: string[]): string;
   removeJoint(id: string): void;
   moveJoint(id: string, position: Vec2): void;
+  editJoint(id: string, position: Vec2): void;
   updateJointType(id: string, type: JointType): void;
   addLink(jointIdA: string, jointIdB: string): string | null;
   removeLink(id: string): void;
@@ -90,7 +95,7 @@ interface MechanismStore {
   reprojectOutlinesFromWorld(frozenWorldPoints: Map<string, Vec2[]>): void;
 
   clearAll(): void;
-  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer> }): void;
+  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; documentContext?: DocumentContext }): void;
   pushHistory(): void;
   undo(): void;
   redo(): void;
@@ -358,7 +363,9 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   clearAll() {
+    get().pushHistory();
     set({
+      documentContext: undefined,
       joints: {},
       links: {},
       bodies: {
@@ -374,15 +381,15 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       colliders: {},
       tracers: {},
       angleConstraints: [],
-      past: [],
-      future: [],
     });
   },
 
   loadState(state) {
+    state = structuredClone(state);
     const sliders = state.sliders || {};
     const { angleConstraints: ac } = generateBodyLinks(state.bodies, state.joints, sliders);
     set({
+      documentContext: state.documentContext,
       joints: state.joints,
       links: state.links,
       bodies: state.bodies,
@@ -399,18 +406,18 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   pushHistory() {
-    const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, past } = get();
     set({
-      past: [...past.slice(-50), { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers } }],
+      past: [...get().past.slice(-49), captureHistory(get())],
       future: [],
     });
   },
 
   undo() {
-    const { past, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers } = get();
+    const { past } = get();
     if (past.length === 0) return;
     const prev = past[past.length - 1];
     set({
+      ...structuredClone(prev),
       joints: prev.joints,
       links: prev.links,
       bodies: prev.bodies,
@@ -421,15 +428,16 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       colliders: prev.colliders || {},
       tracers: prev.tracers || {},
       past: past.slice(0, -1),
-      future: [{ joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers } }, ...get().future],
+      future: [captureHistory(get()), ...get().future],
     });
   },
 
   redo() {
-    const { future, joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers } = get();
+    const { future } = get();
     if (future.length === 0) return;
     const next = future[0];
     set({
+      ...structuredClone(next),
       joints: next.joints,
       links: next.links,
       bodies: next.bodies,
@@ -440,7 +448,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       colliders: next.colliders || {},
       tracers: next.tracers || {},
       future: future.slice(1),
-      past: [...get().past, { joints: { ...joints }, links: { ...links }, bodies: { ...bodies }, baseBodyId, outlines: { ...outlines }, images: { ...images }, sliders: { ...sliders }, colliders: { ...colliders }, tracers: { ...tracers } }],
+      past: [...get().past.slice(-49), captureHistory(get())],
     });
   },
 
@@ -532,6 +540,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   moveJoint(id, position) {
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
     set((s) => {
       const joint = s.joints[id];
       if (!joint) return s;
@@ -539,13 +548,20 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     });
   },
 
-  updateJointType(id, type) {
+  editJoint(id, position) {
+    const joint = get().joints[id];
+    if (!joint || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+    if (joint.position.x === position.x && joint.position.y === position.y) return;
     get().pushHistory();
-    set((s) => {
-      const joint = s.joints[id];
-      if (!joint) return s;
-      return { joints: { ...s.joints, [id]: { ...joint, type } } };
-    });
+    get().moveJoint(id, position);
+    get().regenerateLinks();
+  },
+
+  updateJointType(id, type) {
+    if (!get().joints[id]) return;
+    const fixed = get().bodies[get().baseBodyId]?.jointIds.includes(id);
+    if (type === 'fixed' && !fixed) get().addJointToBody(id, get().baseBodyId);
+    else if (type === 'revolute' && fixed) get().removeJointFromBody(id, get().baseBodyId);
   },
 
   addLink(jointIdA, jointIdB) {
@@ -788,6 +804,11 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
 
 // --- Helpers ---
 
+function captureHistory(state: MechanismStore): HistorySnapshot {
+  const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext } = state;
+  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext });
+}
+
 function buildLinksRecord(links: Link[]): Record<string, Link> {
   const record: Record<string, Link> = {};
   for (const link of links) record[link.id] = link;
@@ -800,7 +821,7 @@ function regenConstraints(bodies: Record<string, Body>, joints: Record<string, J
   for (const id of Object.keys(joints)) {
     if (id.startsWith('__brace_')) delete joints[id];
   }
-  const { links, angleConstraints, bracingJoints } = generateBodyLinks(bodies, joints, sliders);
+  const { links, angleConstraints } = generateBodyLinks(bodies, joints, sliders);
   // bracingJoints are already added to the joints record by generateBodyLinks
   return { newLinks: buildLinksRecord(links), angleConstraints };
 }

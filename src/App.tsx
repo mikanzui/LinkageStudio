@@ -9,11 +9,22 @@ import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
 import { SIM_DT } from './utils/constants';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from './core/body-transform';
+import { isProjectDirty, markProjectSaved } from './document/project';
 
 function App() {
   const initialAngleRef = useRef<number | null>(null);
   const colliderSidesRef = useRef<Map<string, number> | null>(null);
   const lastModeRef = useRef<string>('create');
+
+  useEffect(() => {
+    markProjectSaved();
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!isProjectDirty()) return;
+      event.preventDefault(); event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, []);
 
   useEffect(() => {
     const tick = () => {
