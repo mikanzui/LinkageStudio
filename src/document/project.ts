@@ -9,7 +9,8 @@ import { useSimulationStore } from '../store/simulation-store';
 export const useProjectStatus = create<{ savedText: string | null; message: string; severity: 'status' | 'alert' }>(() => ({ savedText: null, message: '', severity: 'status' }));
 
 export function projectText(name?: string): string {
-  const m = useMechanismStore.getState(), e = useEditorStore.getState(), s = useSimulationStore.getState();
+  const live = useMechanismStore.getState(), e = useEditorStore.getState(), s = useSimulationStore.getState();
+  const m = e.mode === 'simulate' && e.simulationDesign ? { ...live, ...e.simulationDesign } : live;
   const joints = e.mode === 'simulate' && e.savedPositions
     ? Object.fromEntries(Object.entries(m.joints).map(([id, j]) => [id, { ...j, position: e.savedPositions?.[id] ?? j.position }])) : m.joints;
   return serializeMechanism(joints, m.links, m.bodies, m.baseBodyId, m.outlines, m.images, m.sliders, m.colliders, m.tracers, name ?? e.projectName,
@@ -44,7 +45,7 @@ export function importProject(text: string): { ok: boolean; issues: DocumentIssu
   // The store prepares a cloned graph before publishing; invalid input never clears the project.
   useMechanismStore.getState().loadState(state);
   useEditorStore.getState().setMode('create');
-  useEditorStore.setState({ savedPositions: null, activeBodyIds: new Set(), hoveredId: null, arcSelector: null,
+  useEditorStore.setState({ savedPositions: null, simulationDesign: null, activeBodyIds: new Set(), hoveredId: null, arcSelector: null,
     projectName: state.projectName ?? 'Untitled', frozenOutlineWorldPoints: new Map(), outlinePoints: [] });
   const vp = state.viewPreferences;
   if (vp) {

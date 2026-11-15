@@ -140,6 +140,7 @@ export function solveWithForce(
   colliderSides?: Map<string, number>,
   bodiesRef?: Record<string, { jointIds: string[] }>,
   comBodyJointSets?: Set<string>[],
+  ownedVelocities: Map<string, Vec2> = velocities,
 ): SolverResult {
   const freeJoints: Joint[] = [];
   const jointIndex = new Map<string, number>();
@@ -175,16 +176,8 @@ export function solveWithForce(
         gravAccY[idx / 2] += g * weight;
       }
     } else {
-      // Default: per-link distribution (each endpoint gets g)
-      for (const link of linkArray) {
-        const jA = joints[link.jointIds[0]];
-        const jB = joints[link.jointIds[1]];
-        if (!jA || !jB) continue;
-        const idxA = jointIndex.get(jA.id);
-        const idxB = jointIndex.get(jB.id);
-        if (idxA !== undefined) gravAccY[idxA / 2] += g;
-        if (idxB !== undefined) gravAccY[idxB / 2] += g;
-      }
+      // Gravity is acceleration, not a contribution from every derived brace/link.
+      gravAccY.fill(g);
     }
   }
 
@@ -216,7 +209,7 @@ export function solveWithForce(
     const joint = freeJoints[i];
     q[i * 2] = joint.position.x;
     q[i * 2 + 1] = joint.position.y;
-    const vel = velocities.get(joint.id);
+    const vel = ownedVelocities.get(joint.id);
     if (vel) { v[i * 2] = vel.x; v[i * 2 + 1] = vel.y; }
   }
 
@@ -285,7 +278,8 @@ export function solveWithForce(
 
     // 3. Project distance constraints + slider constraints
     const sliderArray = sliders ? Object.values(sliders) : [];
-    for (let pass = 0; pass < CONSTRAINT_PASSES; pass++) {
+    const passes = sliderArray.length || (colliders && Object.keys(colliders).length) ? CONSTRAINT_PASSES : 64;
+    for (let pass = 0; pass < passes; pass++) {
       for (const link of linkArray) {
         const idxI = jointIndex.get(link.jointIds[0]);
         const idxJ = jointIndex.get(link.jointIds[1]);
@@ -618,7 +612,7 @@ export function solveWithForce(
 
   // --- Save velocities for next frame ---
   for (let i = 0; i < freeJoints.length; i++) {
-    velocities.set(freeJoints[i].id, { x: v[i * 2], y: v[i * 2 + 1] });
+    ownedVelocities.set(freeJoints[i].id, { x: v[i * 2], y: v[i * 2 + 1] });
   }
 
   const positions = new Map<string, Vec2>();

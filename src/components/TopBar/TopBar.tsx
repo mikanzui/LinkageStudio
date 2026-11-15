@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
+import { useSimulationStore } from '../../store/simulation-store';
+import { switchMode } from '../../utils/mode-switch';
 import { downloadFile } from '../../utils/file-io';
 import { openLocalFile, saveLocalFile } from '../../utils/file-adapter';
 import { importProject, isProjectDirty, markProjectSaved, projectText, setProjectMessage, useProjectStatus } from '../../document/project';
@@ -72,6 +74,8 @@ export function TopBar() {
   const busyRef = useRef(false);
   const message = useProjectStatus(s => s.message);
   const severity = useProjectStatus(s => s.severity);
+  const isPlaying = useSimulationStore(s => s.isPlaying);
+  const stepError = useSimulationStore(s => s.stepError);
 
   const handleSave = async () => {
     if (busyRef.current) return;
@@ -119,6 +123,13 @@ export function TopBar() {
     <>
     <div className="top-bar" aria-busy={busy}>
       <ProjectNameInput />
+
+      {!isCreate && <div className="top-bar-group">
+        <button className="top-bar-btn" onClick={() => isPlaying ? useSimulationStore.getState().pause() : useSimulationStore.getState().play()}>
+          {isPlaying ? 'Pause' : stepError ? 'Retry' : 'Resume'}
+        </button>
+        <button className="top-bar-btn" onClick={() => { switchMode('create'); switchMode('simulate'); }}>Restart</button>
+      </div>}
 
       <div className="top-bar-separator" />
 
@@ -202,7 +213,7 @@ export function TopBar() {
         <span>Slinker v{__APP_VERSION__}</span>
       </div>
     </div>
-    {message && <div className={`project-feedback ${severity}`} role={severity}>{message}</div>}
+    {(stepError || message) && <div className={`project-feedback ${stepError ? 'alert' : severity}`} role={stepError ? 'alert' : severity}>{stepError ?? message}</div>}
     </>
   );
 }

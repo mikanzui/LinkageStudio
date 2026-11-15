@@ -4,6 +4,7 @@ import { useMechanismStore } from '../store/mechanism-store';
 import { useSimulationStore } from '../store/simulation-store';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import { exitOutlineEditMode } from '../interaction/tool-manager';
+import { compileMechanism, snapshotMechanism } from '../core/compile-mechanism';
 
 /**
  * Shared mode switch logic used by both the expanded Toolbar and the
@@ -29,6 +30,7 @@ export function switchMode(newMode: AppMode): void {
   const editorFresh = useEditorStore.getState();
 
   if (newMode === 'simulate') {
+    const design = snapshotMechanism(useMechanismStore.getState());
     // If lockOutlines is on but frozen points are empty, populate them now
     if (editorFresh.lockOutlines && editorFresh.frozenOutlineWorldPoints.size === 0) {
       const mechNow = useMechanismStore.getState();
@@ -58,13 +60,20 @@ export function switchMode(newMode: AppMode): void {
       positions[id] = { ...joint.position };
     }
     editorFresh.setSavedPositions(positions);
-    mech.regenerateLinks();
+    const compiled = compileMechanism(useMechanismStore.getState());
+    useEditorStore.setState({ simulationDesign: design });
+    useMechanismStore.setState({ joints: compiled.joints, links: compiled.links, angleConstraints: compiled.angleConstraints });
+    useSimulationStore.getState().reset();
+    useSimulationStore.getState().play();
   } else {
     // Clear all traces when leaving simulate mode
     useSimulationStore.getState().clearTraces();
 
     // Restore saved positions
-    if (editorFresh.savedPositions) {
+    if (editorFresh.simulationDesign) {
+      useMechanismStore.setState(structuredClone(editorFresh.simulationDesign));
+      useEditorStore.setState({ simulationDesign: null, savedPositions: null });
+    } else if (editorFresh.savedPositions) {
       const currentJoints = useMechanismStore.getState().joints;
       for (const [id, pos] of Object.entries(editorFresh.savedPositions)) {
         if (currentJoints[id]) {
@@ -72,8 +81,8 @@ export function switchMode(newMode: AppMode): void {
         }
       }
       editorFresh.setSavedPositions(null);
-      mech.regenerateLinks();
     }
+    useSimulationStore.getState().pause();
   }
 
   editorFresh.setMode(newMode);

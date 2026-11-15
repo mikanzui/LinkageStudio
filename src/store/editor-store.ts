@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AppMode, ToolType, JointSubType, CreateTool, JointMode, CameraState, SimDragState, GridLevel } from '../types';
 import type { Vec2 } from '../types';
+import type { MechanismState } from '../types';
 import { DEFAULT_GRID_SIZE } from '../utils/constants';
 
 const GRID_DIVISOR: Record<GridLevel, number> = {
@@ -29,6 +30,7 @@ interface EditorStore {
   linkStartJointId: string | null;
   simDrag: SimDragState | null;
   savedPositions: Record<string, Vec2> | null;
+  simulationDesign: MechanismState | null;
   activeBodyIds: Set<string>;
   showLinks: boolean;
   showVectors: boolean;
@@ -119,6 +121,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   linkStartJointId: null,
   simDrag: null,
   savedPositions: null,
+  simulationDesign: null,
   activeBodyIds: new Set<string>(),
   showLinks: true,
   showVectors: true,

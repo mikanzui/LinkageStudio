@@ -22,6 +22,7 @@ function JointCoordinate({ joint, axis }: { joint: Joint; axis: 'x' | 'y' }) {
 }
 
 export function PropertyPanel() {
+  const mode = useEditorStore(s => s.mode);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const joints = useMechanismStore((s) => s.joints);
   const outlines = useMechanismStore((s) => s.outlines);
@@ -29,7 +30,7 @@ export function PropertyPanel() {
   const bodies = useMechanismStore((s) => s.bodies);
   const updateImage = useMechanismStore((s) => s.updateImage);
 
-  if (selectedIds.size === 0) {
+  if (selectedIds.size === 0 || mode !== 'create') {
     return null;
   }
 

@@ -38,6 +38,7 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
 }
 
 export function BodyPanel() {
+  const mode = useEditorStore(s => s.mode);
   const bodies = useMechanismStore((s) => s.bodies);
   const joints = useMechanismStore((s) => s.joints);
   const outlines = useMechanismStore((s) => s.outlines);
@@ -100,7 +101,7 @@ export function BodyPanel() {
   };
 
   return (
-    <div className="panel-content">
+    <div className="panel-content" inert={mode === 'simulate'}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="panel-title" style={{ margin: 0 }}>Bodies</div>
         <button

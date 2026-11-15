@@ -242,4 +242,3 @@ export function downloadFile(content: string, filename: string, mimeType = 'appl
   a.click();
   URL.revokeObjectURL(url);
 }
-

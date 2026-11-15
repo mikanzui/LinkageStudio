@@ -3,6 +3,7 @@ import type { Vec2, SolverResult } from '../types';
 
 interface SimulationStore {
   isPlaying: boolean;
+  stepError: string | null;
   speed: number;
   time: number;
   driverJointId: string | null;
@@ -44,6 +45,7 @@ interface SimulationStore {
 
 export const useSimulationStore = create<SimulationStore>((set) => ({
   isPlaying: false,
+  stepError: null,
   speed: 1,
   time: 0,
   driverJointId: null,
@@ -62,9 +64,9 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
   dragMultiplier: 25,
   dragDamping: 0.25,
 
-  play() { set({ isPlaying: true }); },
+  play() { set({ isPlaying: true, stepError: null }); },
   pause() { set({ isPlaying: false }); },
-  reset() { set({ isPlaying: false, time: 0, driverAngle: 0, pathTraces: new Map(), tracerPaths: new Map() }); },
+  reset() { set({ isPlaying: false, stepError: null, solverResult: null, time: 0, driverAngle: 0, pathTraces: new Map(), tracerPaths: new Map() }); },
   setSpeed(speed) { set({ speed }); },
 
   setDriver(jointId, linkId, type) {
