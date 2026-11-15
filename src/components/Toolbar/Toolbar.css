@@ -133,3 +133,7 @@
   padding: 2px 8px;
   line-height: 1.4;
 }
+
+@media (pointer: coarse) {
+  .toolbar .tool-btn, .toolbar .mode-btn { min-height: 44px; min-width: 44px; }
+}

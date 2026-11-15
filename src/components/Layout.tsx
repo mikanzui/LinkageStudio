@@ -1,3 +1,4 @@
+import { importImage as handleImportImage } from '../utils/import-image';
 import { deleteSelectedEntities } from '../utils/delete-selection';
 import { MechanismCanvas } from './Canvas/MechanismCanvas';
 import { TopBar } from './TopBar/TopBar';
@@ -8,11 +9,11 @@ import { SimulationPanel } from './Panels/SimulationPanel';
 import { useEditorStore } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
 import { switchMode } from '../utils/mode-switch';
-import { screenToWorld } from '../renderer/camera';
 import './Layout.css';
 import { useEffect } from 'react';
 import { ViewportTools } from './Canvas/ViewportTools';
 import { PanelResizeHandle } from './PanelResizeHandle';
+import { GeometryTools, GeometryOptions } from './GeometryTools';
 
 /* ---- Shared chevron icon ---- */
 const ChevronIcon = ({ direction }: { direction: 'left' | 'right' }) => (
@@ -107,7 +108,7 @@ function CollapsedDeleteButton() {
   const hasVertexSelection = editingOutlineId !== null && editingVertexIndex !== null;
   const canDeleteVertex = hasVertexSelection && (() => {
     const outline = outlines[editingOutlineId!];
-    return outline && outline.points.length > 3;
+    return outline && outline.points.length > (outline.closed === false ? 2 : 3);
   })();
 
 
@@ -150,9 +151,9 @@ function CollapsedBodyList() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const createTool = useEditorStore((s) => s.createTool);
 
-  const isOutlineMode = createTool === 'outline' || createTool === 'tracer';
-  const selectedJointId = [...selectedIds].find((id) => joints[id]);
-  const selectedColliderId = [...selectedIds].find((id) => colliders[id]);
+  const isOutlineMode = ['outline','tracer','rectangle','circle','ngon','image'].includes(createTool);
+  const selectedJointId = createTool === 'trim' ? undefined : [...selectedIds].find((id) => joints[id]);
+  const selectedColliderId = createTool === 'trim' ? undefined : [...selectedIds].find((id) => colliders[id]);
   const selectedCollider = selectedColliderId ? colliders[selectedColliderId] : null;
 
   const bodyList = Object.values(bodies);
@@ -234,8 +235,6 @@ export function Layout() {
   const mode = useEditorStore((s) => s.mode);
   const createTool = useEditorStore((s) => s.createTool);
   const setCreateTool = useEditorStore((s) => s.setCreateTool);
-  const addImage = useMechanismStore((s) => s.addImage);
-  const baseBodyId = useMechanismStore((s) => s.baseBodyId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
@@ -247,47 +246,12 @@ export function Layout() {
     return () => narrow.removeEventListener('change', adapt);
   }, []);
 
-  const handleImportImage = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/bmp,image/webp';
-    input.style.position = 'fixed';
-    input.style.top = '-9999px';
-    input.style.left = '-9999px';
-    document.body.appendChild(input);
-    const cleanup = () => { if (input.parentNode) input.parentNode.removeChild(input); };
-    input.addEventListener('change', () => {
-      const file = input.files?.[0];
-      if (!file) { cleanup(); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new Image();
-        img.onload = () => {
-          const camera = useEditorStore.getState().camera;
-          const canvas = document.querySelector('canvas');
-          let center = { x: 0, y: 0 };
-          if (canvas) {
-            const rect = canvas.getBoundingClientRect();
-            center = screenToWorld({ x: rect.width / 2, y: rect.height / 2 }, camera);
-          }
-          const id = addImage(baseBodyId, dataUrl, img.naturalWidth, img.naturalHeight, center);
-          useEditorStore.getState().select(id);
-          setCreateTool('image');
-          cleanup();
-        };
-        img.onerror = cleanup;
-        img.src = dataUrl;
-      };
-      reader.onerror = cleanup;
-      reader.readAsDataURL(file);
-    });
-    input.click();
-  };
+
 
   return (
     <div className="app-layout">
       <TopBar />
+      <GeometryOptions />
       <div className="app-main">
 
         {/* ---- LEFT TOOLBAR ---- */}
@@ -349,6 +313,7 @@ export function Layout() {
                 >
                   <IconOutlineSmall />
                 </button>
+                <GeometryTools compact />
                 <button
                   className={`collapsed-tool-btn ${drawing && createTool === 'image' ? 'active' : ''}`}
                   onClick={() => {

@@ -6,12 +6,12 @@ const imageCache = new Map<string, HTMLImageElement>();
 
 function getOrLoadImage(src: string): HTMLImageElement | null {
   const cached = imageCache.get(src);
-  if (cached && cached.complete) return cached;
+  if (cached && cached.complete && cached.naturalWidth > 0) return cached;
   if (cached) return null; // still loading
   const img = new Image();
   img.src = src;
   imageCache.set(src, img);
-  return img.complete ? img : null;
+  return img.complete && img.naturalWidth > 0 ? img : null;
 }
 
 /** Get the four corners of the image bounding box in world space. */
@@ -91,6 +91,8 @@ export function drawImages(
   zoom: number,
   selectedIds: Set<string>,
 ) {
+  const activeSources = new Set(Object.values(images).map(img=>img.src));
+  for (const source of imageCache.keys()) if (!activeSources.has(source)) imageCache.delete(source);
   for (const img of Object.values(images)) {
     if (!img.visible) continue;
     const htmlImg = getOrLoadImage(img.src);
@@ -103,7 +105,10 @@ export function drawImages(
 
     const w = img.naturalWidth * img.scale;
     const h = img.naturalHeight * img.scale;
+    ctx.save();
+    if (img.flipX) ctx.scale(-1, 1);
     ctx.drawImage(htmlImg, -w / 2, -h / 2, w, h);
+    ctx.restore();
 
     ctx.globalAlpha = 1;
 

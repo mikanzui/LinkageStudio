@@ -7,6 +7,7 @@ import { clampZoom } from '../renderer/viewport';
 import { useMechanismStore } from './mechanism-store';
 import { resetHitTesting } from '../interaction/hit-test';
 import type { SelectMode, SelectionGesture } from '../types/editor';
+import { computeBodyTransform, localToWorld } from '../core/body-transform';
 
 const GRID_DIVISOR: Record<GridLevel, number> = {
   normal: 1,
@@ -47,6 +48,14 @@ interface EditorStore {
   showForceUnits: boolean;
   projectName: string;
   createTool: CreateTool;
+  shapeGesture: { start: Vec2; end: Vec2; square: boolean } | null;
+  ngonSides: number;
+  square: boolean;
+  trimStroke: Vec2[];
+  trimScope: 'selected' | 'active';
+  mirrorAxis: 'vertical' | 'horizontal';
+  mirrorValue: number;
+  mirrorScope: 'selection' | 'all';
   jointMode: JointMode;
   autoChainLastBodyId: string | null;
   outlinePoints: Vec2[];
@@ -146,6 +155,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   showForceUnits: true,
   projectName: 'Untitled',
   createTool: 'joints' as CreateTool,
+  shapeGesture: null,
+  ngonSides: 6,
+  square: false,
+  trimStroke: [],
+  trimScope: 'selected',
+  mirrorAxis: 'vertical',
+  mirrorValue: 0,
+  mirrorScope: 'selection',
   jointMode: 'manual' as JointMode,
   autoChainLastBodyId: null as string | null,
   outlinePoints: [] as Vec2[],
@@ -167,6 +184,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   arcSelector: null,
 
   setMode(mode) {
+    set({ shapeGesture: null, trimStroke: [] });
     set({ selectMode: 'single', selectionGesture: null, excludedBodies: new Set() });
     resetHitTesting();
     set({ activeTool: mode === 'create' ? 'joint' : 'select' });
@@ -185,6 +203,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   select(id) {
+    if (get().editingOutlineId && get().editingOutlineId !== id) get().setSelectMode('single');
     set({ selectedIds: new Set([id]) });
   },
 
@@ -198,6 +217,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   clearSelection() {
+    if (get().editingOutlineId) get().setCreateTool('joints');
     set({ selectedIds: new Set() });
   },
 
@@ -289,7 +309,15 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   setCreateTool(tool) {
+    set({ shapeGesture: null, trimStroke: [] });
     const previous = get();
+    if (previous.editingOutlineId) {
+      const m = useMechanismStore.getState(), outline = m.outlines[previous.editingOutlineId];
+      if (outline && m.bodies[outline.bodyId]) {
+        const frame = computeBodyTransform(m.bodies[outline.bodyId], m.joints), frozen = new Map(previous.frozenOutlineWorldPoints);
+        frozen.set(outline.id,outline.points.map(p=>localToWorld(p,frame)));set({frozenOutlineWorldPoints:frozen});
+      }
+    }
     const pending = previous.sliderPointA ?? previous.colliderPointA;
     if (pending) useMechanismStore.getState().removeJoint(pending.jointId);
     resetHitTesting();
@@ -343,6 +371,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   setEditingOutline(outlineId) {
     if (outlineId) {
+      set({ activeTool: 'joint' });
       set({ editingOutlineId: outlineId, editingVertexIndex: null, selectedIds: new Set([outlineId]), createTool: 'outline' as CreateTool, outlinePoints: [] });
     } else {
       set({ editingOutlineId: null, editingVertexIndex: null, selectedIds: new Set() });
@@ -365,3 +394,13 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     });
   },
 }));
+
+// Restore geometry first, then invalidate view-only caches before another gesture.
+useMechanismStore.subscribe((state, previous) => {
+  if (state.documentEpoch === previous.documentEpoch) return;
+  const e = useEditorStore.getState();
+  const exists = (id: string) => state.joints[id] || state.links[id] || state.outlines[id] || state.images[id] || state.sliders[id] || state.colliders[id] || state.tracers[id];
+  const editing = e.editingOutlineId && state.outlines[e.editingOutlineId] ? e.editingOutlineId : null;
+  useEditorStore.setState({ frozenOutlineWorldPoints: new Map(), selectedIds: new Set([...e.selectedIds].filter(exists)),
+    editingOutlineId: editing, editingVertexIndex: editing && e.editingVertexIndex !== null && e.editingVertexIndex < state.outlines[editing].points.length ? e.editingVertexIndex : null });
+});

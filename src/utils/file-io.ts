@@ -67,26 +67,27 @@ export function serializeMechanism(
   for (const [id, j] of Object.entries(joints)) {
     // Skip hidden bracing joints — they are regenerated on load
     if (j.hidden) continue;
-    data.joints[id] = { id: j.id, type: j.type, position: { x: j.position.x, y: j.position.y }, connectedLinkIds: [...j.connectedLinkIds] };
+    data.joints[id] = { ...structuredClone(j), id: j.id, type: j.type, position: { ...j.position }, connectedLinkIds: [...j.connectedLinkIds] };
   }
   for (const [id, l] of Object.entries(links)) {
     // Skip links involving hidden bracing joints
     const jA = joints[l.jointIds[0]];
     const jB = joints[l.jointIds[1]];
     if (jA?.hidden || jB?.hidden) continue;
-    data.links[id] = { id: l.id, jointIds: [l.jointIds[0], l.jointIds[1]], restLength: l.restLength, mass: l.mass };
+    data.links[id] = { ...structuredClone(l), id: l.id, jointIds: [l.jointIds[0], l.jointIds[1]], restLength: l.restLength, mass: l.mass };
   }
   for (const [id, b] of Object.entries(bodies)) {
-    data.bodies[id] = { id: b.id, name: b.name, color: b.color, jointIds: [...b.jointIds], useOutlineCOM: b.useOutlineCOM, showLinks: b.showLinks };
+    data.bodies[id] = { ...structuredClone(b), id: b.id, name: b.name, color: b.color, jointIds: [...b.jointIds], useOutlineCOM: b.useOutlineCOM, showLinks: b.showLinks };
   }
   for (const [id, o] of Object.entries(outlines)) {
-    data.outlines[id] = { id: o.id, bodyId: o.bodyId, name: o.name, visible: o.visible, points: o.points.map(p => ({ x: p.x, y: p.y })) };
+    data.outlines[id] = { ...structuredClone(o), id: o.id, bodyId: o.bodyId, name: o.name, visible: o.visible, points: structuredClone(o.points) };
   }
 
   if (images) {
     data.images = {};
     for (const [id, img] of Object.entries(images)) {
       data.images[id] = {
+        ...structuredClone(img),
         id: img.id, bodyId: img.bodyId, src: img.src,
         position: { x: img.position.x, y: img.position.y },
         scale: img.scale, rotation: img.rotation, opacity: img.opacity,
@@ -98,21 +99,21 @@ export function serializeMechanism(
   if (sliders) {
     data.sliders = {};
     for (const [id, s] of Object.entries(sliders)) {
-      data.sliders[id] = { id: s.id, jointIdA: s.jointIdA, jointIdB: s.jointIdB, jointIdC: s.jointIdC, t: s.t };
+      data.sliders[id] = { ...structuredClone(s), id: s.id, jointIdA: s.jointIdA, jointIdB: s.jointIdB, jointIdC: s.jointIdC, t: s.t };
     }
   }
 
   if (colliders) {
     data.colliders = {};
     for (const [id, c] of Object.entries(colliders)) {
-      data.colliders[id] = { id: c.id, jointIdA: c.jointIdA, jointIdC: c.jointIdC, bodyIds: [...c.bodyIds] };
+      data.colliders[id] = { ...structuredClone(c), id: c.id, jointIdA: c.jointIdA, jointIdC: c.jointIdC, bodyIds: [...c.bodyIds] };
     }
   }
 
   if (tracers) {
     data.tracers = {};
     for (const [id, t] of Object.entries(tracers)) {
-      data.tracers[id] = { id: t.id, bodyId: t.bodyId, localPosition: { x: t.localPosition.x, y: t.localPosition.y }, enabled: t.enabled };
+      data.tracers[id] = { ...structuredClone(t), id: t.id, bodyId: t.bodyId, localPosition: { ...t.localPosition }, enabled: t.enabled };
     }
   }
 
@@ -147,6 +148,7 @@ export function deserializeMechanism(json: string): {
     const joints: Record<string, Joint> = {};
     for (const [id, j] of Object.entries(data.joints)) {
       joints[id] = {
+        ...structuredClone(j),
         id: j.id,
         type: j.type as 'revolute' | 'fixed',
         position: { x: j.position.x, y: j.position.y },
@@ -157,6 +159,7 @@ export function deserializeMechanism(json: string): {
     const links: Record<string, Link> = {};
     for (const [id, l] of Object.entries(data.links || {})) {
       links[id] = {
+        ...structuredClone(l),
         id: l.id,
         jointIds: [l.jointIds[0], l.jointIds[1]],
         restLength: l.restLength,
@@ -167,6 +170,7 @@ export function deserializeMechanism(json: string): {
     const bodies: Record<string, Body> = {};
     for (const [id, b] of Object.entries(data.bodies)) {
       bodies[id] = {
+        ...structuredClone(b),
         id: b.id,
         name: b.name,
         color: b.color,
@@ -179,11 +183,12 @@ export function deserializeMechanism(json: string): {
     const outlines: Record<string, Outline> = {};
     for (const [id, o] of Object.entries(data.outlines || {})) {
       outlines[id] = {
+        ...structuredClone(o),
         id: o.id,
         bodyId: o.bodyId,
         name: o.name || `Shape ${Object.keys(outlines).length + 1}`,
         visible: o.visible ?? true,
-        points: o.points.map(p => ({ x: p.x, y: p.y })),
+        points: structuredClone(o.points),
       };
     }
 
@@ -191,6 +196,7 @@ export function deserializeMechanism(json: string): {
     if (data.images) {
       for (const [id, img] of Object.entries(data.images)) {
         images[id] = {
+          ...structuredClone(img),
           id: img.id, bodyId: img.bodyId, src: img.src,
           position: { x: img.position.x, y: img.position.y },
           scale: img.scale, rotation: img.rotation, opacity: img.opacity,
@@ -202,21 +208,21 @@ export function deserializeMechanism(json: string): {
     const sliders: Record<string, SliderConstraint> = {};
     if (data.sliders) {
       for (const [id, s] of Object.entries(data.sliders)) {
-        sliders[id] = { id: s.id, jointIdA: s.jointIdA, jointIdB: s.jointIdB, jointIdC: s.jointIdC, t: s.t };
+        sliders[id] = { ...structuredClone(s), id: s.id, jointIdA: s.jointIdA, jointIdB: s.jointIdB, jointIdC: s.jointIdC, t: s.t };
       }
     }
 
     const colliders: Record<string, ColliderConstraint> = {};
     if (data.colliders) {
       for (const [id, c] of Object.entries(data.colliders)) {
-        colliders[id] = { id: c.id, jointIdA: c.jointIdA, jointIdC: c.jointIdC, bodyIds: c.bodyIds || [] };
+        colliders[id] = { ...structuredClone(c), id: c.id, jointIdA: c.jointIdA, jointIdC: c.jointIdC, bodyIds: c.bodyIds || [] };
       }
     }
 
     const tracers: Record<string, Tracer> = {};
     if (data.tracers) {
       for (const [id, t] of Object.entries(data.tracers)) {
-        tracers[id] = { id: t.id, bodyId: t.bodyId, localPosition: { x: t.localPosition.x, y: t.localPosition.y }, enabled: t.enabled ?? true };
+        tracers[id] = { ...structuredClone(t), id: t.id, bodyId: t.bodyId, localPosition: { ...t.localPosition }, enabled: t.enabled ?? true };
       }
     }
 

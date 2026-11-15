@@ -154,7 +154,7 @@ export function hitTestOutline(
     const worldPts = outline.points.map((p) => localToWorld(p, transform));
     if (!worldPts.every(finitePoint)) continue;
 
-    for (let i = 0; i < worldPts.length; i++) {
+    for (let i = 0; i < worldPts.length - (outline.closed === false ? 1 : 0); i++) {
       const a = worldPts[i];
       const b = worldPts[(i + 1) % worldPts.length];
       const d = distToSegment(worldPos, a, b);
@@ -197,7 +197,7 @@ export function hitTestOutlineFilled(
   const outlinePolygons: { outline: Outline; worldPts: Vec2[] }[] = [];
   for (const outline of Object.values(outlines)) {
     const body = bodies[outline.bodyId];
-    if (!body || outline.points.length < 3 || !outline.visible) continue;
+    if (!body || outline.points.length < 3 || !outline.visible || outline.closed === false) continue;
     const transform = computeBodyTransform(body, joints);
     const worldPts = outline.points.map((p) => localToWorld(p, transform));
     if (!worldPts.every(finitePoint)) continue;

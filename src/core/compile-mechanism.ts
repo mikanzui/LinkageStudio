@@ -7,7 +7,7 @@ export function snapshotMechanism(state: MechanismState): MechanismState {
 }
 
 /** Derive invisible rigidity scaffolding without rewriting saved links or source data. */
-export function compileMechanism(source: MechanismState) {
+export function compileMechanism(source: MechanismState, options: { completeVisiblePairs?: boolean } = {}) {
   const graph = snapshotMechanism(source);
   graph.joints = Object.fromEntries(Object.entries(graph.joints).filter(([id, j]) => !j.hidden && !id.startsWith('__temp_')));
   graph.links = Object.fromEntries(Object.entries(graph.links).filter(([, l]) => graph.joints[l.jointIds[0]] && graph.joints[l.jointIds[1]]));
@@ -15,8 +15,16 @@ export function compileMechanism(source: MechanismState) {
     if (!Number.isFinite(link.restLength) || link.restLength < 0) throw new Error(`Link ${link.id}: rest length must be finite and nonnegative.`);
   }
   const derived = generateBodyLinks(graph.bodies, graph.joints, graph.sliders);
+  const pair = (ids: readonly string[]) => JSON.stringify([...ids].sort());
+  const existingPairs = new Set(Object.values(graph.links).map(link => pair(link.jointIds)));
   for (const link of derived.links) {
-    if (graph.joints[link.jointIds[0]]?.hidden || graph.joints[link.jointIds[1]]?.hidden) graph.links[link.id] = link;
+    const hidden = graph.joints[link.jointIds[0]]?.hidden || graph.joints[link.jointIds[1]]?.hidden;
+    if (hidden || (options.completeVisiblePairs && !existingPairs.has(pair(link.jointIds)))) {
+      let id = link.id, suffix = 1;
+      while (graph.links[id] && pair(graph.links[id].jointIds) !== pair(link.jointIds)) id = link.id + '__derived_' + suffix++;
+      graph.links[id] = { ...link, id };
+      existingPairs.add(pair(link.jointIds));
+    }
   }
   const fixedIds = new Set(graph.bodies[graph.baseBodyId]?.jointIds ?? []);
   const baseBrace = graph.joints[`__brace_${graph.baseBodyId}`];

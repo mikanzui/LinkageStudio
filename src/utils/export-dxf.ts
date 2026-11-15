@@ -113,7 +113,7 @@ export function exportDXF(
     const transform = computeBodyTransform(body, joints);
     const worldPts = outline.points.map((pt) => localToWorld(pt, transform));
 
-    p(0, 'POLYLINE'); p(8, layer); p(66, 1); p(70, 1); // 70=1 means closed
+    p(0, 'POLYLINE'); p(8, layer); p(66, 1); p(70, outline.closed === false ? 0 : 1);
     for (const pt of worldPts) {
       p(0, 'VERTEX'); p(8, layer);
       p(10, (pt.x * SCALE).toFixed(4));

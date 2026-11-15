@@ -94,11 +94,16 @@ export function decodeDocument(text: string): DecodeResult {
     if (v.jointIds !== undefined && !strings(v.jointIds)) issue(`${path}.jointIds`, 'Expected joint IDs.');
     else if (strings(v.jointIds)) for (const id of v.jointIds) if (!Object.hasOwn(joints, id)) issue(`${path}.jointIds`, `Missing joint ${id}.`);
     optionalBoolean(v, 'useOutlineCOM', path); optionalBoolean(v, 'showLinks', path);
+    if (v.frame !== undefined) {
+      if (!record(v.frame) || !strings(v.frame.jointIds) || v.frame.jointIds.length !== 2 || !finite(v.frame.angleOffset)) issue(`${path}.frame`, 'Expected a finite joint-pair body frame.');
+      else if (v.frame.jointIds.some(id => !strings(v.jointIds) || !v.jointIds.includes(id))) issue(`${path}.frame.jointIds`, 'Frame joints must belong to this body.');
+    }
   });
   each('outlines', map('outlines'), (v, path) => {
     bodyRef(v, path);
     if (!Array.isArray(v.points) || !v.points.every(point)) issue(`${path}.points`, 'Expected finite coordinate pairs.');
     optionalBoolean(v, 'visible', path);
+    optionalBoolean(v, 'closed', path);
     if (v.name !== undefined && typeof v.name !== 'string') issue(`${path}.name`, 'Expected text.');
   });
   each('images', map('images'), (v, path) => {
@@ -107,6 +112,7 @@ export function decodeDocument(text: string): DecodeResult {
     if (!point(v.position)) issue(`${path}.position`, 'Expected finite coordinates.');
     for (const key of ['scale', 'naturalWidth', 'naturalHeight']) number(v, key, path, Number.MIN_VALUE);
     number(v, 'rotation', path); number(v, 'opacity', path, 0, 1); optionalBoolean(v, 'visible', path);
+    optionalBoolean(v, 'flipX', path);
   });
   each('sliders', map('sliders'), (v, path) => {
     for (const key of ['jointIdA', 'jointIdB', 'jointIdC']) jointRef(v, key, path);

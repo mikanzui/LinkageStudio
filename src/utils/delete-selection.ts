@@ -7,7 +7,7 @@ export function deleteSelectedEntities(): void {
   if (editor.mode !== 'create') return;
   const before = store.getState();
   if (editor.editingOutlineId && editor.editingVertexIndex !== null) {
-    if (before.outlines[editor.editingOutlineId]?.points.length > 3) {
+    if (before.outlines[editor.editingOutlineId]?.points.length > (before.outlines[editor.editingOutlineId]?.closed === false ? 2 : 3)) {
       before.removeOutlineVertex(editor.editingOutlineId, editor.editingVertexIndex);
       editor.setEditingVertexIndex(null);
     }

@@ -27,6 +27,7 @@ export interface Body {
   jointIds: string[];
   useOutlineCOM: boolean;
   showLinks: boolean;
+  frame?: { jointIds: [string, string]; angleOffset: number };
 }
 
 export interface Outline {
@@ -35,6 +36,7 @@ export interface Outline {
   name: string;
   visible: boolean;
   points: Vec2[];  // local coordinates relative to body reference frame
+  closed?: boolean; // legacy outlines are closed; trimmed paths explicitly opt out
 }
 
 export interface CanvasImage {
@@ -44,6 +46,7 @@ export interface CanvasImage {
   position: Vec2;           // world-space center position
   scale: number;            // uniform scale factor (1 = original size)
   rotation: number;         // rotation in radians
+  flipX?: boolean;
   opacity: number;          // 0-1 transparency
   visible: boolean;         // eye toggle
   naturalWidth: number;     // original pixel width

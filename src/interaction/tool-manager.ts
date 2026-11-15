@@ -10,6 +10,7 @@ import { HIT_RADIUS } from '../utils/constants';
 import { selectInRegion } from './selection-marquee';
 import type { SelectionGesture } from '../types/editor';
 import { deleteSelectedEntities } from '../utils/delete-selection';
+import { beginGeometry, moveGeometry, finishGeometry, commitOutline } from './geometry-tools';
 
 /** Start the long-press arc selector timer for a given joint. No-op for touch input. */
 function startArcTimer(jointId: string, screenX: number, screenY: number) {
@@ -459,6 +460,8 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     return;
   }
 
+  if (beginGeometry(worldPos,e.shiftKey)) return;
+
   // --- IMAGE TOOL ---
   if (editor.createTool === 'image') {
     // Check if clicking on already-selected image handles
@@ -752,7 +755,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
           }
 
           // Check edge hit (insert vertex)
-          for (let i = 0; i < worldPts.length; i++) {
+          for (let i = 0; i < worldPts.length - (outline.closed === false ? 1 : 0); i++) {
             const j = (i + 1) % worldPts.length;
             const a = worldPts[i];
             const b = worldPts[j];
@@ -806,18 +809,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       const distToFirst = distance(pos, points[0]);
       const closeThreshold = HIT_RADIUS / editor.camera.zoom;
       if (distToFirst < closeThreshold) {
-        const activeBodyId = [...editor.activeBodyIds][0];
-        const body = mechanism.bodies[activeBodyId];
-        if (body) {
-          const transform = computeBodyTransform(body, mechanism.joints);
-          const localPoints = points.map((p) => worldToLocal(p, transform));
-          const outlineId = mechanism.addOutline(activeBodyId, localPoints);
-          // Freeze the new outline's world points if lock is on
-          if (editor.lockOutlines && outlineId) {
-            editor.updateFrozenOutline(outlineId, points);
-          }
-        }
-        editor.clearOutlinePoints();
+        commitOutline();
         return;
       }
     }
@@ -934,6 +926,7 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
   const rect = canvas.getBoundingClientRect();
   const screenPos: Vec2 = { x: e.clientX - rect.left, y: e.clientY - rect.top };
   const worldPos = screenToWorld(screenPos, editor.camera);
+  if (moveGeometry(worldPos)) return;
   if (marquee) {
     const region = marquee.region;
     if (region.kind === 'box') marquee.region = { ...region, end: worldPos };
@@ -1008,9 +1001,9 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
         newB = { x: newB.x + snapDx, y: newB.y + snapDy };
         newC = { x: newC.x + snapDx, y: newC.y + snapDy };
       }
-      mechanism.moveJoint(slider.jointIdA, newA);
-      mechanism.moveJoint(slider.jointIdB, newB);
-      mechanism.moveJoint(slider.jointIdC, newC);
+      mechanism.moveJoint(slider.jointIdA, newA, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined);
+      mechanism.moveJoint(slider.jointIdB, newB, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined);
+      mechanism.moveJoint(slider.jointIdC, newC, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined);
     }
     return;
   }
@@ -1097,22 +1090,22 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
           const acLenSq = lengthSq(ac);
           const t = acLenSq > 1e-8 ? Math.max(0, Math.min(1, dot(ap, ac) / acLenSq)) : 0.5;
           const constrained = { x: jA.position.x + ac.x * t, y: jA.position.y + ac.y * t };
-          mechanism.moveJoint(dragJointId, constrained);
+          mechanism.moveJoint(dragJointId, constrained, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined);
           mechanism.updateSliderT(slider.id, t);
         }
       } else {
         // A or C: move freely, but maintain B's parametric t
-        mechanism.moveJoint(dragJointId, pos);
+        mechanism.moveJoint(dragJointId, pos, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined);
         const jA = mechanism.joints[dragJointId === slider.jointIdA ? dragJointId : slider.jointIdA];
         const jC = mechanism.joints[dragJointId === slider.jointIdC ? dragJointId : slider.jointIdC];
         const posA = dragJointId === slider.jointIdA ? pos : jA.position;
         const posC = dragJointId === slider.jointIdC ? pos : jC.position;
         const t = slider.t;
         const newB = { x: posA.x + (posC.x - posA.x) * t, y: posA.y + (posC.y - posA.y) * t };
-        mechanism.moveJoint(slider.jointIdB, newB);
+        mechanism.moveJoint(slider.jointIdB, newB, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined);
       }
     } else {
-      mechanism.moveJoint(dragJointId, pos);
+      mechanism.moveJoint(dragJointId, pos, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined);
     }
     return;
   }
@@ -1124,6 +1117,8 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
 
 export function handleMouseUp(_e?: PointerEvent | MouseEvent, _canvas?: HTMLCanvasElement) {
   const editor = useEditorStore.getState();
+  const rect = _canvas?.getBoundingClientRect();
+  finishGeometry(!!_e, _e && rect ? screenToWorld({x:_e.clientX-rect.left,y:_e.clientY-rect.top},editor.camera) : undefined);
   if (marquee) {
     if (_e && editor.mode === 'create' && editor.activeTool === 'select') {
       const selected = selectInRegion(useMechanismStore.getState(), marquee.region, editor.excludedBodies);
@@ -1249,7 +1244,7 @@ export function handleKeyDown(e: KeyboardEvent) {
     // If editing outline and a vertex is selected, delete the vertex
     if (editor.editingOutlineId && editor.editingVertexIndex !== null) {
       const outline = mechanism.outlines[editor.editingOutlineId];
-      if (outline && outline.points.length > 3) {
+      if (outline && outline.points.length > (outline.closed === false ? 2 : 3)) {
         mechanism.removeOutlineVertex(editor.editingOutlineId, editor.editingVertexIndex);
         editor.setEditingVertexIndex(null);
       }

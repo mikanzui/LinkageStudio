@@ -5,6 +5,7 @@ import { deserializeMechanism, serializeMechanism } from '../utils/file-io';
 import { useMechanismStore } from '../store/mechanism-store';
 import { useEditorStore } from '../store/editor-store';
 import { useSimulationStore } from '../store/simulation-store';
+import { resolveFrozenOutlines } from '../core/frozen-outlines';
 
 export const useProjectStatus = create<{ savedText: string | null; message: string; severity: 'status' | 'alert' }>(() => ({ savedText: null, message: '', severity: 'status' }));
 
@@ -13,7 +14,8 @@ export function projectText(name?: string): string {
   const m = e.mode === 'simulate' && e.simulationDesign ? { ...live, ...e.simulationDesign } : live;
   const joints = e.mode === 'simulate' && e.savedPositions
     ? Object.fromEntries(Object.entries(m.joints).map(([id, j]) => [id, { ...j, position: e.savedPositions?.[id] ?? j.position }])) : m.joints;
-  return serializeMechanism(joints, m.links, m.bodies, m.baseBodyId, m.outlines, m.images, m.sliders, m.colliders, m.tracers, name ?? e.projectName,
+  const outlines = e.mode === 'create' && e.lockOutlines ? resolveFrozenOutlines(m.outlines,m.bodies,joints,e.frozenOutlineWorldPoints,e.editingOutlineId) : m.outlines;
+  return serializeMechanism(joints, m.links, m.bodies, m.baseBodyId, outlines, m.images, m.sliders, m.colliders, m.tracers, name ?? e.projectName,
     { showLinks: e.showLinks, showVectors: e.showVectors, showRulers: e.showRulers, showForceUnits: e.showForceUnits, gridLevel: e.gridLevel, camera: e.camera },
     { gravityEnabled: s.gravityEnabled, gravityStrength: s.gravityStrength, damping: s.damping, dragMultiplier: s.dragMultiplier, dragDamping: s.dragDamping }, m.documentContext);
 }

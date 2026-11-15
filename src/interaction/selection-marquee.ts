@@ -153,8 +153,8 @@ export function selectInRegion(
     if (!body || !outline.visible) continue;
     const transform = computeBodyTransform(body, graph.joints);
     const points = outline.points.map((p) => localToWorld(p, transform));
-    const overlaps = points.length === 2
-      ? segmentOverlaps(points[0], points[1], polygon) : polygonOverlaps(points, polygon);
+    const overlaps = outline.closed === false || points.length === 2
+      ? points.slice(1).some((point, index) => segmentOverlaps(points[index], point, polygon)) : polygonOverlaps(points, polygon);
     if (overlaps) selected.add(outline.id);
   }
   for (const image of Object.values(graph.images)) {

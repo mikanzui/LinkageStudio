@@ -14,6 +14,8 @@ import type { Vec2 } from '../../types';
 import { createPointerRuntime } from '../../interaction/pointer-runtime';
 import { snapshotMechanism } from '../../core/compile-mechanism';
 import { registerInteractionCancellation } from '../../interaction/session';
+import { projectImages } from '../../core/image-transform';
+import { drawGeometryPreview } from '../../renderer/draw-geometry-preview';
 
 const PAN_THRESHOLD = 8; // px movement before a touch becomes a pan drag
 
@@ -22,7 +24,7 @@ function interactionCheckpoint() {
   return {
     mechanism: { ...snapshotMechanism(m), angleConstraints: structuredClone(m.angleConstraints), past: m.past, future: m.future },
     editor: structuredClone({ selectedIds: e.selectedIds, outlinePoints: e.outlinePoints, frozenOutlineWorldPoints: e.frozenOutlineWorldPoints, arcSelector: e.arcSelector,
-      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture }),
+      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture, shapeGesture: e.shapeGesture, trimStroke: e.trimStroke }),
   };
 }
 
@@ -74,7 +76,7 @@ export function MechanismCanvas() {
         links: mechanism.links,
         bodies: mechanism.bodies,
         outlines: mechanism.outlines,
-        images: mechanism.images,
+        images: editor.mode === 'simulate' && editor.simulationDesign ? projectImages(mechanism.images, mechanism.bodies, editor.simulationDesign.joints, mechanism.joints) : mechanism.images,
         sliders: mechanism.sliders,
         colliders: mechanism.colliders,
         tracers: mechanism.tracers,
@@ -128,6 +130,7 @@ export function MechanismCanvas() {
         editingVertexIndex: editor.editingVertexIndex,
         arcSelector: editor.arcSelector ? { jointId: editor.arcSelector.jointId, colliderId: editor.arcSelector.colliderId, tracerId: editor.arcSelector.tracerId, position: editor.arcSelector.position, showTime: editor.arcSelector.showTime, collapseTime: editor.arcSelector.collapseTime, createdBodyId: editor.arcSelector.createdBodyId } : null,
       }, { width: rect.width, height: rect.height, pixelRatio });
+      drawGeometryPreview(ctx,editor,rect.width,rect.height,pixelRatio);
       const selection = editor.selectionGesture;
       if (selection) {
         const points = selection.kind === 'box'
@@ -380,7 +383,7 @@ export function MechanismCanvas() {
           }
         }
 
-        if (componentHit || editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single')) {
+        if (componentHit || editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single') || (editor.activeTool === 'joint' && ['rectangle','circle','ngon','trim','mirror'].includes(editor.createTool))) {
           // Finger landed on a component → forward to tool-manager immediately for drag interaction
           gesture.current.mode = 'interact';
           gesture.current.touchStartPointerId = e.pointerId;

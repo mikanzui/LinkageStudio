@@ -87,7 +87,7 @@ export function render(
       if (body && outline.points.length >= 2) {
         const transform = computeBodyTransform(body, state.joints);
         const worldPts = outline.points.map((p) => localToWorld(p, transform));
-        drawOutlineEditMode(ctx, worldPts, state.camera.zoom, state.editingVertexIndex ?? null);
+        drawOutlineEditMode(ctx, worldPts, state.camera.zoom, state.editingVertexIndex ?? null, outline.closed !== false);
       }
     }
   }
@@ -116,7 +116,7 @@ export function render(
     const comPositions: { pos: Vec2; color: string; gravityForce: Vec2 | null }[] = [];
     for (const body of Object.values(state.bodies)) {
       if (!body.useOutlineCOM) continue;
-      const bodyOutlines = Object.values(state.outlines).filter((o) => o.bodyId === body.id && o.points.length >= 3);
+      const bodyOutlines = Object.values(state.outlines).filter((o) => o.bodyId === body.id && o.points.length >= 3 && o.closed !== false);
       if (bodyOutlines.length === 0) continue;
       const transform = computeBodyTransform(body, state.joints);
       // Area-weighted centroid across all outlines for this body

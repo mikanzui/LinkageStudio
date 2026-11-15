@@ -1,11 +1,11 @@
+import { importImage as handleImportImage } from '../../utils/import-image';
 import { deleteSelectedEntities } from '../../utils/delete-selection';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import type { AppMode } from '../../types';
-import { screenToWorld } from '../../renderer/camera';
-import type { Vec2 } from '../../types';
 import { switchMode } from '../../utils/mode-switch';
 import './Toolbar.css';
+import { GeometryTools } from '../GeometryTools';
 
 /* Inline SVG tool icons (16×16 viewBox) */
 const IconPivot = () => (
@@ -64,8 +64,6 @@ export function Toolbar() {
   const setCreateTool = useEditorStore((s) => s.setCreateTool);
   const outlines = useMechanismStore((s) => s.outlines);
   const selectedIds = useEditorStore((s) => s.selectedIds);
-  const addImage = useMechanismStore((s) => s.addImage);
-  const baseBodyId = useMechanismStore((s) => s.baseBodyId);
 
   const editingOutlineId = useEditorStore((s) => s.editingOutlineId);
   const editingVertexIndex = useEditorStore((s) => s.editingVertexIndex);
@@ -74,53 +72,14 @@ export function Toolbar() {
   const hasVertexSelection = editingOutlineId !== null && editingVertexIndex !== null;
   const canDeleteVertex = hasVertexSelection && (() => {
     const outline = outlines[editingOutlineId!];
-    return outline && outline.points.length > 3;
+    return outline && outline.points.length > (outline.closed === false ? 2 : 3);
   })();
 
 
 
   const handleModeSwitch = (newMode: AppMode) => switchMode(newMode);
 
-  const handleImportImage = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/bmp,image/webp';
-    input.style.position = 'fixed';
-    input.style.top = '-9999px';
-    input.style.left = '-9999px';
-    document.body.appendChild(input);
 
-    const cleanup = () => { if (input.parentNode) input.parentNode.removeChild(input); };
-
-    input.addEventListener('change', () => {
-      const file = input.files?.[0];
-      if (!file) { cleanup(); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new Image();
-        img.onload = () => {
-          const camera = useEditorStore.getState().camera;
-          const canvas = document.querySelector('canvas');
-          let center: Vec2 = { x: 0, y: 0 };
-          if (canvas) {
-            const rect = canvas.getBoundingClientRect();
-            center = screenToWorld({ x: rect.width / 2, y: rect.height / 2 }, camera);
-          }
-          const id = addImage(baseBodyId, dataUrl, img.naturalWidth, img.naturalHeight, center);
-          useEditorStore.getState().select(id);
-          setCreateTool('image');
-          cleanup();
-        };
-        img.onerror = cleanup;
-        img.src = dataUrl;
-      };
-      reader.onerror = cleanup;
-      reader.readAsDataURL(file);
-    });
-
-    input.click();
-  };
 
   const isPivotTool = drawing && createTool === 'joints';
   const isSliderTool = drawing && createTool === 'slider';
@@ -187,6 +146,7 @@ export function Toolbar() {
               <IconOutline />
               <span className="tool-name">Outline</span>
             </button>
+            <GeometryTools />
 
             <button
               className={`tool-btn ${drawing && createTool === 'image' ? 'active' : ''}`}

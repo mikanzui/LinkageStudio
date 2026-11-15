@@ -5,6 +5,7 @@ import { useMechanismStore } from '../../store/mechanism-store';
 import { BODY_COLORS } from '../../utils/constants';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import './BodyPanel.css';
+import { ImageOpacity } from './ImageOpacity';
 
 export function BodyPanel() {
   const mode = useEditorStore(s => s.mode);
@@ -22,10 +23,9 @@ export function BodyPanel() {
   const addBody = useMechanismStore((s) => s.addBody);
   const toggleOutlineCOM = useMechanismStore((s) => s.toggleOutlineCOM);
   const removeOutline = useMechanismStore((s) => s.removeOutline);
-  const renameOutline = useMechanismStore((s) => s.renameOutline);
   const toggleBodyShowLinks = useMechanismStore((s) => s.toggleBodyShowLinks);
   const toggleOutlineVisible = useMechanismStore((s) => s.toggleOutlineVisible);
-  const updateImage = useMechanismStore((s) => s.updateImage);
+  const editImage = useMechanismStore((s) => s.editImage);
   const removeImage = useMechanismStore((s) => s.removeImage);
   const activeBodyIds = useEditorStore((s) => s.activeBodyIds);
   const toggleActiveBody = useEditorStore((s) => s.toggleActiveBody);
@@ -37,7 +37,6 @@ export function BodyPanel() {
   const setEditingOutline = useEditorStore((s) => s.setEditingOutline);
   const updateFrozenOutline = useEditorStore((s) => s.updateFrozenOutline);
 
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [bodyRename, setBodyRename] = useState<{ id: string; name: string } | null>(null);
   const renameDraft = useRef(bodyRename);
   const renameTrigger = useRef<HTMLButtonElement | null>(null);
@@ -51,10 +50,10 @@ export function BodyPanel() {
   const removeBodyFromCollider = useMechanismStore((s) => s.removeBodyFromCollider);
 
   const usedColors = new Set(Object.values(bodies).map((b) => b.color));
-  const isOutlineMode = createTool === 'outline' || createTool === 'tracer';
+  const isOutlineMode = ['outline','tracer','rectangle','circle','ngon','image'].includes(createTool);
 
-  const selectedJointId = [...selectedIds].find((id) => joints[id]);
-  const selectedColliderId = [...selectedIds].find((id) => colliders[id]);
+  const selectedJointId = createTool === 'trim' ? undefined : [...selectedIds].find((id) => joints[id]);
+  const selectedColliderId = createTool === 'trim' ? undefined : [...selectedIds].find((id) => colliders[id]);
   const selectedCollider = selectedColliderId ? colliders[selectedColliderId] : null;
 
   const bodyList = Object.values(bodies);
@@ -271,7 +270,6 @@ export function BodyPanel() {
               <div id={`body-children-${body.id}`} style={{ marginLeft: 14 }}>
                 {/* Outlines */}
                 {bodyOutlines.map((outline) => {
-                  const isOutlineEditing = editingId === outline.id;
                   const isSelected = selectedIds.has(outline.id);
                   return (
                     <div
@@ -302,30 +300,10 @@ export function BodyPanel() {
                         <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/>
                       </svg>
 
-                      {/* Name (double-click to edit) */}
-                      {isOutlineEditing ? (
-                        <input
-                          autoFocus
-                          value={outline.name}
-                          onChange={(e) => renameOutline(outline.id, e.target.value)}
-                          onBlur={() => setEditingId(null)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') setEditingId(null); }}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            flex: 1, fontSize: 11, background: 'rgba(255,255,255,0.1)', border: '1px solid #666',
-                            color: 'inherit', outline: 'none', padding: '0 4px', borderRadius: 2,
-                          }}
-                        />
-                      ) : (
-                        <span
-                          style={{ flex: 1, color: '#aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          onDoubleClick={(e) => { e.stopPropagation(); setEditingId(outline.id); }}
-                        >
-                          {outline.name}
-                        </span>
-                      )}
-
-
+                      <button type="button" className="body-child-name" title={outline.name} aria-label={'Properties for '+outline.name}
+                        onClick={event=>{event.stopPropagation();useEditorStore.getState().setSelectMode('single');select(outline.id);}}>
+                        {outline.name}
+                      </button>
                       {/* Edit vertices */}
                       <button
                         onClick={(e) => {
@@ -395,7 +373,7 @@ export function BodyPanel() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       {/* Eye toggle */}
                       <button
-                        onClick={() => updateImage(img.id, { visible: !img.visible })}
+                        onClick={() => editImage(img.id, { visible: !img.visible })}
                         title={img.visible ? 'Hide image' : 'Show image'}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
@@ -406,9 +384,7 @@ export function BodyPanel() {
                         {img.visible ? <EyeIcon /> : <EyeOffIcon />}
                       </button>
 
-                      <span style={{ flex: 1, color: '#aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        Image
-                      </span>
+                      <button type="button" className="body-child-name" aria-label="Image properties" onClick={()=>{useEditorStore.getState().setCreateTool('image');select(img.id);}}>Image</button>
 
                       <button
                         className="tool-btn"
@@ -423,14 +399,7 @@ export function BodyPanel() {
                     {/* Opacity slider */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 2 }}>
                       <span style={{ fontSize: 10, color: '#777', width: 42 }}>Opacity</span>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={Math.round(img.opacity * 100)}
-                        onChange={(e) => updateImage(img.id, { opacity: Number(e.target.value) / 100 })}
-                        style={{ flex: 1, height: 12, accentColor: '#2196F3' }}
-                      />
+                      <ImageOpacity image={img}/>
                       <span style={{ fontSize: 10, color: '#777', width: 24, textAlign: 'right' }}>
                         {Math.round(img.opacity * 100)}%
                       </span>

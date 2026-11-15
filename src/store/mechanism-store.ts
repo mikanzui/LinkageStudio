@@ -3,10 +3,13 @@ import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, Collide
 import type { Vec2 } from '../types';
 import { createId } from '../utils/id';
 import { generateBodyLinks } from '../core/body-links';
-import { computeBodyTransform, localToWorld, worldToLocal } from '../core/body-transform';
+import { computeBodyTransform, localToWorld, worldToLocal, stabilizeBodyFrame } from '../core/body-transform';
 import { BASE_BODY_COLOR, BODY_COLORS } from '../utils/constants';
 import type { DocumentContext } from '../document/codec';
 import { cancelInteractions } from '../interaction/session';
+import { mirrorGeometry } from '../core/mirror-geometry';
+import { compileMechanism, snapshotMechanism } from '../core/compile-mechanism';
+import { resolveFrozenOutlines } from '../core/frozen-outlines';
 
 interface HistorySnapshot {
   documentContext?: DocumentContext;
@@ -29,6 +32,7 @@ function createBaseBody(): Body {
 }
 
 interface MechanismStore {
+  documentEpoch: number;
   documentContext?: DocumentContext;
   joints: Record<string, Joint>;
   links: Record<string, Link>;
@@ -46,8 +50,8 @@ interface MechanismStore {
 
   addJoint(type: JointType, position: Vec2, bodyIds?: string[]): string;
   removeJoint(id: string): void;
-  moveJoint(id: string, position: Vec2): void;
-  editJoint(id: string, position: Vec2): void;
+  moveJoint(id: string, position: Vec2, frozen?: ReadonlyMap<string, Vec2[]>): void;
+  editJoint(id: string, position: Vec2, frozen?: ReadonlyMap<string, Vec2[]>): void;
   updateJointType(id: string, type: JointType): void;
   addLink(jointIdA: string, jointIdB: string): string | null;
   removeLink(id: string): void;
@@ -72,6 +76,9 @@ interface MechanismStore {
 
   addImage(bodyId: string, src: string, naturalWidth: number, naturalHeight: number, position: Vec2): string;
   removeImage(id: string): void;
+  editImage(id: string, updates: Partial<Omit<CanvasImage, 'id'>>): void;
+  editOutline(id: string, updates: Partial<Omit<Outline, 'id'>>): void;
+  mirrorAcrossAxis(axis: 'vertical' | 'horizontal', value: number, scope: 'selection' | 'all', selected: ReadonlySet<string>): string[];
   updateImage(id: string, updates: Partial<Pick<CanvasImage, 'position' | 'scale' | 'rotation' | 'opacity' | 'visible'>>): void;
 
   addSlider(jointIdA: string, jointIdC: string, jointIdB: string): string;
@@ -103,6 +110,7 @@ interface MechanismStore {
 }
 
 export const useMechanismStore = create<MechanismStore>((set, get) => ({
+  documentEpoch: 0,
   joints: {},
   links: {},
   bodies: {
@@ -148,6 +156,39 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       if (!img) return s;
       return { images: { ...s.images, [id]: { ...img, ...updates } } };
     });
+  },
+
+  editImage(id, updates) {
+    const previous = get().images[id];
+    if (!previous) return;
+    const next = { ...previous, ...structuredClone(updates), id };
+    if (!get().bodies[next.bodyId] || ![next.position.x, next.position.y, next.scale, next.rotation, next.opacity].every(Number.isFinite)
+      || next.scale <= 0 || next.opacity < 0 || next.opacity > 1) return;
+    if (JSON.stringify(previous) === JSON.stringify(next)) return;
+    get().pushHistory(); set({ images: { ...get().images, [id]: next } });
+  },
+
+  editOutline(id, updates) {
+    const previous = get().outlines[id];
+    if (!previous) return;
+    const next = { ...previous, ...structuredClone(updates), id };
+    if (!get().bodies[next.bodyId] || next.points.length < 2 || !next.points.every(p => Number.isFinite(p.x) && Number.isFinite(p.y))) return;
+    if (updates.bodyId && updates.bodyId !== previous.bodyId && !updates.points) {
+      const oldTransform = computeBodyTransform(get().bodies[previous.bodyId], get().joints);
+      const newTransform = computeBodyTransform(get().bodies[next.bodyId], get().joints);
+      next.points = previous.points.map(p => worldToLocal(localToWorld(p, oldTransform), newTransform));
+    }
+    if (JSON.stringify(previous) === JSON.stringify(next)) return;
+    get().pushHistory(); set({ outlines: { ...get().outlines, [id]: next } });
+  },
+
+  mirrorAcrossAxis(axis, value, scope, selected) {
+    const result = mirrorGeometry(snapshotMechanism(get()), axis, value, scope, selected, createId);
+    if (!result.createdIds.length) return [];
+    const compiled = compileMechanism(result.graph, { completeVisiblePairs: true });
+    get().pushHistory();
+    set({ ...snapshotMechanism(compiled), angleConstraints: compiled.angleConstraints });
+    return result.createdIds;
   },
 
   addSlider(jointIdA, jointIdC, jointIdB) {
@@ -369,6 +410,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     cancelInteractions();
     get().pushHistory();
     set({
+      documentEpoch: get().documentEpoch + 1,
       documentContext: undefined,
       joints: {},
       links: {},
@@ -391,9 +433,11 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   loadState(state) {
     cancelInteractions();
     state = structuredClone(state);
+    state.bodies = Object.fromEntries(Object.entries(state.bodies).map(([id, body]) => [id, stabilizeBodyFrame(body, state.joints)]));
     const sliders = state.sliders || {};
     const { angleConstraints: ac } = generateBodyLinks(state.bodies, state.joints, sliders);
     set({
+      documentEpoch: get().documentEpoch + 1,
       documentContext: state.documentContext,
       joints: state.joints,
       links: state.links,
@@ -423,6 +467,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     if (past.length === 0) return;
     const prev = past[past.length - 1];
     set({
+      documentEpoch: get().documentEpoch + 1,
       ...structuredClone(prev),
       joints: prev.joints,
       links: prev.links,
@@ -444,6 +489,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     if (future.length === 0) return;
     const next = future[0];
     set({
+      documentEpoch: get().documentEpoch + 1,
       ...structuredClone(next),
       joints: next.joints,
       links: next.links,
@@ -536,21 +582,22 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     set({ joints: newJoints, links: newLinks, bodies: newBodies, outlines: newOutlines, tracers: newTracers, sliders: newSliders, colliders, angleConstraints: newAngle });
   },
 
-  moveJoint(id, position) {
+  moveJoint(id, position, frozen) {
     if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
     set((s) => {
       const joint = s.joints[id];
       if (!joint) return s;
-      return { joints: { ...s.joints, [id]: { ...joint, position } } };
+      const joints = { ...s.joints, [id]: { ...joint, position } };
+      return { joints, outlines: frozen ? resolveFrozenOutlines(s.outlines,s.bodies,joints,frozen) : s.outlines };
     });
   },
 
-  editJoint(id, position) {
+  editJoint(id, position, frozen) {
     const joint = get().joints[id];
     if (!joint || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
     if (joint.position.x === position.x && joint.position.y === position.y) return;
     get().pushHistory();
-    get().moveJoint(id, position);
+    get().moveJoint(id, position, frozen);
     get().regenerateLinks();
   },
 
@@ -649,7 +696,10 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       if (outline.bodyId === id) delete newOutlines[oid];
     }
 
-    set({ bodies: newBodies, joints: newJoints, links: newLinks, outlines: newOutlines, angleConstraints: newAngle });
+    const images = Object.fromEntries(Object.entries(get().images).filter(([, image]) => image.bodyId !== id));
+    const tracers = Object.fromEntries(Object.entries(get().tracers).filter(([, tracer]) => tracer.bodyId !== id));
+    const colliders = Object.fromEntries(Object.entries(get().colliders).map(([cid, c]) => [cid, { ...c, bodyIds: c.bodyIds.filter(bodyId => bodyId !== id) }]));
+    set({ bodies: newBodies, joints: newJoints, links: newLinks, outlines: newOutlines, images, tracers, colliders, angleConstraints: newAngle });
   },
 
   renameBody(id, name) {
@@ -746,6 +796,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   toggleOutlineCOM(bodyId) {
+    get().pushHistory();
     set((s) => {
       const body = s.bodies[bodyId];
       if (!body) return s;
@@ -754,6 +805,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   toggleBodyShowLinks(bodyId) {
+    get().pushHistory();
     set((s) => {
       const body = s.bodies[bodyId];
       if (!body) return s;
@@ -762,6 +814,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   },
 
   toggleOutlineVisible(outlineId) {
+    get().pushHistory();
     set((s) => {
       const outline = s.outlines[outlineId];
       if (!outline) return s;
@@ -792,7 +845,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     get().pushHistory();
     set((s) => {
       const outline = s.outlines[outlineId];
-      if (!outline || outline.points.length <= 3) return s; // Need at least 3 vertices
+      if (!outline || outline.points.length <= (outline.closed === false ? 2 : 3)) return s; // Need at least 3 vertices
       const newPoints = outline.points.filter((_, i) => i !== vertexIndex);
       return { outlines: { ...s.outlines, [outlineId]: { ...outline, points: newPoints } } };
     });
@@ -866,6 +919,8 @@ function reprojectTracers(
   newJoints: Record<string, Joint>,
 ) {
   const oldTransform = computeBodyTransform(oldBody, oldJoints);
+  const frame = stabilizeBodyFrame(newBody, newJoints).frame;
+  if (frame) newBody.frame = frame; else delete newBody.frame;
   const newTransform = computeBodyTransform(newBody, newJoints);
 
   for (const id of Object.keys(tracers)) {
@@ -885,6 +940,8 @@ function reprojectOutlines(
   newJoints: Record<string, Joint>,
 ) {
   const oldTransform = computeBodyTransform(oldBody, oldJoints);
+  const frame = stabilizeBodyFrame(newBody, newJoints).frame;
+  if (frame) newBody.frame = frame; else delete newBody.frame;
   const newTransform = computeBodyTransform(newBody, newJoints);
 
   for (const id of Object.keys(outlines)) {

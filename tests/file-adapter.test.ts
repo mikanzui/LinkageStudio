@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createLocalFileAdapter, openLocalFile, saveLocalFile,
+  createLocalFileAdapter, openLocalFile, saveLocalFile, openImageFile,
   type BrowserFileHost, type LocalFileInput, type LocalFileInputEvent,
   type LocalReadableFile, type LocalWritableFile,
 } from '../src/utils/file-adapter.ts';
@@ -399,3 +399,26 @@ for (const event of ['load', 'error', 'abort', 'throw'] as const) {
     } finally { restore(); }
   });
 }
+
+for (const scenario of [
+  { name: 'photo.PNG', type: '', expected: 'image/png' },
+  { name: 'photo.jpeg', type: 'application/octet-stream', expected: 'image/jpeg' },
+  { name: 'photo.webp', type: 'image/webp', expected: 'image/webp' },
+  { name: 'photo.png', type: 'image/svg+xml', expected: null },
+  { name: 'unknown', type: '', expected: null },
+]) test('image Files metadata: '+scenario.type+'/'+scenario.name,async()=>{
+  const input=new MockInput(),file=new File([new Uint8Array([1,2])],scenario.name,{type:scenario.type});
+  class MockReader {
+    static current:MockReader;
+    result:string|null=null;error=null;onload:(()=>void)|null=null;onerror:(()=>void)|null=null;onabort:(()=>void)|null=null;
+    constructor(){MockReader.current=this;}
+    readAsDataURL(blob:Blob){assert(input.attached);assert.equal(blob.type,scenario.expected);}
+  }
+  const element={type:'',accept:'',multiple:true,style:{},files:[file],addEventListener:input.addEventListener.bind(input),removeEventListener:input.removeEventListener.bind(input),click:input.click.bind(input),remove:input.remove.bind(input)};
+  const restore=replaceGlobals({window:{},FileReader:MockReader,document:{createElement:()=>element,body:{appendChild:()=>input.attach()}}});
+  try{
+    const promise=openImageFile();assert(element.accept.includes('image/png'));input.emit('change');
+    if(scenario.expected){input.emit('cancel');assert(input.attached);MockReader.current.result='data:'+scenario.expected+';base64,AQID';MockReader.current.onload?.();}
+    const result=await promise;assert.equal(result.status,scenario.expected?'opened':'failed');input.assertClean();
+  }finally{restore();}
+});

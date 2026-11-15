@@ -74,7 +74,7 @@ function App() {
         if (bodiesWithCOM.length > 0 && sim.gravityEnabled) {
           jointGravityWeights = new Map();
           for (const body of bodiesWithCOM) {
-            const bodyOutlines = Object.values(mech.outlines).filter((o) => o.bodyId === body.id && o.points.length >= 3);
+            const bodyOutlines = Object.values(mech.outlines).filter((o) => o.bodyId === body.id && o.points.length >= 3 && o.closed !== false);
             if (bodyOutlines.length === 0) continue;
 
             const transform = computeBodyTransform(body, mech.joints);

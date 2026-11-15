@@ -226,6 +226,15 @@
 .viewport-zoom { width: 44px; text-align: center; font-size: 11px; flex: 0 0 44px; }
 .viewport-divider { width: 1px; height: 18px; background: #555; margin: 0 3px; flex-shrink: 0; }
 .canvas-container canvas:focus-visible { outline: 2px solid #90caf9; outline-offset: -2px; }
+.geometry-options { flex: 0 0 auto; width: 100%; box-sizing: border-box; max-height: min(40vh, 240px); overflow-y: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 6px 12px; background: #f0f0f0; color: #333; border-bottom: 1px solid #aaa; font-size: 12px; }
+.geometry-options fieldset { min-width: 0; margin: 0; padding: 0 4px; border: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.geometry-options legend { font-size: 10px; color: #666; }
+.geometry-options label { display: flex; align-items: center; gap: 5px; min-height: 28px; }
+.geometry-options input[type=number] { width: 88px; min-width: 0; padding: 4px; font-size: 13px; }
+.geometry-options .tool-btn { color: #333; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; }
+.geometry-actions { display: flex; gap: 6px; margin: 6px 0; }
+.toolbar-collapsed { overflow-y: auto; }
+@media (pointer: coarse) { .geometry-options label, .geometry-options input[type=number], .geometry-options .tool-btn { min-height: 44px; } .geometry-options input[type=number] { font-size: 16px; } .geometry-options .tool-btn { min-width: 44px; } }
 @media (max-width: 1099px) {
   .toolbar-wrapper, .right-panel { position: absolute; top: 0; bottom: 0; z-index: 20; box-shadow: 0 0 12px #0005; max-width: calc(100% - 64px); overflow-y: auto; }
   .toolbar-wrapper { left: 0; background: #1e1e1e; }
@@ -237,7 +246,9 @@
   .toolbar-collapsed, .panel-collapsed { width: 44px; min-width: 44px; }
   .collapsed-tool-btn, .collapsed-mode-btn { min-width: 44px; min-height: 44px; }
   .viewport-tools button { width: 44px; height: 44px; flex-basis: 44px; }
-  .panel-content input[type=number], .panel-content select { min-height: 36px; font-size: 16px; }
+  .panel-content input[type=number], .panel-content input[type=text], .panel-content select { min-height: 44px; font-size: 16px; }
+  .panel-content label { min-height: 44px; }
+  .panel-content .tool-btn { min-height: 44px; min-width: 44px; }
   .panel-content input[type=range] { min-height: 44px; }
 }
 

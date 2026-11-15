@@ -1,104 +1,48 @@
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
-import type { Joint, Outline, CanvasImage } from '../../types';
-import { useRef, useState } from 'react';
-
-function JointCoordinate({ joint, axis }: { joint: Joint; axis: 'x' | 'y' }) {
-  const [draft, setDraft] = useState(joint.position[axis].toFixed(1));
-  const cancelled = useRef(false);
-  return <input type="number" aria-label={`Joint ${axis.toUpperCase()}`} value={draft}
-    onFocus={() => { cancelled.current = false; }}
-    onChange={event => setDraft(event.target.value)}
-    onBlur={() => {
-      if (!cancelled.current && draft.trim() && Number.isFinite(Number(draft))) {
-        useMechanismStore.getState().editJoint(joint.id, { ...joint.position, [axis]: Number(draft) });
-      }
-      setDraft(joint.position[axis].toFixed(1));
-    }}
-    onKeyDown={event => {
-      if (event.key === 'Escape') { cancelled.current = true; event.currentTarget.blur(); }
-      else if (event.key === 'Enter') event.currentTarget.blur();
-    }} />;
-}
+import { CommitInput } from '../CommitInput';
+import { Pencil, Check, Trash2 } from 'lucide-react';
+import { computeBodyTransform, localToWorld, worldToLocal } from '../../core/body-transform';
+import { exitOutlineEditMode } from '../../interaction/tool-manager';
+import { deleteSelectedEntities } from '../../utils/delete-selection';
 
 export function PropertyPanel() {
-  const mode = useEditorStore(s => s.mode);
-  const selectedIds = useEditorStore((s) => s.selectedIds);
-  const joints = useMechanismStore((s) => s.joints);
-  const outlines = useMechanismStore((s) => s.outlines);
-  const images = useMechanismStore((s) => s.images);
-  const bodies = useMechanismStore((s) => s.bodies);
-  const updateImage = useMechanismStore((s) => s.updateImage);
-
-  if (selectedIds.size === 0 || mode !== 'create') {
-    return null;
-  }
-
-  const id = [...selectedIds][0];
-  const joint = joints[id] as Joint | undefined;
-  const outline = outlines[id] as Outline | undefined;
-  const image = images[id] as CanvasImage | undefined;
-
-  if (joint) {
-    return (
-      <div className="panel-content">
-        <div className="panel-title">Joint</div>
-        <div className="panel-info" style={{ fontStyle: 'italic', opacity: 0.7 }}>
-          {joint.type === 'fixed' ? 'Fixed (Base)' : 'Revolute'}
-        </div>
-        <label>
-          X
-          <JointCoordinate key={`${joint.id}-${joint.position.x}`} joint={joint} axis="x" />
-        </label>
-        <label>
-          Y
-          <JointCoordinate key={`${joint.id}-${joint.position.y}`} joint={joint} axis="y" />
-        </label>
-      </div>
-    );
-  }
-
+  const editor = useEditorStore();
+  const m = useMechanismStore();
+  if (!editor.selectedIds.size || editor.mode !== 'create') return null;
+  const id = [...editor.selectedIds][0], joint = m.joints[id], outline = m.outlines[id], image = m.images[id];
+  const bodyOptions = Object.values(m.bodies).map(body => <option key={body.id} value={body.id}>{body.name}</option>);
+  const remove = <button className="tool-btn" type="button" aria-label={image ? 'Delete image' : 'Delete shape'} title={image ? 'Delete image' : 'Delete shape'} onClick={()=>{if(outline){m.removeOutline(id);editor.setEditingOutline(null);}else deleteSelectedEntities();}}><Trash2 size={16}/></button>;
+  if (joint) return <div className="panel-content">
+    <div className="panel-title">Joint</div><div className="panel-info">{joint.type === 'fixed' ? 'Fixed (Base)' : 'Revolute'}</div>
+    {(['x','y'] as const).map(axis => <label key={axis}>{axis.toUpperCase()}<CommitInput key={id+axis+joint.position[axis]} label={'Joint '+axis.toUpperCase()} value={joint.position[axis]} numeric commit={value => m.editJoint(id,{ ...joint.position,[axis]:Number(value) }, editor.lockOutlines ? editor.frozenOutlineWorldPoints : undefined)}/></label>)}
+  </div>;
   if (outline) {
-    const body = bodies[outline.bodyId];
-    return (
-      <div className="panel-content">
-        <div className="panel-title">{outline.name || 'Shape'}</div>
-        <div className="panel-info">Body: {body?.name ?? 'Unknown'}</div>
-        <div className="panel-info">{outline.points.length} vertices</div>
-      </div>
-    );
+    const editing = editor.editingOutlineId === id, vertex = editor.editingVertexIndex;
+    const transform = computeBodyTransform(m.bodies[outline.bodyId],m.joints);
+    const point = vertex !== null && outline.points[vertex] ? localToWorld(outline.points[vertex],transform) : null;
+    return <div className="panel-content">
+      <div className="panel-title">Shape</div>
+      <label>Name<CommitInput key={id+outline.name} label="Shape name" value={outline.name} commit={name => m.editOutline(id,{name})}/></label>
+      <label>Body<select aria-label="Shape body" value={outline.bodyId} onChange={event => { if (editing) exitOutlineEditMode(); m.editOutline(id,{bodyId:event.target.value}); }}>{bodyOptions}</select></label>
+      <label><input type="checkbox" aria-label="Shape visible" checked={outline.visible} onChange={event => m.editOutline(id,{visible:event.target.checked})}/>Visible</label>
+      <label><input type="checkbox" aria-label="Closed shape" checked={outline.closed !== false} disabled={outline.points.length < 3} onChange={event => m.editOutline(id,{closed:event.target.checked})}/>Closed</label>
+      <div className="geometry-actions"><button className="tool-btn" type="button" aria-label={editing ? 'Finish vertex editing' : 'Edit vertices'} title={editing ? 'Finish vertex editing' : 'Edit vertices'} onClick={() => { if (editing) exitOutlineEditMode(); else editor.setEditingOutline(id); }}>{editing ? <Check size={16}/> : <Pencil size={16}/>}</button>{remove}</div>
+      {editing && <>
+        <label>Vertex<select aria-label="Shape vertex" value={vertex ?? ''} onChange={event => editor.setEditingVertexIndex(event.target.value === '' ? null : Number(event.target.value))}><option value="">-</option>{outline.points.map((_,index) => <option key={index} value={index}>{index+1}</option>)}</select></label>
+        {point && (['x','y'] as const).map(axis => <label key={axis}>{axis.toUpperCase()}<CommitInput key={id+vertex+axis+point[axis]} label={'Vertex '+axis.toUpperCase()} value={point[axis]} numeric commit={value => { const points=outline.points.map(p=>({...p})); points[vertex!]=worldToLocal({...point,[axis]:Number(value)},transform); m.editOutline(id,{points}); }}/></label>)}
+      </>}
+    </div>;
   }
-
-  if (image) {
-    const body = bodies[image.bodyId];
-    return (
-      <div className="panel-content">
-        <div className="panel-title">Image</div>
-        <div className="panel-info">Body: {body?.name ?? 'Unknown'}</div>
-        <div className="panel-info">{image.naturalWidth} x {image.naturalHeight} px</div>
-        <label>
-          Scale
-          <input
-            type="number"
-            step="0.1"
-            min="0.01"
-            value={image.scale.toFixed(2)}
-            onChange={(e) => updateImage(image.id, { scale: Math.max(0.01, +e.target.value) })}
-          />
-        </label>
-        <label>
-          Rotation
-          <input
-            type="number"
-            step="5"
-            value={Math.round((image.rotation * 180) / Math.PI)}
-            onChange={(e) => updateImage(image.id, { rotation: (+e.target.value * Math.PI) / 180 })}
-          />
-          <span style={{ fontSize: 10, color: '#777' }}>deg</span>
-        </label>
-      </div>
-    );
-  }
-
+  if (image) return <div className="panel-content">
+    <div className="panel-title">Image</div><div className="panel-info">{image.naturalWidth} x {image.naturalHeight} px</div>
+    <label>Body<select aria-label="Image body" value={image.bodyId} onChange={event=>m.editImage(id,{bodyId:event.target.value})}>{bodyOptions}</select></label>
+    {(['x','y'] as const).map(axis=><label key={axis}>{axis.toUpperCase()}<CommitInput key={id+axis+image.position[axis]} label={'Image '+axis.toUpperCase()} value={image.position[axis]} numeric commit={value=>m.editImage(id,{position:{...image.position,[axis]:Number(value)}})}/></label>)}
+    <label>Scale<CommitInput key={id+'scale'+image.scale} label="Image scale" value={image.scale} numeric min={0.0001} commit={value=>m.editImage(id,{scale:Number(value)})}/></label>
+    <label>Rotation<CommitInput key={id+'rotation'+image.rotation} label="Image rotation degrees" value={image.rotation*180/Math.PI} numeric commit={value=>m.editImage(id,{rotation:Number(value)*Math.PI/180})}/><span>deg</span></label>
+    <label>Opacity<CommitInput key={id+'opacity'+image.opacity} label="Image opacity percent" value={image.opacity*100} numeric min={0} max={100} commit={value=>m.editImage(id,{opacity:Number(value)/100})}/><span>%</span></label>
+    <label><input type="checkbox" aria-label="Image reflected" checked={image.flipX ?? false} onChange={event=>m.editImage(id,{flipX:event.target.checked})}/>Reflected</label>
+    <label><input type="checkbox" aria-label="Image visible" checked={image.visible} onChange={event=>m.editImage(id,{visible:event.target.checked})}/>Visible</label>{remove}
+  </div>;
   return null;
 }

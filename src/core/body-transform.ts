@@ -38,12 +38,41 @@ export function computeBodyTransform(
   cy /= positions.length;
   const origin = { x: cx, y: cy };
 
+  if (body.frame && body.frame.jointIds.every(id => body.jointIds.includes(id))) {
+    const [a, b] = body.frame.jointIds.map(id => joints[id]?.position);
+    if (a && b && Math.hypot(b.x - a.x, b.y - a.y) > 1e-10) {
+      return { origin, angle: Math.atan2(b.y - a.y, b.x - a.x) + body.frame.angleOffset };
+    }
+  }
+
   // Angle from centroid to first joint
   const dx = positions[0].x - cx;
   const dy = positions[0].y - cy;
   const angle = Math.atan2(dy, dx);
 
   return { origin, angle };
+}
+
+/** Initialize a stable pair without changing the legacy frame at the saved pose. */
+export function stabilizeBodyFrame(body: Body, joints: Record<string, Joint>): Body {
+  const withoutFrame = () => { const next = { ...body }; delete next.frame; return next; };
+  if (body.frame && body.frame.jointIds.every(id => body.jointIds.includes(id) && joints[id])) {
+    const [a,b] = body.frame.jointIds.map(id => joints[id].position);
+    if (Math.hypot(b.x-a.x,b.y-a.y) > 1e-10) return body;
+  }
+  const first = body.jointIds.find(id => joints[id]);
+  if (!first) return body.frame ? withoutFrame() : body;
+  const a = joints[first].position;
+  let farthest = first, separation = 0;
+  for (const id of body.jointIds) {
+    const b = joints[id]?.position;
+    if (!b) continue;
+    const d = Math.hypot(b.x-a.x,b.y-a.y);
+    if (d > separation) { separation = d; farthest = id; }
+  }
+  if (separation <= 1e-10) return body.frame ? withoutFrame() : body;
+  const b = joints[farthest].position;
+  return { ...body, frame: { jointIds: [first, farthest], angleOffset: computeBodyTransform(body,joints).angle - Math.atan2(b.y-a.y,b.x-a.x) } };
 }
 
 /** Convert a local-frame point to world coordinates. */
@@ -58,41 +87,30 @@ export function worldToLocal(worldPt: Vec2, transform: BodyTransform): Vec2 {
   return rotate(relative, -transform.angle);
 }
 
-/** Compute the signed area of a closed polygon. Returns absolute value. */
-export function polygonArea(points: Vec2[]): number {
-  if (points.length < 3) return 0;
-  let area = 0;
-  for (let i = 0; i < points.length; i++) {
-    const j = (i + 1) % points.length;
-    area += points[i].x * points[j].y - points[j].x * points[i].y;
+function polygonMoments(points: Vec2[]) {
+  const origin = points[0] ?? { x: 0, y: 0 };
+  let area2 = 0, mx = 0, my = 0;
+  // A translated triangle fan avoids catastrophic cancellation far from the origin.
+  for (let i = 1; i < points.length - 1; i++) {
+    const ax = points[i].x - origin.x, ay = points[i].y - origin.y;
+    const bx = points[i+1].x - origin.x, by = points[i+1].y - origin.y;
+    const cross = ax*by - ay*bx;
+    area2 += cross; mx += (ax+bx)*cross; my += (ay+by)*cross;
   }
-  return Math.abs(area / 2);
+  return { origin, area2, mx, my };
 }
 
-/** Compute the centroid (center of area) of a closed polygon. */
-export function polygonCentroid(points: Vec2[]): Vec2 {
-  if (points.length === 0) return { x: 0, y: 0 };
-  if (points.length === 1) return points[0];
-  if (points.length === 2) return { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+export function polygonArea(points: Vec2[]): number {
+  return Math.abs(polygonMoments(points).area2 / 2);
+}
 
-  let area = 0;
-  let cx = 0;
-  let cy = 0;
-  for (let i = 0; i < points.length; i++) {
-    const j = (i + 1) % points.length;
-    const cross = points[i].x * points[j].y - points[j].x * points[i].y;
-    area += cross;
-    cx += (points[i].x + points[j].x) * cross;
-    cy += (points[i].y + points[j].y) * cross;
+export function polygonCentroid(points: Vec2[]): Vec2 {
+  if (!points.length) return { x: 0, y: 0 };
+  const { origin, area2, mx, my } = polygonMoments(points);
+  if (Math.abs(area2) < 2e-10) {
+    let x = 0, y = 0;
+    for (const p of points) { x += (p.x-origin.x)/points.length; y += (p.y-origin.y)/points.length; }
+    return { x: origin.x+x, y: origin.y+y };
   }
-  area /= 2;
-  if (Math.abs(area) < 1e-10) {
-    // Degenerate — use simple average
-    let sx = 0, sy = 0;
-    for (const p of points) { sx += p.x; sy += p.y; }
-    return { x: sx / points.length, y: sy / points.length };
-  }
-  cx /= (6 * area);
-  cy /= (6 * area);
-  return { x: cx, y: cy };
+  return { x: origin.x+mx/(3*area2), y: origin.y+my/(3*area2) };
 }

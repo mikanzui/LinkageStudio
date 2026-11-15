@@ -170,7 +170,7 @@ export function createLocalFileAdapter(host: BrowserFileHost): LocalFileAdapter 
   };
 }
 
-function readBrowserFile(file: File): Promise<string> {
+function readBrowserFile(file: File, image = false): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     const cleanup = () => { reader.onload = reader.onerror = reader.onabort = null; };
@@ -186,11 +186,19 @@ function readBrowserFile(file: File): Promise<string> {
       reject(error);
     };
     reader.onabort = () => { cleanup(); reject(new Error('Reading the local file was interrupted.')); };
-    try { reader.readAsText(file); } catch (error) { cleanup(); reject(error); }
+    try {
+      if (image) {
+        const extension = /\.(png|jpe?g|bmp|webp)$/i.exec(file.name)?.[1].toLowerCase();
+        const fallback = extension ? 'image/' + (extension === 'jpg' ? 'jpeg' : extension) : '';
+        const type = (!file.type || file.type === 'application/octet-stream') ? fallback : file.type;
+        if (!/^image\/(png|jpeg|bmp|webp)$/.test(type) || file.size > 20 * 1024 * 1024) throw new Error('Choose a PNG, JPEG, BMP or WebP image up to 20 MB.');
+        reader.readAsDataURL(file.type === type ? file : new Blob([file],{type}));
+      } else reader.readAsText(file);
+    } catch (error) { cleanup(); reject(error); }
   });
 }
 
-function browserHost(): BrowserFileHost {
+function browserHost(image = false): BrowserFileHost {
   const browser = window as Window & {
     showSaveFilePicker?: BrowserFileHost['showSaveFilePicker'];
   };
@@ -219,7 +227,7 @@ function browserHost(): BrowserFileHost {
     createFileInput() {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = '.slinker,.json,application/json';
+      input.accept = image ? 'image/png,image/jpeg,image/bmp,image/webp' : '.slinker,.json,application/json';
       input.multiple = false;
       input.style.position = 'fixed';
       input.style.top = '-9999px';
@@ -227,7 +235,7 @@ function browserHost(): BrowserFileHost {
       return {
         get files() {
           const file = input.files?.[0];
-          return file ? [{ name: file.name, readText: () => readBrowserFile(file) }] : null;
+          return file ? [{ name: file.name, readText: () => readBrowserFile(file, image) }] : null;
         },
         addEventListener: (type, listener) => input.addEventListener(type, listener),
         removeEventListener: (type, listener) => input.removeEventListener(type, listener),
@@ -246,5 +254,10 @@ export async function saveLocalFile(content: string, suggestedName: string): Pro
 
 export async function openLocalFile(): Promise<LocalOpenOutcome> {
   try { return await createLocalFileAdapter(browserHost()).openLocalFile(); }
+  catch (error) { return failed(error); }
+}
+
+export async function openImageFile(): Promise<LocalOpenOutcome> {
+  try { return await createLocalFileAdapter(browserHost(true)).openLocalFile(); }
   catch (error) { return failed(error); }
 }

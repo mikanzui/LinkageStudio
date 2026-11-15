@@ -420,11 +420,11 @@ export function drawOutlines(
     for (let i = 1; i < worldPoints.length; i++) {
       ctx.lineTo(worldPoints[i].x, worldPoints[i].y);
     }
-    ctx.closePath();
+    if (outline.closed !== false) ctx.closePath();
 
     // Fill with transparent body color
     ctx.fillStyle = body.color + (isSelected ? '33' : '1A');
-    ctx.fill();
+    if (outline.closed !== false) ctx.fill();
 
     // Stroke
     ctx.strokeStyle = isSelected ? SELECTION_COLOR : body.color;
@@ -439,6 +439,7 @@ export function drawOutlineEditMode(
   worldPoints: Vec2[],
   zoom: number,
   selectedVertexIndex: number | null,
+  closed = true,
 ) {
   if (worldPoints.length < 2) return;
 
@@ -448,7 +449,7 @@ export function drawOutlineEditMode(
   for (let i = 1; i < worldPoints.length; i++) {
     ctx.lineTo(worldPoints[i].x, worldPoints[i].y);
   }
-  ctx.closePath();
+  if (closed) ctx.closePath();
   ctx.strokeStyle = SELECTION_COLOR;
   ctx.lineWidth = 2 / zoom;
   ctx.setLineDash([6 / zoom, 4 / zoom]);
@@ -457,7 +458,7 @@ export function drawOutlineEditMode(
 
   // Light fill
   ctx.fillStyle = 'rgba(74, 158, 255, 0.08)';
-  ctx.fill();
+  if (closed) ctx.fill();
 
   // Draw vertex squares
   const vertSize = 5 / zoom;

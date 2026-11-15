@@ -10,6 +10,7 @@
 
 .body-row-active { background: rgba(255, 255, 255, 0.1); }
 .body-context { margin: 5px 2px 3px; color: #aaa; font-size: 11px; }
+.body-child-name { flex: 1; min-width: 0; border: 0; background: transparent; color: #aaa; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; cursor: pointer; }
 .body-selection { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 24px; cursor: pointer; }
 .body-selection input { flex-shrink: 0; margin: 0; cursor: pointer; }
 .body-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
