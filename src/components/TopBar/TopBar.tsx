@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Save, FolderOpen, Undo2, Redo2, FileDown, Trash2, Pause, Play, RotateCcw } from 'lucide-react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
-import { useSimulationStore } from '../../store/simulation-store';
+import { useSimulationStore, resetRuntimeForDocument } from '../../store/simulation-store';
 import { switchMode } from '../../utils/mode-switch';
 import { downloadFile } from '../../utils/file-io';
 import { openLocalFile, saveLocalFile } from '../../utils/file-adapter';
@@ -173,7 +173,7 @@ export function TopBar() {
       <div className="top-bar-group">
         <button
           className="top-bar-btn danger"
-          onClick={() => { if (confirm('Clear everything?')) { clearAll(); clearSelection(); } }}
+          onClick={() => { if (confirm('Clear everything?')) { clearAll(); clearSelection(); resetRuntimeForDocument(); } }}
           title="Clear all"
           aria-label="Clear All"
           disabled={!isCreate || busy}

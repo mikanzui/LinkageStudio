@@ -70,7 +70,8 @@ function App() {
         // When useOutlineCOM is enabled, mass is proportional to outline area and
         // gravity is distributed to joints based on COM position relative to joints.
         let jointGravityWeights: Map<string, number> | undefined;
-        const bodiesWithCOM = Object.values(mech.bodies).filter((b) => b.useOutlineCOM);
+        const bodiesWithCOM = Object.values(mech.bodies).filter(b => b.useOutlineCOM
+          && Object.values(mech.outlines).some(o => o.bodyId === b.id && o.points.length >= 3 && o.closed !== false));
         if (bodiesWithCOM.length > 0 && sim.gravityEnabled) {
           jointGravityWeights = new Map();
           for (const body of bodiesWithCOM) {
@@ -129,7 +130,9 @@ function App() {
         const frame = sessionRef.current.step(mech, { dt: SIM_DT * sim.speed,
           gravityEnabled: sim.gravityEnabled, gravityStrength: sim.gravityStrength,
           damping: sim.damping, dragMultiplier: sim.dragMultiplier, dragDamping: sim.dragDamping,
-          pull: pullForce, gravityWeights: jointGravityWeights, comBodyJointSets });
+          pull: pullForce, gravityWeights: jointGravityWeights, comBodyJointSets,
+          analysis: editor.showLoads || editor.showReactions || Object.values(mech.forceSensors).some(sensor => sensor.enabled)
+            || [...editor.selectedIds].some(id => mech.joints[id] || mech.links[id] || mech.forceSensors[id]) });
         if (!frame.ok) {
           useSimulationStore.setState({ isPlaying: false, stepError: frame.error });
           return;
@@ -138,11 +141,15 @@ function App() {
         sim.setSolverResult(result);
         useMechanismStore.setState({ joints: frame.joints });
         sim.advanceTime(SIM_DT * sim.speed);
+        for (const sensor of Object.values(mech.forceSensors)) {
+          const value = result.forceAnalysis?.linkForces.get(sensor.linkId)?.axialForce;
+          if (sensor.enabled && typeof value === 'number') sim.recordForceSensorData(sensor.id, sim.time + SIM_DT * sim.speed, value);
+        }
         {
           // Record traces
           if (sim.tracingEnabled) {
             for (const jointId of sim.trackedJointIds) {
-              const pos = result.positions.get(jointId);
+              const pos = frame.joints[jointId]?.position;
               if (pos) sim.recordTrace(jointId, pos);
             }
           }

@@ -6,7 +6,7 @@ import { validateSpring } from './springs/spring-model';
 
 type ReflectableImage = CanvasImage & { flipX?: boolean };
 const AXIS_EPSILON = 0.001;
-const ENTITY_MAPS = ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers', 'springs'] as const;
+const ENTITY_MAPS = ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers', 'springs', 'forceSensors'] as const;
 
 function fail(message: string): never {
   throw new Error(`Mirror: ${message}`);
@@ -31,7 +31,7 @@ function validate(graph: MechanismState): Set<string> {
   if (!record(graph)) fail('graph must be an object.');
   const used = new Set<string>();
   for (const kind of ENTITY_MAPS) {
-    const entities = kind === 'springs' ? graph.springs ?? {} : graph[kind];
+    const entities = kind === 'springs' || kind === 'forceSensors' ? graph[kind] ?? {} : graph[kind];
     if (!record(entities)) fail(`${kind} must be an entity map.`);
     for (const [id, entity] of Object.entries(entities)) {
       if (!record(entity) || !id.trim() || entity.id !== id) fail(`${kind}.${id} has an invalid ID.`);
@@ -90,6 +90,7 @@ function validate(graph: MechanismState): Set<string> {
     point(tracer.localPosition, `tracer ${tracer.id} position`);
   }
   for (const spring of Object.values(graph.springs ?? {})) validateSpring(spring, graph.joints, graph.links);
+  for (const sensor of Object.values(graph.forceSensors ?? {})) if (!graph.links[sensor.linkId]) fail(`missing sensor link ${sensor.linkId}.`);
 
   // Reserve extension-entity IDs too (for example future springs/force sensors).
   const seen = new WeakSet<object>();
@@ -151,13 +152,14 @@ export function mirrorGeometry(
   const onAxis = (p: Vec2) => Math.abs((axis === 'vertical' ? p.x : p.y) - axisValue) <= AXIS_EPSILON;
   const targets = {
     joints: new Set<string>(), links: new Set<string>(), outlines: new Set<string>(),
-    images: new Set<string>(), sliders: new Set<string>(), colliders: new Set<string>(), tracers: new Set<string>(), springs: new Set<string>(),
+    images: new Set<string>(), sliders: new Set<string>(), colliders: new Set<string>(), tracers: new Set<string>(), springs: new Set<string>(), forceSensors: new Set<string>(),
   };
   for (const kind of Object.keys(targets) as (keyof typeof targets)[]) {
     for (const [id, entity] of Object.entries(graph[kind] ?? {})) {
       const wanted = scope === 'all' ? visible(entity) : selected.has(id);
       if (!wanted || ('hidden' in entity && entity.hidden === true)) continue;
       if (kind === 'tracers' && scope === 'all' && !graph.tracers[id].enabled) continue;
+      if (kind === 'forceSensors' && scope === 'all' && !graph.forceSensors![id].enabled) continue;
       targets[kind].add(id);
     }
   }
@@ -167,6 +169,7 @@ export function mirrorGeometry(
       if (anchor.type === 'link') targets.links.add(anchor.linkId);
     }
   }
+  for (const id of targets.forceSensors) targets.links.add(graph.forceSensors![id].linkId);
   const expand = (kind: 'links' | 'sliders' | 'colliders', id: string, jointIds: readonly string[]) => {
     if (jointIds.some(jid => graph.joints[jid].hidden)) {
       targets[kind].delete(id);
@@ -193,7 +196,7 @@ export function mirrorGeometry(
       continue;
     }
     const mirroredId = allocate();
-    result.joints[mirroredId] = { ...structuredClone(joint), id: mirroredId, position: reflect(structuredClone(joint.position)), connectedLinkIds: [] };
+    result.joints[mirroredId] = { ...structuredClone(joint), id: mirroredId, position: reflect(structuredClone(joint.position)), connectedLinkIds: [], mirrored: true };
     jointMap.set(id, mirroredId);
     for (const body of Object.values(result.bodies)) {
       if (!body.jointIds.includes(id)) continue;
@@ -241,6 +244,10 @@ export function mirrorGeometry(
     result.springs[mirroredId] = { ...structuredClone(spring), id: mirroredId, anchorA: anchor(spring.anchorA), anchorB: anchor(spring.anchorB),
       restLength: spring.kind === 'torsional' ? -spring.restLength : spring.restLength,
       prestressDelta: spring.kind === 'torsional' ? -spring.prestressDelta : spring.prestressDelta };
+  }
+  for (const id of targets.forceSensors) {
+    const sensor = graph.forceSensors![id], mirroredId = allocate(); result.forceSensors ??= {};
+    result.forceSensors[mirroredId] = { ...structuredClone(sensor), id: mirroredId, linkId: linkMap.get(sensor.linkId)! };
   }
   for (const id of targets.sliders) {
     const slider = result.sliders[id];

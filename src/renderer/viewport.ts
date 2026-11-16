@@ -16,6 +16,16 @@ export function fitMechanism(graph: MechanismState, width: number, height: numbe
   }
   for (const image of Object.values(graph.images)) if (image.visible) points.push(...getImageCorners(image));
   for (const spring of Object.values(graph.springs ?? {})) points.push(...springPolyline(spring, graph.joints, graph.links, 1));
+  for (const tracer of Object.values(graph.tracers)) {
+    const body = graph.bodies[tracer.bodyId];
+    if (tracer.enabled && body) points.push(localToWorld(tracer.localPosition, computeBodyTransform(body, graph.joints)));
+  }
+  for (const sensor of Object.values(graph.forceSensors ?? {})) {
+    const link = graph.links[sensor.linkId];
+    if (!sensor.enabled || !link) continue;
+    const a = graph.joints[link.jointIds[0]], b = graph.joints[link.jointIds[1]];
+    if (a && b && !a.hidden && !b.hidden) points.push({ x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 });
+  }
   const finite = points.filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
   if (!finite.length) return { pan: { x: width / 2, y: height / 2 }, zoom: 1 };
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;

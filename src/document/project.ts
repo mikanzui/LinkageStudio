@@ -4,7 +4,7 @@ import type { DocumentIssue } from './codec';
 import { deserializeMechanism, serializeMechanism } from '../utils/file-io';
 import { useMechanismStore } from '../store/mechanism-store';
 import { useEditorStore } from '../store/editor-store';
-import { useSimulationStore } from '../store/simulation-store';
+import { useSimulationStore, resetRuntimeForDocument } from '../store/simulation-store';
 import { resolveFrozenOutlines } from '../core/frozen-outlines';
 
 export const useProjectStatus = create<{ savedText: string | null; message: string; severity: 'status' | 'alert' }>(() => ({ savedText: null, message: '', severity: 'status' }));
@@ -16,8 +16,8 @@ export function projectText(name?: string): string {
     ? Object.fromEntries(Object.entries(m.joints).map(([id, j]) => [id, { ...j, position: e.savedPositions?.[id] ?? j.position }])) : m.joints;
   const outlines = e.mode === 'create' && e.lockOutlines ? resolveFrozenOutlines(m.outlines,m.bodies,joints,e.frozenOutlineWorldPoints,e.editingOutlineId) : m.outlines;
   return serializeMechanism(joints, m.links, m.bodies, m.baseBodyId, outlines, m.images, m.sliders, m.colliders, m.tracers, name ?? e.projectName,
-    { showLinks: e.showLinks, showVectors: e.showVectors, showRulers: e.showRulers, showForceUnits: e.showForceUnits, gridLevel: e.gridLevel, camera: e.camera },
-    { gravityEnabled: s.gravityEnabled, gravityStrength: s.gravityStrength, damping: s.damping, dragMultiplier: s.dragMultiplier, dragDamping: s.dragDamping }, m.documentContext, m.springs);
+    { showLinks: e.showLinks, showVectors: e.showVectors, showRulers: e.showRulers, showForceUnits: e.showForceUnits, showLoads: e.showLoads, showReactions: e.showReactions, gridLevel: e.gridLevel, camera: e.camera },
+    { gravityEnabled: s.gravityEnabled, gravityStrength: s.gravityStrength, damping: s.damping, dragMultiplier: s.dragMultiplier, dragDamping: s.dragDamping }, m.documentContext, m.springs, m.forceSensors);
 }
 
 // Camera/view changes alone do not require a destructive-navigation confirmation.
@@ -37,11 +37,6 @@ export function setProjectMessage(message: string, severity: 'status' | 'alert' 
 export function importProject(text: string): { ok: boolean; issues: DocumentIssue[] } {
   const decoded = decodeDocument(text);
   if (!decoded.ok) return decoded;
-  const unsupported = ['forceSensors'].filter(key => {
-    const value = decoded.context.source[key];
-    return value && typeof value === 'object' && Object.keys(value).length > 0;
-  });
-  if (unsupported.length) return { ok: false, issues: [{ severity: 'error', path: unsupported.join(', '), message: 'This rebuild stage cannot edit these features yet. The file and current project are unchanged.' }] };
   const state = deserializeMechanism(text);
   if (!state) return { ok: false, issues: [{ severity: 'error', path: '$', message: 'Could not construct the mechanism.' }] };
   // The store prepares a cloned graph before publishing; invalid input never clears the project.
@@ -52,12 +47,12 @@ export function importProject(text: string): { ok: boolean; issues: DocumentIssu
   const vp = state.viewPreferences;
   if (vp) {
     const prefs: Partial<ReturnType<typeof useEditorStore.getState>> = {};
-    for (const key of ['showLinks', 'showVectors', 'showRulers', 'showForceUnits'] as const) if (vp[key] !== undefined) prefs[key] = vp[key];
+    for (const key of ['showLinks', 'showVectors', 'showRulers', 'showForceUnits', 'showLoads', 'showReactions'] as const) if (vp[key] !== undefined) prefs[key] = vp[key];
     if (vp.camera) prefs.camera = structuredClone(vp.camera);
     useEditorStore.setState(prefs);
     if (vp.gridLevel) useEditorStore.getState().setGridLevel(vp.gridLevel as 'normal' | 'fine' | 'ultrafine' | 'off');
   }
-  useSimulationStore.getState().reset();
+  resetRuntimeForDocument();
   useSimulationStore.setState({ driverJointId: null, driverLinkId: null, solverResult: null, trackedJointIds: new Set(), tracingEnabled: false,
     gravityEnabled: false, gravityStrength: 250, damping: 0.5, dragMultiplier: 25, dragDamping: 0.25, ...state.simulationSettings });
   markProjectSaved();

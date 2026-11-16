@@ -7,6 +7,7 @@ import { switchMode } from '../../utils/mode-switch';
 import './Toolbar.css';
 import { GeometryTools } from '../GeometryTools';
 import { SpringTools } from '../SpringTools';
+import { SensorToolButton } from '../ObjectTools';
 
 /* Inline SVG tool icons (16×16 viewBox) */
 const IconPivot = () => (
@@ -169,6 +170,7 @@ export function Toolbar() {
 
             {/* Sensors group */}
             <div className="toolbar-group-label">Sensors</div>
+            <SensorToolButton />
 
             <button
               className={`tool-btn ${isTracerTool ? 'active' : ''}`}

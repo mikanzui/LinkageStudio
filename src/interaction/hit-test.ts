@@ -1,4 +1,4 @@
-import type { Vec2, Joint, Link, Outline, Body } from '../types';
+import type { Vec2, Joint, Link, Outline, Body, Tracer, ForceSensor } from '../types';
 import { distance } from '../core/math/vec2';
 import { distToSegment } from '../core/math/vec2';
 import { HIT_RADIUS, LINK_HIT_THRESHOLD } from '../utils/constants';
@@ -10,6 +10,25 @@ function finitePoint(point: Vec2): boolean {
 
 function validQuery(worldPos: Vec2, zoom: number): boolean {
   return finitePoint(worldPos) && Number.isFinite(zoom) && zoom > 0;
+}
+
+export function hitTestTracer(world: Vec2, tracers: Record<string, Tracer>, bodies: Record<string, Body>, joints: Record<string, Joint>, zoom: number): string | null {
+  if (!validQuery(world, zoom)) return null;
+  for (const tracer of Object.values(tracers).reverse()) {
+    const body = bodies[tracer.bodyId];
+    if (body && tracer.enabled && distance(world, localToWorld(tracer.localPosition, computeBodyTransform(body, joints))) <= HIT_RADIUS / zoom) return tracer.id;
+  }
+  return null;
+}
+
+export function hitTestSensor(world: Vec2, sensors: Record<string, ForceSensor>, links: Record<string, Link>, joints: Record<string, Joint>, zoom: number): string | null {
+  if (!validQuery(world, zoom)) return null;
+  for (const sensor of Object.values(sensors).reverse()) {
+    const link = links[sensor.linkId]; if (!link || !sensor.enabled) continue;
+    const a = joints[link.jointIds[0]], b = joints[link.jointIds[1]];
+    if (a && b && distance(world, { x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 }) <= HIT_RADIUS / zoom) return sensor.id;
+  }
+  return null;
 }
 
 /**

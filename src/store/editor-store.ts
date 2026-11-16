@@ -26,7 +26,7 @@ interface EditorStore {
   springPlacement: { anchorA?: SpringAnchor; pivotId?: string; linkAId?: string } | null;
   springSnapSteps: number;
   springReattachId: string | null;
-  springCommitted: boolean;
+  placementCommitted: boolean;
   mode: AppMode;
   activeTool: ToolType;
   selectMode: SelectMode;
@@ -50,6 +50,8 @@ interface EditorStore {
   showVectors: boolean;
   showRulers: boolean;
   showForceUnits: boolean;
+  showLoads: boolean;
+  showReactions: boolean;
   projectName: string;
   createTool: CreateTool;
   shapeGesture: { start: Vec2; end: Vec2; square: boolean } | null;
@@ -155,12 +157,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   springPlacement: null,
   springSnapSteps: 20,
   springReattachId: null,
-  springCommitted: false,
+  placementCommitted: false,
   activeBodyIds: new Set<string>(),
   showLinks: true,
   showVectors: true,
   showRulers: true,
   showForceUnits: true,
+  showLoads: false,
+  showReactions: false,
   projectName: 'Untitled',
   createTool: 'joints' as CreateTool,
   shapeGesture: null,
@@ -317,7 +321,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   setCreateTool(tool) {
-    set({ shapeGesture: null, trimStroke: [], springPlacement: null, springReattachId: null, springCommitted: false });
+    set({ shapeGesture: null, trimStroke: [], springPlacement: null, springReattachId: null, placementCommitted: false });
     const previous = get();
     if (previous.editingOutlineId) {
       const m = useMechanismStore.getState(), outline = m.outlines[previous.editingOutlineId];
@@ -407,8 +411,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 useMechanismStore.subscribe((state, previous) => {
   if (state.documentEpoch === previous.documentEpoch) return;
   const e = useEditorStore.getState();
-  const exists = (id: string) => state.joints[id] || state.links[id] || state.outlines[id] || state.images[id] || state.sliders[id] || state.colliders[id] || state.tracers[id] || state.springs[id];
+  const exists = (id: string) => state.joints[id] || state.links[id] || state.outlines[id] || state.images[id] || state.sliders[id] || state.colliders[id] || state.tracers[id] || state.springs[id] || state.forceSensors[id];
   const editing = e.editingOutlineId && state.outlines[e.editingOutlineId] ? e.editingOutlineId : null;
-  useEditorStore.setState({ frozenOutlineWorldPoints: new Map(), springPlacement: null, springReattachId: null, springCommitted: false, selectedIds: new Set([...e.selectedIds].filter(exists)),
+  useEditorStore.setState({ frozenOutlineWorldPoints: new Map(), springPlacement: null, springReattachId: null, placementCommitted: false, selectedIds: new Set([...e.selectedIds].filter(exists)),
     editingOutlineId: editing, editingVertexIndex: editing && e.editingVertexIndex !== null && e.editingVertexIndex < state.outlines[editing].points.length ? e.editingVertexIndex : null });
 });

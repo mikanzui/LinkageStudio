@@ -4,6 +4,9 @@ import { solveWithForce } from './solver/newton-raphson';
 import { validateSpring } from './springs/spring-model';
 
 export interface FrameOptions {
+  analysis?: boolean;
+  constraintPasses?: number;
+  substeps?: number;
   dt: number;
   gravityEnabled: boolean;
   gravityStrength: number;
@@ -39,7 +42,8 @@ export class SimulationSession {
       const fixedIds = new Set(this.fixed.keys());
       const result = solveWithForce(graph.joints, graph.links, { enabled: options.gravityEnabled, strength: options.gravityStrength },
         options.pull, options.damping, options.dragMultiplier, options.dragDamping, options.dt,
-        fixedIds, options.gravityWeights, graph.sliders, [], graph.colliders, sides, graph.bodies, options.comBodyJointSets, trialVelocities, graph.springs);
+        fixedIds, options.gravityWeights, graph.sliders, [], graph.colliders, sides, graph.bodies, options.comBodyJointSets, trialVelocities, graph.springs,
+        { analysis: options.analysis, constraintPasses: options.constraintPasses, substeps: options.substeps });
       const joints = { ...graph.joints };
       for (const [id, position] of result.positions) {
         if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) throw new Error(`Joint ${id}: non-finite solver position.`);

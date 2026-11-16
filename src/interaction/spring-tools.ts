@@ -50,7 +50,7 @@ export function placeSpring(world: Vec2): boolean {
     while (names.has(`Spring ${number}`)) number++;
     const id = e.springReattachId && m.springs[e.springReattachId] ? e.springReattachId : m.addSpring({ ...spring, name: `Spring ${number}` });
     if (e.springReattachId && m.springs[e.springReattachId]) m.editSpring(id, { anchorA: spring.anchorA, anchorB: spring.anchorB });
-    useEditorStore.setState({ springPlacement: null, springReattachId: null, springCommitted: true }); e.select(id);
+    useEditorStore.setState({ springPlacement: null, springReattachId: null, placementCommitted: true }); e.select(id);
   } catch (error) { setProjectMessage(error instanceof Error ? error.message : 'Could not place spring.', 'alert'); }
   return true;
 }

@@ -1,12 +1,14 @@
 import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2 } from '../types';
 import { decodeDocument, encodeDocument } from '../document/codec';
 import type { DocumentContext, DocumentIssue, JsonObject } from '../document/codec';
-import type { MechanismSpring } from '../types';
+import type { MechanismSpring, ForceSensor } from '../types';
 
 declare const __APP_VERSION__: string;
 
 /** View preferences saved with the file */
 interface ViewPreferences {
+  showLoads?: boolean;
+  showReactions?: boolean;
   showLinks?: boolean;
   showVectors?: boolean;
   showRulers?: boolean;
@@ -26,6 +28,7 @@ interface SimulationSettings {
 
 /** Serializable format for a linkage file (.slinker) */
 interface SlinkerFile {
+  forceSensors?: Record<string, ForceSensor>;
   springs?: Record<string, MechanismSpring>;
   version: string;
   joints: Record<string, { id: string; type: string; position: Vec2; connectedLinkIds: string[] }>;
@@ -57,10 +60,12 @@ export function serializeMechanism(
   simulationSettings?: SimulationSettings,
   documentContext?: DocumentContext,
   springs: Record<string, MechanismSpring> = {},
+  forceSensors: Record<string, ForceSensor> = {},
 ): string {
   const data: SlinkerFile = {
     version: __APP_VERSION__,
     springs: structuredClone(springs),
+    forceSensors: structuredClone(forceSensors),
     joints: {},
     links: {},
     bodies: {},
@@ -129,6 +134,7 @@ export function serializeMechanism(
 }
 
 export function deserializeMechanism(json: string): {
+  forceSensors: Record<string, ForceSensor>;
   springs: Record<string, MechanismSpring>;
   joints: Record<string, Joint>;
   links: Record<string, Link>;
@@ -233,6 +239,7 @@ export function deserializeMechanism(json: string): {
 
     return {
       joints, links, bodies, baseBodyId: data.baseBodyId, outlines, images, sliders, colliders, tracers, springs: structuredClone(data.springs ?? {}),
+      forceSensors: Object.fromEntries(Object.entries(data.forceSensors ?? {}).map(([id, sensor]) => [id, { ...structuredClone(sensor), enabled: sensor.enabled ?? true }])),
       projectName: data.projectName,
       viewPreferences: data.viewPreferences,
       simulationSettings: data.simulationSettings,

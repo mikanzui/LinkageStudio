@@ -49,6 +49,7 @@ export function decodeDocument(text: string): DecodeResult {
   if (source.schemaVersion !== undefined && source.schemaVersion !== 1) issue('schemaVersion', `Unsupported schema version ${source.schemaVersion}. This file was not modified.`);
   if (source.simulationModel !== undefined && source.simulationModel !== 'saved-links-v1') issue('simulationModel', 'Unsupported simulation model.');
   if (source.springModel !== undefined && source.springModel !== 'legacy-motion-v1') issue('springModel', 'Unsupported spring motion model.');
+  if (source.forceModel !== undefined && source.forceModel !== 'unit-particle-v1') issue('forceModel', 'Unsupported model-force convention.');
   if (source.version !== undefined && typeof source.version !== 'string') issue('version', 'Version must be text.');
   if (source.sourceVersion !== undefined && typeof source.sourceVersion !== 'string') issue('sourceVersion', 'Source version must be text.');
   const map = (name: string, required = false): JsonObject => {
@@ -81,6 +82,8 @@ export function decodeDocument(text: string): DecodeResult {
     if (typeof v.bodyId !== 'string' || !Object.hasOwn(bodies, v.bodyId)) issue(`${path}.bodyId`, 'Missing owning body.');
   };
   each('joints', joints, (v, path) => {
+    if (v.label !== undefined && typeof v.label !== 'string') issue(`${path}.label`, 'Expected text.');
+    optionalBoolean(v, 'mirrored', path);
     if (!['fixed', 'revolute'].includes(String(v.type))) issue(`${path}.type`, 'Expected fixed or revolute.');
     if (!point(v.position)) issue(`${path}.position`, 'Expected finite x and y coordinates.');
     if (v.connectedLinkIds !== undefined && !strings(v.connectedLinkIds)) issue(`${path}.connectedLinkIds`, 'Expected link IDs.');
@@ -128,6 +131,7 @@ export function decodeDocument(text: string): DecodeResult {
     else for (const id of v.bodyIds) if (!Object.hasOwn(bodies, id)) issue(`${path}.bodyIds`, `Missing body ${id}; saved data retained.`, 'warning');
   });
   each('tracers', map('tracers'), (v, path) => {
+    if (v.name !== undefined && typeof v.name !== 'string') issue(`${path}.name`, 'Expected text.');
     bodyRef(v, path);
     if (!point(v.localPosition)) issue(`${path}.localPosition`, 'Expected finite local coordinates.');
     optionalBoolean(v, 'enabled', path);
@@ -137,12 +141,17 @@ export function decodeDocument(text: string): DecodeResult {
     try { validateSpring(v as unknown as MechanismSpring, joints as unknown as Record<string, Joint>, links as unknown as Record<string, Link>); }
     catch (error) { issue(path, error instanceof Error ? error.message : 'Invalid spring.'); }
   });
+  each('forceSensors', map('forceSensors'), (v, path) => {
+    if (typeof v.linkId !== 'string' || !Object.hasOwn(links, v.linkId)) issue(`${path}.linkId`, 'Missing sensor link.');
+    optionalBoolean(v, 'enabled', path);
+    if (v.name !== undefined && typeof v.name !== 'string') issue(`${path}.name`, 'Expected text.');
+  });
   if (source.projectName !== undefined && typeof source.projectName !== 'string') issue('projectName', 'Expected text.');
   const view = source.viewPreferences;
   if (view !== undefined) {
     if (!record(view)) issue('viewPreferences', 'Expected view preferences object.');
     else {
-      for (const key of ['showLinks', 'showVectors', 'showRulers', 'showForceUnits']) optionalBoolean(view, key, 'viewPreferences');
+      for (const key of ['showLinks', 'showVectors', 'showRulers', 'showForceUnits', 'showLoads', 'showReactions']) optionalBoolean(view, key, 'viewPreferences');
       if (view.gridLevel !== undefined && !['normal', 'fine', 'ultrafine', 'off'].includes(String(view.gridLevel))) issue('viewPreferences.gridLevel', 'Unknown grid setting.');
       if (view.camera !== undefined && (!record(view.camera) || !point(view.camera.pan) || !finite(view.camera.zoom) || view.camera.zoom <= 0)) issue('viewPreferences.camera', 'Expected finite pan and positive zoom.');
     }
@@ -165,7 +174,7 @@ export function decodeDocument(text: string): DecodeResult {
 /** Keep future fields, but never resurrect deleted entities from the source file. */
 export function encodeDocument(current: JsonObject, writerVersion: string, context?: DocumentContext): string {
   const result: JsonObject = { ...structuredClone(context?.source ?? {}), ...structuredClone(current) };
-  for (const name of ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers', 'springs']) {
+  for (const name of ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers', 'springs', 'forceSensors']) {
     const source = context?.source[name];
     const active = current[name];
     if (!record(active)) continue;
@@ -180,6 +189,7 @@ export function encodeDocument(current: JsonObject, writerVersion: string, conte
   result.writerVersion = writerVersion;
   result.simulationModel = context?.simulationModel ?? 'saved-links-v1';
   if (record(result.springs) && Object.keys(result.springs).length) result.springModel = 'legacy-motion-v1';
+  if (record(result.forceSensors) && Object.keys(result.forceSensors).length) result.forceModel = 'unit-particle-v1';
   const text = JSON.stringify(result, null, 2);
   const check = decodeDocument(text);
   if (!check.ok) throw new Error(check.issues.map(x => `${x.path}: ${x.message}`).join('\n'));

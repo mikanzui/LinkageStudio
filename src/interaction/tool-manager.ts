@@ -1,7 +1,7 @@
 import type { Vec2 } from '../types';
 import { useEditorStore } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
-import { hitTest, hitTestJoint, hitTestOutline, hitTestOutlineFilled } from './hit-test';
+import { hitTest, hitTestJoint, hitTestLink, hitTestOutline, hitTestOutlineFilled, hitTestSensor, hitTestTracer } from './hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../renderer/draw-images';
 import { screenToWorld } from '../renderer/camera';
 import { snapToGrid, distance, sub, dot, lengthSq } from '../core/math/vec2';
@@ -435,6 +435,11 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
 
   // --- CREATE MODE ---
   if (e.button !== 0) return;
+  if (editor.activeTool === 'joint' && editor.createTool === 'force-sensor') {
+    const link = hitTestLink(worldPos, mechanism.links, mechanism.joints, editor.camera.zoom);
+    if (link) { editor.select(mechanism.addForceSensor(link.id)); useEditorStore.setState({ placementCommitted: true }); }
+    return;
+  }
   if (editor.activeTool === 'joint' && placeSpring(worldPos)) return;
 
   if (editor.activeTool === 'select') {
@@ -442,6 +447,13 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       const region: SelectionGesture = editor.selectMode === 'box' ? { kind: 'box', start: worldPos, end: worldPos } : { kind: 'lasso', points: [worldPos] };
       marquee = { region, initial: new Set(editor.selectedIds), additive: e.shiftKey };
       useEditorStore.setState({ selectionGesture: region });
+      return;
+    }
+    const sensorId = hitTestSensor(worldPos, mechanism.forceSensors, mechanism.links, mechanism.joints, editor.camera.zoom);
+    const tracerId = hitTestTracer(worldPos, mechanism.tracers, mechanism.bodies, mechanism.joints, editor.camera.zoom);
+    if (!hitTestJoint(worldPos, mechanism.joints, editor.camera.zoom) && (sensorId || tracerId)) {
+      editor.select(sensorId || tracerId!);
+      if (tracerId && !sensorId) { tracerDragId = tracerId; mechanism.pushHistory(); }
       return;
     }
     const hit = hitTest(worldPos, mechanism.joints, mechanism.links, editor.camera.zoom, true);
@@ -658,6 +670,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
   if (editor.createTool === 'tracer') {
     // Check for existing tracer hit (select it)
     for (const tracer of Object.values(mechanism.tracers)) {
+      if (!tracer.enabled) continue;
       const body = mechanism.bodies[tracer.bodyId];
       if (!body) continue;
       const transform = computeBodyTransform(body, mechanism.joints);
@@ -673,47 +686,6 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       }
     }
 
-    if (editor.selectedIds.size > 0) {
-      editor.clearSelection();
-      if (lastPointerType === 'touch') return; // Touch: just deselect, no deferred place
-      // Deselect + start timer — if held, place a new tracer + arc selector
-      const pos2 = editor.gridEnabled ? snapToGrid(worldPos, editor.gridSize) : worldPos;
-      longPressStartScreen = { x: e.clientX, y: e.clientY };
-      longPressJointId = '__deferred_tracer__';
-      if (longPressTimer) clearTimeout(longPressTimer);
-      longPressTimer = setTimeout(() => {
-        if (longPressJointId === '__deferred_tracer__') {
-          const edState = useEditorStore.getState();
-          const mechState = useMechanismStore.getState();
-          let bodyId = [...edState.activeBodyIds][0];
-          if (!bodyId) {
-            const nonBase = Object.values(mechState.bodies).find((b) => b.id !== mechState.baseBodyId);
-            if (nonBase) { bodyId = nonBase.id; edState.setActiveBody(nonBase.id); }
-          }
-          if (bodyId && mechState.bodies[bodyId]) {
-            const body = mechState.bodies[bodyId];
-            const transform = computeBodyTransform(body, mechState.joints);
-            const localPt = worldToLocal(pos2, transform);
-            const newTracerId = mechState.addTracer(bodyId, localPt);
-            edState.select(newTracerId);
-            // Open arc immediately
-            const tracer = useMechanismStore.getState().tracers[newTracerId];
-            if (tracer) {
-              const worldPt = localToWorld(tracer.localPosition, computeBodyTransform(useMechanismStore.getState().bodies[bodyId], useMechanismStore.getState().joints));
-              edState.setArcSelector({
-                jointId: null, colliderId: null, tracerId: newTracerId,
-                position: { ...worldPt },
-                showTime: Date.now(), collapseTime: null,
-                readyToToggle: new Set([...Object.keys(useMechanismStore.getState().bodies), '__add_body__']),
-                createdBodyId: null, lastToggleTime: 0, lastToggle: null,
-              });
-            }
-          }
-        }
-        longPressTimer = null;
-      }, LONG_PRESS_MS);
-      return;
-    }
 
     // Place a tracer on the active body (radio-select, single body)
     let activeBodyId = [...editor.activeBodyIds][0];
@@ -732,6 +704,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
     const transform = computeBodyTransform(body, mechanism.joints);
     const localPt = worldToLocal(pos, transform);
     const tracerId = mechanism.addTracer(activeBodyId, localPt);
+    useEditorStore.setState({ placementCommitted: true });
     editor.select(tracerId);
     startTracerArcTimer(tracerId, e.clientX, e.clientY);
     return;
@@ -1124,8 +1097,8 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
 export function handleMouseUp(_e?: PointerEvent | MouseEvent, _canvas?: HTMLCanvasElement) {
   const editor = useEditorStore.getState();
   // Clear old input errors only after a committed placement has released capture.
-  if (_e && editor.springCommitted) {
-    useEditorStore.setState({ springCommitted: false }); setProjectMessage('');
+  if (_e && editor.placementCommitted) {
+    useEditorStore.setState({ placementCommitted: false }); setProjectMessage('');
   }
   const rect = _canvas?.getBoundingClientRect();
   finishGeometry(!!_e, _e && rect ? screenToWorld({x:_e.clientX-rect.left,y:_e.clientY-rect.top},editor.camera) : undefined);

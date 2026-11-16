@@ -4,7 +4,7 @@ import { validateSpring } from './springs/spring-model';
 
 export function snapshotMechanism(state: MechanismState): MechanismState {
   const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers } = state;
-  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs: state.springs ?? {} });
+  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs: state.springs ?? {}, forceSensors: state.forceSensors ?? {} });
 }
 
 /** Derive invisible rigidity scaffolding without rewriting saved links or source data. */

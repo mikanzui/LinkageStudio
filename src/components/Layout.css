@@ -238,6 +238,12 @@
 .spring-anchor-fields label { flex-wrap: wrap; }
 .spring-anchor-fields select { min-width: 0; max-width: 100%; flex: 1; }
 .panel-content .tool-name { overflow-wrap: anywhere; min-width: 0; }
+.physics-control { display: grid; grid-template-columns: 68px minmax(44px, 1fr) 76px; align-items: center; gap: 5px; font-size: 11px; color: #aaa; }
+.physics-control span { overflow-wrap: anywhere; }
+.physics-control input[type=range] { min-width: 0; width: 100%; }
+.physics-control input[type=number] { min-width: 0; width: 100%; box-sizing: border-box; }
+.grid-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+.grid-controls .tool-btn { justify-content: center; padding: 4px 0; }
 .toolbar-collapsed { overflow-y: auto; }
 @media (pointer: coarse) { .geometry-options label, .geometry-options input[type=number], .geometry-options .tool-btn { min-height: 44px; } .geometry-options input[type=number] { font-size: 16px; } .geometry-options .tool-btn { min-width: 44px; } }
 @media (max-width: 1099px) {

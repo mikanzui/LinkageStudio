@@ -11,6 +11,8 @@ export interface Joint {
   externalForce?: Vec2;
   /** Hidden bracing joints are invisible to the user but participate in physics */
   hidden?: boolean;
+  label?: string;
+  mirrored?: boolean;
 }
 
 export interface Link {
@@ -99,6 +101,14 @@ export interface Tracer {
   bodyId: string;
   localPosition: Vec2;
   enabled: boolean;
+  name?: string;
+}
+
+export interface ForceSensor {
+  readonly id: string;
+  linkId: string;
+  enabled: boolean;
+  name?: string;
 }
 
 export type SpringAnchor = { type: 'joint'; jointId: string }
@@ -128,4 +138,5 @@ export interface MechanismState {
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
   springs?: Record<string, MechanismSpring>;
+  forceSensors?: Record<string, ForceSensor>;
 }

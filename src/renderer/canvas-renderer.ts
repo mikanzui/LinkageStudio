@@ -9,8 +9,14 @@ import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from
 import { getArcCirclePositions, getArcAddButtonPosition } from '../interaction/tool-manager';
 import type { MechanismSpring } from '../types';
 import { drawSprings } from './draw-springs';
+import type { ForceSensor, ForceAnalysisResult } from '../types';
+import { drawLoads, drawSensors } from './draw-loads';
 
 export interface RenderState {
+  forceSensors: Record<string, ForceSensor>;
+  forceAnalysis?: ForceAnalysisResult;
+  showLoads: boolean;
+  showReactions: boolean;
   springs: Record<string, MechanismSpring>;
   springAnchor?: Vec2 | null;
   joints: Record<string, Joint>;
@@ -77,6 +83,8 @@ export function render(
   }
   drawMechanism(ctx, state.joints, state.links, state.bodies, state.outlines, state.sliders, state.colliders, state.selectedIds, state.hoveredId, state.camera.zoom, state.showLinks, state.baseBodyId, frozenPts);
   drawSprings(ctx, state.springs, state.joints, state.links, state.camera.zoom, state.selectedIds, state.springAnchor, state.cursorWorld);
+  drawLoads(ctx, state.forceAnalysis, state.joints, state.links, state.camera.zoom, state.showLoads, state.showReactions, state.showForceUnits);
+  drawSensors(ctx, state.forceSensors, state.links, state.joints, state.camera.zoom, state.selectedIds);
 
   drawPathTraces(ctx, state.pathTraces, state.camera.zoom);
 

@@ -6,6 +6,7 @@ import { BODY_COLORS } from '../../utils/constants';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import './BodyPanel.css';
 import { ImageOpacity } from './ImageOpacity';
+import { BodyNodes } from '../ObjectTools';
 
 export function BodyPanel() {
   const mode = useEditorStore(s => s.mode);
@@ -111,7 +112,7 @@ export function BodyPanel() {
         const bodyOutlines = Object.values(outlines).filter((o) => o.bodyId === body.id);
         const bodyImages = Object.values(images).filter((img) => img.bodyId === body.id);
         const bodyTracers = Object.values(tracers).filter((t) => t.bodyId === body.id);
-        const hasChildren = bodyOutlines.length > 0 || bodyImages.length > 0 || bodyTracers.length > 0;
+        const hasChildren = bodyOutlines.length > 0 || bodyImages.length > 0 || bodyTracers.length > 0 || body.jointIds.some(id => joints[id] && !joints[id].hidden);
         const isCollapsed = collapsedBodies.has(body.id);
 
         return (
@@ -268,6 +269,7 @@ export function BodyPanel() {
             {/* Collapsible children: outlines + images */}
             {hasChildren && !isCollapsed && (
               <div id={`body-children-${body.id}`} style={{ marginLeft: 14 }}>
+                <BodyNodes bodyId={body.id}/>
                 {/* Outlines */}
                 {bodyOutlines.map((outline) => {
                   const isSelected = selectedIds.has(outline.id);
@@ -431,7 +433,7 @@ export function BodyPanel() {
                     >
                       {tracer.enabled ? <EyeIcon /> : <EyeOffIcon />}
                     </button>
-                    <span style={{ flex: 1, color: '#aaa' }}>Path Plotter</span>
+                    <button type="button" className="body-child-name" aria-label={`Tracer ${tracer.name || tracer.id.slice(0, 8)} properties`} onClick={event => { event.stopPropagation(); select(tracer.id); }}>{tracer.name || 'Path Plotter'}</button>
                     <button
                       className="tool-btn"
                       style={{ fontSize: 10, padding: '1px 4px' }}

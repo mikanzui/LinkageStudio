@@ -1,0 +1,26 @@
+.object-tools { min-width: 0; }
+.object-tools label { min-width: 0; }
+.object-tools input:not([type="checkbox"]), .object-tools select { min-width: 0; max-width: 100%; }
+.object-tools output { min-width: 0; overflow-wrap: anywhere; text-align: right; font-variant-numeric: tabular-nums; }
+.object-tools .panel-title { display: flex; align-items: center; gap: 6px; }
+.object-node-list { display: flex; flex-direction: column; min-width: 0; padding-left: 12px; }
+.object-pick { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 32px; padding: 4px 6px; color: inherit; background: transparent; border: 1px solid transparent; border-radius: 4px; text-align: left; font: inherit; cursor: pointer; }
+.object-pick > span:not(.object-mirrored) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.object-pick > svg { flex-shrink: 0; }
+.object-pick[aria-pressed="true"] { border-color: currentColor; background: var(--bg-hover, #ffffff10); }
+.object-pick:hover { background: var(--bg-hover, #ffffff10); }
+.object-pick:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+.object-mirrored { display: inline-flex; align-items: center; flex-shrink: 0; }
+.object-name-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.object-name-row > label { flex: 1; }
+.object-tools .object-checkbox { justify-content: flex-start; gap: 8px; }
+.object-checkbox input { flex: 0 0 auto; }
+.object-history { width: 100%; min-width: 0; }
+.object-history canvas { display: block; width: 100%; height: 96px; color: var(--accent-color, #45bd9a); }
+.object-contributions summary { cursor: pointer; overflow-wrap: anywhere; }
+.object-contributions > div { padding: 6px 0; overflow-wrap: anywhere; border-bottom: 1px solid var(--border-color, #ffffff20); }
+@media (pointer: coarse) {
+  .object-pick, .object-contributions summary { min-height: 44px; }
+  .object-tools input:not([type="checkbox"]), .object-tools select, .object-tools .tool-btn, .object-checkbox { min-height: 44px; }
+  .object-tools .tool-btn { min-width: 44px; }
+}

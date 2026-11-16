@@ -5,7 +5,7 @@ export type ToolType = 'select' | 'joint' | 'link' | 'pan';
 export type SelectMode = 'single' | 'box' | 'lasso';
 export type SelectionGesture = { kind: 'box'; start: Vec2; end: Vec2 } | { kind: 'lasso'; points: Vec2[] };
 export type JointSubType = 'revolute' | 'fixed';
-export type CreateTool = 'joints' | 'slider' | 'collider' | 'outline' | 'image' | 'tracer' | 'rectangle' | 'circle' | 'ngon' | 'trim' | 'mirror' | 'spring' | 'damper' | 'torsion';
+export type CreateTool = 'joints' | 'slider' | 'collider' | 'outline' | 'image' | 'tracer' | 'rectangle' | 'circle' | 'ngon' | 'trim' | 'mirror' | 'spring' | 'damper' | 'torsion' | 'force-sensor';
 export type JointMode = 'manual' | 'autochain';
 export type GridLevel = 'normal' | 'fine' | 'ultrafine' | 'off';
 

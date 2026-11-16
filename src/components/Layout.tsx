@@ -15,6 +15,7 @@ import { ViewportTools } from './Canvas/ViewportTools';
 import { PanelResizeHandle } from './PanelResizeHandle';
 import { GeometryTools, GeometryOptions } from './GeometryTools';
 import { SpringTools, SpringOptions, SpringList } from './SpringTools';
+import { SensorList, RuntimeObjects, SensorToolButton } from './ObjectTools';
 
 /* ---- Shared chevron icon ---- */
 const ChevronIcon = ({ direction }: { direction: 'left' | 'right' }) => (
@@ -335,6 +336,7 @@ export function Layout() {
 
                 <div className="collapsed-divider" />
                 <div className="collapsed-group-label">Sensors</div>
+                <SensorToolButton compact />
                 <button
                   className={`collapsed-tool-btn ${drawing && createTool === 'tracer' ? 'active' : ''}`}
                   onClick={() => setCreateTool('tracer')}
@@ -387,9 +389,11 @@ export function Layout() {
               </button>
               <PanelResizeHandle side="right" />
             </div>
+            <RuntimeObjects />
+            <PropertyPanel />
             <BodyPanel />
             <SpringList />
-            <PropertyPanel />
+            <SensorList />
             <SimulationPanel />
           </div>
         )}

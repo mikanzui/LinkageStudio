@@ -171,6 +171,13 @@ export function selectInRegion(
     const worldPoint = localToWorld(tracer.localPosition, computeBodyTransform(body, graph.joints));
     if (contains(worldPoint, polygon)) selected.add(tracer.id);
   }
+  for (const sensor of Object.values(graph.forceSensors ?? {})) {
+    const link = graph.links[sensor.linkId];
+    if (!sensor.enabled || !link || !eligible(ownersFor(link.jointIds))) continue;
+    const a = graph.joints[link.jointIds[0]], b = graph.joints[link.jointIds[1]];
+    if (!a || !b || a.hidden || b.hidden) continue;
+    if (contains({ x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 }, polygon)) selected.add(sensor.id);
+  }
   for (const spring of Object.values(graph.springs ?? {})) {
     const ids = [spring.anchorA, spring.anchorB].flatMap(anchor => anchor.type === 'joint' ? [anchor.jointId] : anchor.type === 'link' ? graph.links[anchor.linkId]?.jointIds ?? [] : []);
     if (!eligible(bodies.filter(body => ids.some(id => body.jointIds.includes(id))))) continue;

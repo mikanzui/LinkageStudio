@@ -7,7 +7,7 @@ import { screenToWorld } from '../../renderer/camera';
 import {
   handleMouseDown, handleMouseMove, handleMouseUp, handleDoubleClick, handleWheel, handleKeyDown,
 } from '../../interaction/tool-manager';
-import { hitTestAny, hitTestOutlineFilled } from '../../interaction/hit-test';
+import { hitTestAny, hitTestOutlineFilled, hitTestSensor, hitTestTracer } from '../../interaction/hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../../renderer/draw-images';
 import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import type { Vec2 } from '../../types';
@@ -26,7 +26,7 @@ function interactionCheckpoint() {
   return {
     mechanism: { ...snapshotMechanism(m), angleConstraints: structuredClone(m.angleConstraints), past: m.past, future: m.future },
     editor: structuredClone({ selectedIds: e.selectedIds, outlinePoints: e.outlinePoints, frozenOutlineWorldPoints: e.frozenOutlineWorldPoints, arcSelector: e.arcSelector,
-      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture, shapeGesture: e.shapeGesture, trimStroke: e.trimStroke, springPlacement: e.springPlacement, springReattachId: e.springReattachId, springCommitted: e.springCommitted }),
+      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture, shapeGesture: e.shapeGesture, trimStroke: e.trimStroke, springPlacement: e.springPlacement, springReattachId: e.springReattachId, placementCommitted: e.placementCommitted }),
   };
 }
 
@@ -52,7 +52,7 @@ export function MechanismCanvas() {
       useEditorStore.setState(checkpoint.current.editor);
     }
     checkpoint.current = null;
-    if (active) useEditorStore.setState({ springPlacement: null, springReattachId: null, springCommitted: false });
+    if (active) useEditorStore.setState({ springPlacement: null, springReattachId: null, placementCommitted: false });
   }, []);
 
   const renderLoop = useCallback(function drawFrame() {
@@ -77,6 +77,10 @@ export function MechanismCanvas() {
     try {
       render(ctx, canvas, {
         springs: mechanism.springs,
+        forceSensors: mechanism.forceSensors,
+        forceAnalysis: editor.mode === 'simulate' ? sim.solverResult?.forceAnalysis : undefined,
+        showLoads: editor.showLoads,
+        showReactions: editor.showReactions,
         springAnchor: editor.springPlacement?.anchorA ? resolveSpringAnchor(editor.springPlacement.anchorA, mechanism.joints, mechanism.links) : mechanism.joints[editor.springPlacement?.pivotId ?? '']?.position,
         joints: mechanism.joints,
         links: mechanism.links,
@@ -389,7 +393,11 @@ export function MechanismCanvas() {
           }
         }
 
-        if (componentHit || hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom) || editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single') || (editor.activeTool === 'joint' && ['rectangle','circle','ngon','trim','mirror','spring','damper','torsion'].includes(editor.createTool))) {
+        if (componentHit || hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom)
+          || hitTestSensor(worldPos, mechanism.forceSensors, mechanism.links, mechanism.joints, editor.camera.zoom)
+          || hitTestTracer(worldPos, mechanism.tracers, mechanism.bodies, mechanism.joints, editor.camera.zoom)
+          || editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single')
+          || (editor.activeTool === 'joint' && ['rectangle','circle','ngon','trim','mirror','spring','damper','torsion','force-sensor'].includes(editor.createTool))) {
           // Finger landed on a component → forward to tool-manager immediately for drag interaction
           gesture.current.mode = 'interact';
           gesture.current.touchStartPointerId = e.pointerId;

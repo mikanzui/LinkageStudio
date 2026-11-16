@@ -305,9 +305,15 @@ export function drawForceVectors(
   zoom: number,
   showForceUnits: boolean = false,
 ) {
+  const labels: { x: number; y: number; width: number; height: number }[] = [];
   for (const v of vectors) {
-    const toX = v.origin.x + v.force.x;
-    const toY = v.origin.y + v.force.y;
+    if (!(zoom > 0) || ![v.origin.x, v.origin.y, v.force.x, v.force.y].every(Number.isFinite)) continue;
+    const mag = Math.hypot(v.force.x, v.force.y);
+    if (mag < 1e-10) continue;
+    const scale = Math.min(1, 100 / zoom / mag);
+    const dx = v.force.x * scale, dy = v.force.y * scale;
+    const toX = v.origin.x + dx;
+    const toY = v.origin.y + dy;
     const lineWidth = v.color === '#42A5F5' ? 1.5 : 2.5;
     drawArrow(ctx, v.origin.x, v.origin.y, toX, toY, v.color, lineWidth, zoom, false);
 
@@ -318,21 +324,25 @@ export function drawForceVectors(
     ctx.fill();
 
     // Force magnitude label
-    if (showForceUnits) {
-      const mag = Math.sqrt(v.force.x * v.force.x + v.force.y * v.force.y);
+    if (showForceUnits && v.magnitude !== undefined && Number.isFinite(v.magnitude)) {
       if (mag > 0.1) {
-        const label = mag >= 1000 ? `${(mag / 1000).toFixed(1)} kN` : `${mag.toFixed(1)} N`;
-        const midX = v.origin.x + v.force.x * 0.5;
-        const midY = v.origin.y + v.force.y * 0.5;
+        const label = `${Number(v.magnitude.toPrecision(4))} model`;
+        const midX = v.origin.x + dx * 0.5;
+        const midY = v.origin.y + dy * 0.5;
         // Offset label perpendicular to force direction
         const nx = -v.force.y / mag;
         const ny = v.force.x / mag;
-        const offsetDist = 12 / zoom;
         ctx.font = `bold ${10 / zoom}px monospace`;
+        const width = ctx.measureText(label).width, height = 12 / zoom;
+        const offsetDist = (Math.abs(nx) * width + Math.abs(ny) * height) / 2 + 13 / zoom;
+        const x = midX + nx * offsetDist, y = midY + ny * offsetDist;
+        const box = { x: x - width / 2, y: y - height / 2, width, height };
+        if (labels.some(b => b.x < box.x + box.width && b.x + b.width > box.x && b.y < box.y + box.height && b.y + b.height > box.y)) continue;
+        labels.push(box);
         ctx.fillStyle = v.color;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(label, midX + nx * offsetDist, midY + ny * offsetDist);
+        ctx.fillText(label, x, y);
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
       }

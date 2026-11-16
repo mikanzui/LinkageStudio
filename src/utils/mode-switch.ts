@@ -56,7 +56,7 @@ export function switchMode(newMode: AppMode): void {
     // Reproject outlines if locked — re-read state since setLockOutlines may have updated it
     const editorForReproject = useEditorStore.getState();
     if (editorForReproject.lockOutlines && editorForReproject.frozenOutlineWorldPoints.size > 0) {
-      mech.reprojectOutlinesFromWorld(editorForReproject.frozenOutlineWorldPoints);
+      mech.reprojectOutlinesFromWorld(editorForReproject.frozenOutlineWorldPoints, false);
       editorForReproject.setLockOutlines(false);
     }
 
@@ -89,6 +89,7 @@ export function switchMode(newMode: AppMode): void {
       editorFresh.setSavedPositions(null);
     }
     useSimulationStore.getState().pause();
+    useSimulationStore.setState({ solverResult: null });
   }
 
   editorFresh.setMode(newMode);

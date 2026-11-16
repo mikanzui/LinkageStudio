@@ -1,5 +1,7 @@
 export type { Vec2 } from './geometry';
 export type { SpringAnchor, MechanismSpring } from './mechanism';
+export type { ForceSensor } from './mechanism';
+export type { LinkForce, JointReaction, ForceAnalysisResult } from './solver';
 export type { JointType, Joint, Link, Body, Outline, CanvasImage, SliderConstraint, AngleConstraint, ColliderConstraint, Tracer, MechanismState } from './mechanism';
 export type { SolverConfig, SolverResult, ForceVector, SimulationState } from './solver';
 export type {

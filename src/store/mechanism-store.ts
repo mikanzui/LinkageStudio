@@ -10,11 +10,13 @@ import { cancelInteractions } from '../interaction/session';
 import { mirrorGeometry } from '../core/mirror-geometry';
 import { compileMechanism, snapshotMechanism } from '../core/compile-mechanism';
 import { resolveFrozenOutlines } from '../core/frozen-outlines';
-import type { MechanismSpring } from '../types';
+import type { MechanismSpring, ForceSensor } from '../types';
+import { remapSensorLinks } from '../core/sensor-links';
 import { remapSpringAnchors } from '../core/spring-anchors';
 import { validateSpring, resolveSpringAnchor, torsionGeometry } from '../core/springs/spring-model';
 
 interface HistorySnapshot {
+  forceSensors: Record<string, ForceSensor>;
   springs: Record<string, MechanismSpring>;
   documentContext?: DocumentContext;
   angleConstraints: AngleConstraint[];
@@ -36,6 +38,12 @@ function createBaseBody(): Body {
 }
 
 interface MechanismStore {
+  forceSensors: Record<string, ForceSensor>;
+  addForceSensor(linkId: string): string;
+  editForceSensor(id: string, updates: Partial<Omit<ForceSensor, 'id'>>): void;
+  removeForceSensor(id: string): void;
+  editJointProperties(id: string, updates: Pick<Partial<Joint>, 'label' | 'externalForce' | 'mass'>): void;
+  editTracer(id: string, updates: Partial<Omit<Tracer, 'id'>>): void;
   springs: Record<string, MechanismSpring>;
   addSpring(spring: Omit<MechanismSpring, 'id'>): string;
   editSpring(id: string, updates: Partial<Omit<MechanismSpring, 'id'>>): void;
@@ -108,10 +116,10 @@ interface MechanismStore {
 
   addTempJoint(position: Vec2, bodyId: string): string;
   removeTempJoint(id: string): void;
-  reprojectOutlinesFromWorld(frozenWorldPoints: Map<string, Vec2[]>): void;
+  reprojectOutlinesFromWorld(frozenWorldPoints: Map<string, Vec2[]>, recordHistory?: boolean): void;
 
   clearAll(): void;
-  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; springs?: Record<string, MechanismSpring>; documentContext?: DocumentContext }): void;
+  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; springs?: Record<string, MechanismSpring>; forceSensors?: Record<string, ForceSensor>; documentContext?: DocumentContext }): void;
   pushHistory(): void;
   undo(): void;
   redo(): void;
@@ -122,13 +130,13 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
   const set = (update: Partial<MechanismStore> | ((state: MechanismStore) => Partial<MechanismStore>)) => publish(previous => {
     const patch = typeof update === 'function' ? update(previous) : update;
     if (patch === previous) return previous;
-    if ((patch.links || patch.joints) && patch.springs === undefined) {
-      const next = { ...previous, ...patch };
-      return { ...patch, springs: remapSpringAnchors(previous.springs, previous.links, next.links, next.joints) };
-    }
-    return patch;
+    const result = { ...patch }, next = { ...previous, ...patch };
+    if ((patch.links || patch.joints) && patch.springs === undefined) result.springs = remapSpringAnchors(previous.springs, previous.links, next.links, next.joints);
+    if (patch.links && patch.forceSensors === undefined) result.forceSensors = remapSensorLinks(previous.forceSensors, previous.links, next.links);
+    return result;
   });
   return ({
+  forceSensors: {},
   springs: {},
   documentEpoch: 0,
   joints: {},
@@ -148,6 +156,49 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
   angleConstraints: [],
   past: [],
   future: [],
+
+  addForceSensor(linkId) {
+    if (!get().links[linkId]) throw new Error('Choose an existing link for the sensor.');
+    const existing = Object.values(get().forceSensors).find(sensor => sensor.linkId === linkId);
+    if (existing) return existing.id;
+    const id = createId(); get().pushHistory();
+    const names = new Set(Object.values(get().forceSensors).map(sensor => sensor.name)); let number = 1;
+    while (names.has(`Sensor ${number}`)) number++;
+    set({ forceSensors: { ...get().forceSensors, [id]: { id, linkId, enabled: true, name: `Sensor ${number}` } } });
+    return id;
+  },
+  editForceSensor(id, updates) {
+    const old = get().forceSensors[id]; if (!old) return;
+    const next = { ...old, ...updates, id };
+    if (!get().links[next.linkId] || typeof next.enabled !== 'boolean' || (next.name !== undefined && typeof next.name !== 'string')) throw new Error('Invalid force sensor settings.');
+    if (JSON.stringify(old) === JSON.stringify(next)) return;
+    get().pushHistory(); set({ forceSensors: { ...get().forceSensors, [id]: next } });
+  },
+  removeForceSensor(id) {
+    if (!get().forceSensors[id]) return;
+    const forceSensors = { ...get().forceSensors }; delete forceSensors[id]; get().pushHistory(); set({ forceSensors });
+  },
+  editJointProperties(id, updates) {
+    const old = get().joints[id]; if (!old) return;
+    const next = { ...old, ...structuredClone(updates) };
+    if (Object.hasOwn(updates, 'label') && updates.label === undefined) next.label = '';
+    if ((next.label !== undefined && typeof next.label !== 'string') || (next.mass !== undefined && (!Number.isFinite(next.mass) || next.mass < 0))
+      || (next.externalForce && ![next.externalForce.x, next.externalForce.y].every(Number.isFinite))) throw new Error('Invalid joint properties.');
+    if (JSON.stringify(old) === JSON.stringify(next)) return;
+    get().pushHistory(); set({ joints: { ...get().joints, [id]: next } });
+  },
+  editTracer(id, updates) {
+    const old = get().tracers[id]; if (!old) return;
+    let next = { ...old, ...structuredClone(updates), id };
+    if (!get().bodies[next.bodyId] || ![next.localPosition.x, next.localPosition.y].every(Number.isFinite) || typeof next.enabled !== 'boolean'
+      || (next.name !== undefined && typeof next.name !== 'string')) throw new Error('Invalid tracer settings.');
+    if (updates.bodyId && updates.bodyId !== old.bodyId && !updates.localPosition) {
+      const world = localToWorld(old.localPosition, computeBodyTransform(get().bodies[old.bodyId], get().joints));
+      next = { ...next, localPosition: worldToLocal(world, computeBodyTransform(get().bodies[next.bodyId], get().joints)) };
+    }
+    if (JSON.stringify(old) === JSON.stringify(next)) return;
+    get().pushHistory(); set({ tracers: { ...get().tracers, [id]: next } });
+  },
 
   addSpring(input) {
     const id = createId(), spring = { ...structuredClone(input), id };
@@ -321,14 +372,16 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
   },
 
   addTracer(bodyId, localPosition) {
+    if (!get().bodies[bodyId] || ![localPosition.x, localPosition.y].every(Number.isFinite)) throw new Error('Choose an existing body and finite tracer coordinates.');
     const id = createId();
     get().pushHistory();
-    const tracer: Tracer = { id, bodyId, localPosition, enabled: true };
+    const tracer: Tracer = { id, bodyId, localPosition: { ...localPosition }, enabled: true };
     set((s) => ({ tracers: { ...s.tracers, [id]: tracer } }));
     return id;
   },
 
   removeTracer(id) {
+    if (!get().tracers[id]) return;
     get().pushHistory();
     set((s) => {
       const newTracers = { ...s.tracers };
@@ -338,37 +391,21 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
   },
 
   updateTracerBody(tracerId, bodyId) {
-    get().pushHistory();
-    const { tracers, bodies, joints } = get();
-    const tracer = tracers[tracerId];
-    if (!tracer) return;
-    // Convert world position from old body frame to new body frame
-    const oldBody = bodies[tracer.bodyId];
-    const newBody = bodies[bodyId];
-    if (!oldBody || !newBody) return;
-    const oldTransform = computeBodyTransform(oldBody, joints);
-    const worldPt = localToWorld(tracer.localPosition, oldTransform);
-    const newTransform = computeBodyTransform(newBody, joints);
-    const newLocalPt = worldToLocal(worldPt, newTransform);
-    set((s) => ({
-      tracers: { ...s.tracers, [tracerId]: { ...tracer, bodyId, localPosition: newLocalPt } },
-    }));
+    get().editTracer(tracerId, { bodyId });
   },
 
   moveTracer(id, localPosition) {
+    if (![localPosition.x, localPosition.y].every(Number.isFinite)) return;
     set((s) => {
       const tracer = s.tracers[id];
       if (!tracer) return s;
-      return { tracers: { ...s.tracers, [id]: { ...tracer, localPosition } } };
+      return { tracers: { ...s.tracers, [id]: { ...tracer, localPosition: { ...localPosition } } } };
     });
   },
 
   toggleTracerEnabled(id) {
-    set((s) => {
-      const tracer = s.tracers[id];
-      if (!tracer) return s;
-      return { tracers: { ...s.tracers, [id]: { ...tracer, enabled: !tracer.enabled } } };
-    });
+    const tracer = get().tracers[id];
+    if (tracer) get().editTracer(id, { enabled: !tracer.enabled });
   },
 
   addTempJoint(position, bodyId) {
@@ -441,8 +478,8 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
     set({ joints: newJoints, links: newLinks });
   },
 
-  reprojectOutlinesFromWorld(frozenWorldPoints) {
-    get().pushHistory();
+  reprojectOutlinesFromWorld(frozenWorldPoints, recordHistory = true) {
+    if (recordHistory) get().pushHistory();
     const { outlines, bodies, joints } = get();
     const newOutlines = { ...outlines };
     for (const [outlineId, worldPts] of frozenWorldPoints) {
@@ -463,6 +500,7 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
     set({
       documentEpoch: get().documentEpoch + 1,
       documentContext: undefined,
+      forceSensors: {},
       springs: {},
       joints: {},
       links: {},
@@ -491,6 +529,7 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
     set({
       documentEpoch: get().documentEpoch + 1,
       documentContext: state.documentContext,
+      forceSensors: state.forceSensors ?? {},
       springs: state.springs ?? {},
       joints: state.joints,
       links: state.links,
@@ -910,7 +949,7 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
 
 function captureHistory(state: MechanismStore): HistorySnapshot {
   const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext } = state;
-  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext, springs: state.springs });
+  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext, springs: state.springs, forceSensors: state.forceSensors });
 }
 
 function buildLinksRecord(links: Link[]): Record<string, Link> {
