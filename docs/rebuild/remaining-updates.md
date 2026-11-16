@@ -3,7 +3,9 @@
 2026-11-16. User resumed development beyond the 0.16.0-rebuild.1 checkpoint.
 Preserve tag/commit 1b6f723 and the original dirty master workspace. Work continues
 on codex/rebuild-cloud-pwa in the existing isolated candidate. Codex owns tests and
-gate decisions; no routine user sign-off. No deployment is authorized.
+gate decisions; no routine user sign-off. Subsequent user authorization enabled
+the verified Pages publication of9b9d52f; see evidence/pages/acceptance.md. Earlier
+checkpoint reports retain their historical no-deployment scope.
 
 ## G9: Optional Cloud Projects
 

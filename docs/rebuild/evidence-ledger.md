@@ -330,3 +330,21 @@ EQLI3Y/gP4CZC runs omit the added visible chart assertion and are not misreprese
 Example guide and evidence/examples/acceptance.md qualify narrow overview zoom,
 mouse canvas-drag boundary, incomplete non-SI reactions and physical-device limits.
 No application release/deployment, live cloud mutation or worker/cost-saving claim.
+
+## First Rebuilt Pages Publication (2026-11-16)
+
+User authorized new coauthor credits, removing the model tag, commit and Pages
+publication; explicitly confirmed Hugo's permission and exact Azure SPA callback.
+Published9b9d52f fromcodex/rebuild-cloud-pwa with no force ref updates; original
+master/main9954fca, earlier public checkpoint1b6f723 and dirty workspace preserved.
+Local962 domain/27 tooling/type/lint/normal build PASS. Hosted run43951095147 build
+and deploy PASS, deployment7835707157 success20:36:22 UTC. Public hosted units947
+PASS plus15 explicit private skips; local originals are included in962/zero skips.
+
+Uninstrumented live https://mikanzui.github.io/LinkageStudio/: ChromedcB50Q and
+WebKitYqRal4 PASS cold/warm worker/version/credit-links/no old tag, callback200,
+public example match/native import/actual mechanism pixels moving/Create/Save.
+No console errors or exposed observer/mock auth. Visible hosted in-app tab also
+shows both author links and no model tag. Normal artifact plus public example only;
+no private fixtures/traces published. Evidence/pages/acceptance.md owns outcome,
+prior harness readiness failure, permission attestation and residual limits.

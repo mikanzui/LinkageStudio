@@ -449,4 +449,7 @@ paint is retained and wraps inside the narrow expanded toolbar. Native productio
 Chrome/WebKit tests assert exact caption, both link targets, absence of old labels
 and no horizontal text overflow; captures named coauthor-credits.png. The toolbar
 remains collapsible, so credits are accessible by expanding it on narrow layouts.
-No solver/persistence/cloud behavior is changed. See [publication evidence](evidence/pages/acceptance.md).
+No solver/persistence/cloud behavior is changed. Actual hosted Chrome/WebKit and
+visible in-app tab confirm the same credits after successful deployment of9b9d52f.
+The public example moves and saves on the live site, with no test observer. Hosted
+run43951095147 PASS; see [publication evidence](evidence/pages/acceptance.md).

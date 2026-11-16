@@ -1,8 +1,8 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Latest task: coauthor credits and first rebuilt Pages publication ACTIVE.
-Credits/local production checks PASS; remote build/deployment pending.
+Latest task: coauthor credits and first rebuilt Pages publication DONE / scoped PASS.
+Local checks, hosted CI/deployment and actual live Chrome/WebKit checks PASS.
 Mechanism Playground example DONE;962 domain tests and six native profiles PASS.
 UI16-05 historical hold-menu correction is DONE / scoped code-browser contract PASS.
 Previous .3 functional evidence is retained, but its historical appearance claim
@@ -23,7 +23,7 @@ recorded, with explicit external qualifications and current UI-16 follow-up.
 Codex owns verification and gate decisions; routine user sign-off is not required.
 Execution mode: one lead with zero to two focused workers; first measured pilot at G0.
 
-## Credits And Publication (Active)
+## Credits And Publication
 
 2026-11-16 user explicitly authorizes coauthor credits, removing the model tag,
 commit and publication to the existing GitHub Pages site. Candidate-only edits;
@@ -39,7 +39,12 @@ Coauthor caption/links replace VibeCoded/model tag. Local962 domain/27 tooling,
 lint/type/normal build and six production scenarios per Chrome/WebKit PASS.
 Pages workflow is gated by public tests/audit/both production browsers and deploys
 only the normal artifact; private originals/diagnostics are not uploaded. Remote
-execution/deployment verification pending; evidence/pages/acceptance.md.
+execution/deployment PASS: commit9b9d52f, run43951095147, deployment7835707157;
+https://mikanzui.github.io/LinkageStudio/ is live. Actual live Chrome dcB50Q /
+WebKitYqRal4 cold/warm credits/author links, callback, example import/motion/save
+PASS without observers or mock auth. Public CI947 PASS plus15 private skips;
+local962 PASS/zero skips. Site visibly opened in a separate retained in-app tab.
+Final details and remaining qualifications: evidence/pages/acceptance.md.
 
 ## Example Playground
 

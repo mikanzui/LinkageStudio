@@ -1,5 +1,12 @@
 # Rebuild.2 Readiness And Rollback
 
+Publication follow-up,2026-11-16: the user subsequently confirmed Hugo's publication
+permission and exact hosted Azure SPA callback, and requested publication. The
+rebuilt.4 site at commit9b9d52f now has successful hosted CI/deployment and actual
+live Chrome/WebKit checks. See [Pages outcome](../pages/acceptance.md). The table
+below is the historical.2 checkpoint, not the latest publication status; physical
+device, model and Azure hardening qualifications remain explicitly open.
+
 2026-11-16. Version 0.16.0-rebuild.2, branch codex/rebuild-cloud-pwa. Local
 implementation candidate, not deployment approval. Final gate report owns the
 cumulative decision; this document owns residual qualifications and rollback.

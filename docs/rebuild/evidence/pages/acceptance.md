@@ -2,8 +2,9 @@
 
 2026-11-16. User explicitly requests coauthor credits, removing the Claude model
 tag, a commit and publication to their existing GitHub Pages site. Lead owns
-verification and gate decisions. Status: local checks PASS; hosted execution and
-publication PENDING. No worker/cost-saving claim. Version0.16.0-rebuild.4.
+verification and gate decisions. Status: local checks, hosted CI/deployment and
+actual live-site browser checks PASS; scoped publication accepted by the lead.
+No worker/cost-saving claim. Version0.16.0-rebuild.4.
 
 ## Authorization And Preserved State
 
@@ -65,8 +66,35 @@ existing github-pages environment. No auth scopes, registration or environment
 protections are weakened. References: GitHub's official
 [Pages workflow requirements](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-Hosted run/commit/deployment URL and actual cold/warm/file/credit outcome: PENDING.
-Do not call the site published merely because a source push succeeds.
+Published source commit:
+[`9b9d52f1424a38123cc0c38d2f36bc176f98c76d`](https://github.com/mikanzui/LinkageStudio/commit/9b9d52f1424a38123cc0c38d2f36bc176f98c76d).
+Hosted workflow [43951095147](https://github.com/mikanzui/LinkageStudio/actions/runs/43951095147)
+PASS: both build and deploy jobs succeed, including all unit/tooling/type/lint/
+production-audit and both production-browser steps. Hosted public unit run962
+total,947 PASS plus15 explicit unavailable-private-fixture skips; local962 PASS
+has zero skips. Hosted install and production audit report zero vulnerabilities.
+No universal security certification is inferred from those audit results.
+
+GitHub deployment7835707157 reports success at2026-11-16T20:36:22Z for the exact
+source commit and rebuild branch, environmentgithub-pages. Live URL:
+[Slinker](https://mikanzui.github.io/LinkageStudio/).
+[Public example](https://mikanzui.github.io/LinkageStudio/examples/mechanism-playground.slinker)
+returns200 and matches the source example. Master/main remain unchanged.
+
+Actual uninstrumented live site: `pages/chromium-live-dcB50Q` and
+`pages/webkit-live-YqRal4` PASS. New isolated browser contexts verify HTTPS200,
+actual version, warm service-worker control, exact caption and both author links,
+no Claude/VibeCoded label, no mounted test observer, callback200/no editor bundle,
+public example contents, native Open/Fit/Simulate and actual colored mechanism
+pixel-centroid movement (not only a changed HUD). Native Create and Save download
+retain springs, sliders, collider, tracers and sensors. No page/console errors.
+These live checks use a public synthetic example, not uploaded private originals.
+`verify-pages-live.mjs` records the reproducible workflow and its stated limits.
+
+The actual hosted app was also opened visibly in a separate in-app browser tab:
+version and new credits observed, old tag absent, tab retained as a deliverable.
+No existing local/cloud project or tab was replaced. A documentation/helper-only
+follow-up records this outcome without redeploying an unchanged application.
 
 ## Qualifications
 
@@ -85,4 +113,4 @@ updates. Do not promise that old already-running worker behavior can be changed
 retroactively by the new deployment.
 
 See [credit comparison](../../visual-usability-comparison.md#coauthor-credits-and-publication)
-and [tracker](../../progress-tracker.md#credits-and-publication-active).
+and [tracker](../../progress-tracker.md#credits-and-publication).

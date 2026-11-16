@@ -24,7 +24,9 @@ removing the model tag, commit and publication to the existing GitHub Pages site
 Hugo's publication permission and the exact production Azure SPA callback are
 confirmed by the user. Publish the isolated rebuild branch; preserve original
 master/main/dirty experiments, no forced ref changes. Hosted verification and
-live-site outcome are recorded in `evidence/pages/acceptance.md`. Existing physical
+live-site outcome are recorded in `evidence/pages/acceptance.md`: commit9b9d52f,
+hosted build/deploy and uninstrumented live Chrome/WebKit PASS; site published at
+https://mikanzui.github.io/LinkageStudio/. Existing physical
 device, model-accuracy and Azure hardening qualifications remain explicit.
 
 ### UI-16 Follow-Up
