@@ -1,7 +1,15 @@
 # Groundwork Evidence Ledger
 
-Updated 2026-11-16. G0-G7 accepted; G8 verified implementation checkpoint with
-external qualification limits. Stopping at 0.16.0-rebuild.1 before G9 as requested.
+Latest follow-up: UI-16 hold/context menu and checkbox/radio/range reintegration,
+candidate `0.16.0-rebuild.3`. Scoped contract accepted: 950 domain/27 tooling,
+focused three-engine checks and 24 qualifying regression suite/engine results
+on unchanged final source, with a G9 harness-only retry explicitly qualified.
+See [UI-16 acceptance](evidence/ui16/acceptance.md) for final
+status, source/artifact identity, retained failures and device limits. Earlier
+baseline/checkpoint rows below are historical, not a claim to stop current work.
+
+Updated 2026-11-16. G0-G7 accepted; G8/G9/G10 verified implementation checkpoints
+with external qualification limits. Development resumed after 0.16.0-rebuild.1.
 Earlier baseline rows remain historical.
 
 | Check | Result | Evidence / Limit |

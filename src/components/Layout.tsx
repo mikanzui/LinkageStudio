@@ -16,6 +16,7 @@ import { PanelResizeHandle } from './PanelResizeHandle';
 import { GeometryTools, GeometryOptions } from './GeometryTools';
 import { SpringTools, SpringOptions, SpringList } from './SpringTools';
 import { SensorList, RuntimeObjects, SensorToolButton } from './ObjectTools';
+import './ControlTheme.css';
 
 /* ---- Shared chevron icon ---- */
 const ChevronIcon = ({ direction }: { direction: 'left' | 'right' }) => (

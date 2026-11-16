@@ -5,7 +5,7 @@ import { useSimulationStore } from '../../store/simulation-store';
 import { render } from '../../renderer/canvas-renderer';
 import { screenToWorld } from '../../renderer/camera';
 import {
-  handleMouseDown, handleMouseMove, handleMouseUp, handleDoubleClick, handleWheel, handleKeyDown,
+  handleMouseDown, handleMouseMove, handleMouseUp, handleDoubleClick, handleWheel, handleKeyDown, startObjectHold,
 } from '../../interaction/tool-manager';
 import { hitTestAny, hitTestOutlineFilled, hitTestSensor, hitTestTracer } from '../../interaction/hit-test';
 import { hitTestImage, hitTestRotateHandle, hitTestScaleHandle } from '../../renderer/draw-images';
@@ -18,6 +18,8 @@ import { projectImages } from '../../core/image-transform';
 import { drawGeometryPreview } from '../../renderer/draw-geometry-preview';
 import { resolveSpringAnchor } from '../../core/springs/spring-model';
 import { hitTestSpring } from '../../core/spring-geometry';
+import { RadialMenu } from './RadialMenu';
+import { openRadialMenu, pickRadialTarget, targetForId } from '../../interaction/radial-menu';
 
 const PAN_THRESHOLD = 8; // px movement before a touch becomes a pan drag
 
@@ -41,9 +43,22 @@ export function MechanismCanvas() {
   const beginTool = useCallback((event: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) => {
     if (useEditorStore.getState().mode === 'create') { checkpoint.current = interactionCheckpoint(); setInteractionActive(interactionOwner.current, true); }
     handleMouseDown(event, canvas);
+    startObjectHold(event, canvas);
   }, []);
   const endTool = useCallback((event: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) => {
-    try { handleMouseUp(event, canvas); }
+    const held = useEditorStore.getState().arcSelector?.openMode !== 'context' && !!useEditorStore.getState().arcSelector;
+    const before = checkpoint.current?.mechanism;
+    try {
+      handleMouseUp(event, canvas);
+      if (held && before) {
+        const current = useMechanismStore.getState();
+        const changed = JSON.stringify(snapshotMechanism(current)) !== JSON.stringify(snapshotMechanism(before));
+        useMechanismStore.setState({
+          past: changed ? [...before.past.slice(-49), { ...snapshotMechanism(before), springs: before.springs ?? {}, forceSensors: before.forceSensors ?? {}, angleConstraints: before.angleConstraints, documentContext: current.documentContext }] : before.past,
+          future: changed ? [] : before.future,
+        });
+      }
+    }
     finally { checkpoint.current = null; setInteractionActive(interactionOwner.current, false); }
   }, []);
   const cancelTool = useCallback(() => {
@@ -311,7 +326,7 @@ export function MechanismCanvas() {
   }, [cancelGesture]);
 
   return (
-    <canvas
+    <><canvas
       ref={canvasRef}
       aria-label="Mechanism canvas"
       tabIndex={0}
@@ -558,7 +573,15 @@ export function MechanismCanvas() {
         if (gesture.current.accepts(e.pointerId, e.pointerType, 'cancel')) cancelGesture();
       }}
       onLostPointerCapture={(e) => { if (gesture.current.accepts(e.pointerId, e.pointerType, 'cancel')) cancelGesture(); }}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        if (useEditorStore.getState().mode !== 'create') return;
+        const canvas = canvasRef.current!, rect = canvas.getBoundingClientRect(), editor = useEditorStore.getState();
+        const point = screenToWorld({ x: event.clientX - rect.left, y: event.clientY - rect.top }, editor.camera);
+        const target = pickRadialTarget(point) ?? [...editor.selectedIds].map(targetForId).find(t => t !== null);
+        if (target) { openRadialMenu(target, point); useEditorStore.setState({ selectedIds: new Set([target.id]) }); }
+      }}
     />
+    <RadialMenu canvasRef={canvasRef}/></>
   );
 }

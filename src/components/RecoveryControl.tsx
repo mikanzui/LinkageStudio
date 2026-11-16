@@ -26,6 +26,7 @@ export function RecoveryControl({ ref }: { ref: Ref<RecoveryActions> }) {
   const status = useRecoveryStore(s => s.status), storageError = useRecoveryStore(s => s.error);
   const [selected, setSelected] = useState(''), [draft, setDraft] = useState<RecoveryDraft | null>(null);
   const [loading, setLoading] = useState(false), [error, setError] = useState(''), [url, setUrl] = useState('');
+  const [opening, setOpening] = useState(false);
 
   useImperativeHandle(ref, () => ({
     async flush() { await runtime.current?.coordinator.flush(); },
@@ -95,7 +96,7 @@ export function RecoveryControl({ ref }: { ref: Ref<RecoveryActions> }) {
     const previous = downloadUrl.current; downloadUrl.current = ''; setUrl('');
     if (previous) setTimeout(() => URL.revokeObjectURL(previous), 60_000);
   };
-  const close = () => { modalToken.current++; selectionToken.current++; clearDownload(); setLoading(false); setDraft(null); setSelected(''); setError(''); useRecoveryStore.setState({ open: false }); };
+  const close = () => { modalToken.current++; selectionToken.current++; clearDownload(); setLoading(false); setOpening(false); setDraft(null); setSelected(''); setError(''); useRecoveryStore.setState({ open: false }); };
   const select = async (id: string) => {
     const owned = runtime.current, token = ++selectionToken.current;
     clearDownload(); setSelected(id); setDraft(null); setError(''); setLoading(true);
@@ -121,10 +122,13 @@ export function RecoveryControl({ ref }: { ref: Ref<RecoveryActions> }) {
   const show = async () => {
     cancelInteractions();
     const token = ++modalToken.current, selection = selectionToken.current, owned = runtime.current;
+    // Do not expose rows while a pending flush can insert/recenter them mid-click.
+    setOpening(true);
     trigger.current?.focus();
     openedSession.current = useProjectStatus.getState().sessionId; setError(''); useRecoveryStore.setState({ open: true });
     try { await owned?.coordinator.flush(); if (runtime.current === owned) await refresh(token, selection); }
     catch (issue) { if (alive.current && runtime.current === owned && token === modalToken.current) setError(String(issue)); }
+    finally { if (alive.current && runtime.current === owned && token === modalToken.current) setOpening(false); }
   };
   const restore = () => {
     if (!draft) return;
@@ -146,18 +150,18 @@ export function RecoveryControl({ ref }: { ref: Ref<RecoveryActions> }) {
   return <>
     <button ref={trigger} type="button" className="top-bar-btn" aria-label="Recovery" title={storageError ? `Recovery unavailable: ${storageError}` : `Recovery: ${status}`}
       data-recovery-status={status} onClick={() => { void show(); }}><History size={16}/>{drafts.length > 0 && <span className="recovery-count">{drafts.length}</span>}</button>
-    <dialog ref={dialog} className="project-dialog" aria-labelledby="recovery-title" onKeyDown={containDialogTab} onCancel={event => { event.preventDefault(); close(); }} onClose={() => { if (!dialog.current?.open) { close(); if (!document.querySelector('dialog[open]')) trigger.current?.focus(); } }}>
+    <dialog ref={dialog} className="project-dialog" aria-labelledby="recovery-title" aria-busy={opening || loading} onKeyDown={containDialogTab} onCancel={event => { event.preventDefault(); close(); }} onClose={() => { if (!dialog.current?.open) { close(); if (!document.querySelector('dialog[open]')) trigger.current?.focus(); } }}>
       <header><h2 id="recovery-title">Recovery Drafts</h2><button type="button" className="dialog-icon" aria-label="Close recovery" title="Close" onClick={close}><X size={18}/></button></header>
       <div className="dialog-body">
         {(error || storageError) && <div role="alert" className="dialog-error">{error || storageError}</div>}
-        {!drafts.length && <p>No recovery drafts.</p>}
-        <div className="recovery-list">{drafts.map(row => {
+        {!opening && !drafts.length && <p>No recovery drafts.</p>}
+        <div className="recovery-list">{!opening && drafts.map(row => {
           const date = new Date(row.updatedAt), validDate = Number.isFinite(date.valueOf());
           return <label key={row.id} data-recovery-id={row.id}>
           <input type="radio" name="recovery-draft" checked={selected === row.id} onChange={() => { void select(row.id); }}/>
           <span><strong>{row.displayName || 'Untitled'}</strong><time dateTime={validDate ? date.toISOString() : undefined}>{validDate ? date.toLocaleString() : 'Unknown date'}</time></span>
         </label>; })}</div>
-        <div className="recovery-status" role="status">{loading ? 'Loading...' : selected && !draft && !error ? 'Choose a draft.' : ''}</div>
+        <div className="recovery-status" role="status">{opening || loading ? 'Loading...' : selected && !draft && !error ? 'Choose a draft.' : ''}</div>
       </div>
       <footer>
         <button type="button" className="dialog-command" disabled={!draft || loading} onClick={restore}><RotateCcw size={16}/>Restore copy</button>

@@ -3,10 +3,9 @@ import type { CameraState } from '../types';
 import { applyCamera, resetCamera } from './camera';
 import { drawMechanism, drawOutlineGhost, drawSliderGhost, drawColliderGhost, drawOutlineEditMode, drawTracers, drawTracerPaths } from './draw-mechanism';
 import { drawImages } from './draw-images';
-import { drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInteraction, drawModeBadge, drawHUD, clearCanvas, drawCOMMarkers, drawArcSelector } from './draw-overlays';
+import { drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInteraction, drawModeBadge, drawHUD, clearCanvas, drawCOMMarkers } from './draw-overlays';
 import { lerp } from '../core/math/vec2';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from '../core/body-transform';
-import { getArcCirclePositions, getArcAddButtonPosition } from '../interaction/tool-manager';
 import type { MechanismSpring } from '../types';
 import { drawSprings } from './draw-springs';
 import type { ForceSensor, ForceAnalysisResult } from '../types';
@@ -179,30 +178,4 @@ export function render(
   drawHUD(ctx, w, h - 70, state.dof, state.cursorWorld);
   drawModeBadge(ctx, w, state.mode);
 
-  // Arc body selector (screen-space, after resetCamera)
-  if (state.arcSelector) {
-    const bodies = Object.values(state.bodies);
-    bodies.sort((a, b) => {
-      if (a.id === state.baseBodyId) return -1;
-      if (b.id === state.baseBodyId) return 1;
-      return 0;
-    });
-    const positions = getArcCirclePositions(state.arcSelector.position, bodies.length, state.camera);
-    const colors = bodies.map((b) => b.color);
-    const names = bodies.map((b) => b.name);
-    let selected: boolean[];
-    if (state.arcSelector.tracerId) {
-      // Tracer mode: single body highlighted
-      const tracer = state.tracers[state.arcSelector.tracerId];
-      selected = bodies.map((b) => tracer ? b.id === tracer.bodyId : false);
-    } else if (state.arcSelector.colliderId) {
-      const collider = state.colliders[state.arcSelector.colliderId];
-      selected = bodies.map((b) => collider ? collider.bodyIds.includes(b.id) : false);
-    } else {
-      const joint = state.arcSelector.jointId ? state.joints[state.arcSelector.jointId] : null;
-      selected = bodies.map((b) => joint ? b.jointIds.includes(state.arcSelector!.jointId!) : false);
-    }
-    const addBtnPos = getArcAddButtonPosition(state.arcSelector.position, bodies.length, state.camera);
-    drawArcSelector(ctx, positions, colors, selected, names, state.arcSelector.showTime, state.arcSelector.collapseTime, addBtnPos, !!state.arcSelector.createdBodyId, pixelRatio);
-  }
 }

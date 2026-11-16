@@ -1,0 +1,22 @@
+.radial-menu { position: absolute; z-index: 30; pointer-events: none; color: #ddd; }
+.radial-orbit { width: 1px; height: 1px; }
+.radial-control { position: absolute; margin: 0; padding: 4px 8px; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; border: 1px solid #646464; border-radius: 999px; background: #181818f5; color: #ccc; font: 500 11px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 0; pointer-events: auto; cursor: pointer; touch-action: manipulation; box-shadow: 0 3px 8px #0004; animation: radial-appear 120ms ease-out; }
+.radial-control:hover { border-color: #afafaf; color: #fff; background: #333; }
+.radial-control[aria-pressed=true] { border-color: #8cc3ff; background: #244e70; color: #f2f8ff; }
+.radial-control:focus-visible { outline: 2px solid #aad6ff; outline-offset: 3px; }
+.radial-body-dot { width: 10px; height: 10px; border: 1px solid #ddd8; border-radius: 50%; flex: 0 0 10px; }
+.radial-body-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left; }
+.radial-body-check { width: 5px; height: 9px; flex: 0 0 5px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(40deg); margin-right: 2px; }
+.radial-command { padding: 0; }
+.radial-danger { background: #622a2a; border-color: #b96b6b; color: #ffe3e3; }
+.radial-danger:hover { background: #8c3333; border-color: #f1aaaa; }
+.radial-list { transform: translate(-50%, -50%); background: #202020; border: 1px solid #777; border-radius: 6px; box-shadow: 0 6px 20px #0005; padding: 6px; display: flex; flex-direction: column; pointer-events: auto; overflow: hidden; }
+.radial-list-actions { display: flex; gap: 6px; flex: 0 0 auto; padding-bottom: 6px; }
+.radial-list .radial-control { position: static; min-height: 32px; border-radius: 5px; }
+.radial-list .radial-command { width: 32px; height: 32px; }
+.radial-list-bodies { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.radial-list-bodies .radial-control { width: 100%; flex: 0 0 auto; }
+@keyframes radial-appear { from { opacity: 0; } to { opacity: 1; } }
+@media (pointer: coarse) { .radial-list .radial-control { min-height: 44px; } .radial-list .radial-command { width: 44px; height: 44px; } }
+@media (prefers-reduced-motion: reduce) { .radial-control { animation: none; } }
+@media (forced-colors: active) { .radial-control { background: Canvas; color: ButtonText; border-color: ButtonText; box-shadow: none; } .radial-control[aria-pressed=true] { border: 3px solid Highlight; } .radial-danger { border-color: LinkText; } }

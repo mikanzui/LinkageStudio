@@ -9,6 +9,8 @@ export type CreateTool = 'joints' | 'slider' | 'collider' | 'outline' | 'image' 
 export type JointMode = 'manual' | 'autochain';
 export type GridLevel = 'normal' | 'fine' | 'ultrafine' | 'off';
 
+export type RadialTarget = { kind: 'joint' | 'link' | 'collider' | 'tracer' | 'outline' | 'image' | 'spring' | 'sensor'; id: string };
+
 export interface SimDragState {
   active: boolean;
   grabPoint: Vec2;

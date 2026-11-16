@@ -1,8 +1,9 @@
-import { Hand, MousePointer2, ZoomIn, ZoomOut, Maximize, RotateCcw, ChevronDown, BoxSelect, LassoSelect } from 'lucide-react';
+import { Hand, MousePointer2, ZoomIn, ZoomOut, Maximize, RotateCcw, ChevronDown, BoxSelect, LassoSelect, Ellipsis } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useEditorStore } from '../../store/editor-store';
 import { useMechanismStore } from '../../store/mechanism-store';
 import { fitMechanism } from '../../renderer/viewport';
+import { openRadialMenu, radialAnchor, targetForId } from '../../interaction/radial-menu';
 
 export function ViewportTools() {
   const [open, setOpen] = useState(false);
@@ -18,6 +19,7 @@ export function ViewportTools() {
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, []);
   const tool = useEditorStore(s => s.activeTool);
+  const selected = useEditorStore(s => s.selectedIds);
   const zoom = useEditorStore(s => s.camera.zoom);
   const changeZoom = (factor: number) => {
     const r = document.querySelector('canvas')?.getBoundingClientRect(); if (!r) return;
@@ -27,6 +29,10 @@ export function ViewportTools() {
     <button aria-label="Select" title={tool === 'select' ? `Select: ${selectMode}` : 'Select'} aria-pressed={tool === 'select'} onClick={() => useEditorStore.getState().setSelectMode('single')}>{selectMode === 'box' && tool === 'select' ? <BoxSelect size={17}/> : selectMode === 'lasso' && tool === 'select' ? <LassoSelect size={17}/> : <MousePointer2 size={17}/>}</button>
     {mode === 'create' && <button aria-label="Selection options" title="Selection options" aria-expanded={open} onClick={() => setOpen(!open)}><ChevronDown size={15}/></button>}
     {open && mode === 'create' && <div className="selection-options" role="group" aria-label="Selection options">
+      <button type="button" aria-label="Object actions" title="Object actions" disabled={selected.size !== 1} onClick={() => {
+        const target = targetForId([...selected][0]);
+        if (target) { setOpen(false); openRadialMenu(target, radialAnchor(target)); }
+      }}><Ellipsis size={17}/></button>
       <fieldset><legend>Selection</legend>{(['single','box','lasso'] as const).map(value => <label key={value}><input type="radio" name="selection-mode" checked={tool === 'select' && selectMode === value} onChange={() => { useEditorStore.getState().setSelectMode(value); setOpen(false); }}/>{value === 'single' ? 'Single' : value === 'box' ? 'Box' : 'Lasso'}</label>)}</fieldset>
       <fieldset><legend>Included bodies</legend>{Object.values(bodies).map(body => <label key={body.id}><input type="checkbox" checked={!excluded.has(body.id)} onChange={() => useEditorStore.getState().toggleExcludedBody(body.id)}/>{body.name}</label>)}</fieldset>
     </div>}

@@ -14,6 +14,8 @@ import { beginGeometry, moveGeometry, finishGeometry, commitOutline } from './ge
 import { placeSpring } from './spring-tools';
 import { hitTestSpring } from '../core/spring-geometry';
 import { setProjectMessage } from '../document/project';
+import { arcTarget, chooseRadialBody, currentRadialLayout, openRadialMenu, radialAction, targetForId, targetExists, radialAnchor, radialUsesToggle } from './radial-menu';
+import { radialHit } from './radial-layout';
 
 /** Start the long-press arc selector timer for a given joint. No-op for touch input. */
 function startArcTimer(jointId: string, screenX: number, screenY: number) {
@@ -94,166 +96,38 @@ function startTracerArcTimer(tracerId: string, screenX: number, screenY: number)
   }, LONG_PRESS_MS);
 }
 
-/** Compute the screen positions of arc selector body circles. */
-export function getArcCirclePositions(
-  jointWorldPos: Vec2,
-  bodyCount: number,
-  camera: { pan: Vec2; zoom: number },
-): { screenX: number; screenY: number; centerScreenX: number; centerScreenY: number; angle: number }[] {
-  const RADIUS = 52; // screen px from joint center
-  const PER_CIRCLE_DEG = 32; // angular spacing between circles
-  const MAX_SPAN_DEG = 250;
-  // Arc is centered at 345° (11 o'clock), expanding symmetrically clockwise
-  const centerAngleDeg = 315;
-  const spanDeg = Math.min(MAX_SPAN_DEG, Math.max(PER_CIRCLE_DEG, (bodyCount - 1) * PER_CIRCLE_DEG));
-  // First circle at the counter-clockwise edge, last at the clockwise edge
-  const startAngleDeg = centerAngleDeg - spanDeg / 2;
-  const centerScreenX = jointWorldPos.x * camera.zoom + camera.pan.x;
-  const centerScreenY = jointWorldPos.y * camera.zoom + camera.pan.y;
-
-  const positions: { screenX: number; screenY: number; centerScreenX: number; centerScreenY: number; angle: number }[] = [];
-  for (let i = 0; i < bodyCount; i++) {
-    const t = bodyCount > 1 ? i / (bodyCount - 1) : 0;
-    // Fan clockwise: increasing angle (0° = up, clockwise positive in screen space)
-    const angleDeg = startAngleDeg + spanDeg * t;
-    const angleRad = (angleDeg - 90) * (Math.PI / 180);
-    positions.push({
-      screenX: centerScreenX + Math.cos(angleRad) * RADIUS,
-      screenY: centerScreenY + Math.sin(angleRad) * RADIUS,
-      centerScreenX,
-      centerScreenY,
-      angle: angleDeg,
-    });
-  }
-  return positions;
+/** Extra object holds use the same timer/cancellation ownership as pivot holds. */
+export function startObjectHold(e: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) {
+  const editor = useEditorStore.getState();
+  if (editor.mode !== 'create' || e.button !== 0 || lastPointerType === 'touch' || editor.selectedIds.size !== 1) return;
+  if (editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single')
+    || (editor.activeTool === 'joint' && !['joints', 'image', 'tracer'].includes(editor.createTool))) return;
+  const target = [...editor.selectedIds].map(targetForId).find(t => t !== null);
+  if (!target) return;
+  const rect = canvas.getBoundingClientRect();
+  longPressStartScreen = { x: e.clientX, y: e.clientY };
+  if (longPressTimer) clearTimeout(longPressTimer);
+  longPressTimer = setTimeout(() => {
+    if (targetExists(target) && useEditorStore.getState().mode === 'create') {
+      openRadialMenu(target, target.kind === 'joint' || target.kind === 'tracer' ? radialAnchor(target)
+        : screenToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top }, editor.camera), 'hold');
+      isDragging = false; dragJointId = null;
+    }
+    longPressTimer = null;
+  }, LONG_PRESS_MS);
 }
 
-/** Compute the screen position of the "Add Body" button at the end of the arc. */
-export function getArcAddButtonPosition(
-  jointWorldPos: Vec2,
-  bodyCount: number,
-  camera: { pan: Vec2; zoom: number },
-): { screenX: number; screenY: number; centerScreenX: number; centerScreenY: number } {
-  const RADIUS = 52;
-  const PER_CIRCLE_DEG = 32;
-  const MAX_SPAN_DEG = 250;
-  const centerAngleDeg = 315;
-  const spanDeg = Math.min(MAX_SPAN_DEG, Math.max(PER_CIRCLE_DEG, (bodyCount - 1) * PER_CIRCLE_DEG));
-  // Place one step past the last body circle
-  const addAngleDeg = centerAngleDeg + spanDeg / 2 + PER_CIRCLE_DEG;
-  const angleRad = (addAngleDeg - 90) * (Math.PI / 180);
-  const centerScreenX = jointWorldPos.x * camera.zoom + camera.pan.x;
-  const centerScreenY = jointWorldPos.y * camera.zoom + camera.pan.y;
-  return {
-    screenX: centerScreenX + Math.cos(angleRad) * RADIUS,
-    screenY: centerScreenY + Math.sin(angleRad) * RADIUS,
-    centerScreenX,
-    centerScreenY,
-  };
-}
-
-/** Handle cursor movement over arc body circles — toggle body membership on enter. */
-function handleArcHover(worldPos: Vec2, editor: ReturnType<typeof useEditorStore.getState>) {
+function handleArcHover(worldPos: Vec2, editor: ReturnType<typeof useEditorStore.getState>, canvas: HTMLCanvasElement) {
   const arc = editor.arcSelector;
-  if (!arc) return;
-  // No toggles during collapse animation
-  if (arc.collapseTime !== null) return;
-  const mechanism = useMechanismStore.getState();
-  const bodies = Object.values(mechanism.bodies);
-  bodies.sort((a, b) => {
-    if (a.id === mechanism.baseBodyId) return -1;
-    if (b.id === mechanism.baseBodyId) return 1;
-    return 0;
-  });
-
-  const positions = getArcCirclePositions(arc.position, bodies.length, editor.camera);
-  const CIRCLE_RADIUS = 12; // screen px hit radius
-
-  // Convert world cursor to screen
-  const cursorScreenX = worldPos.x * editor.camera.zoom + editor.camera.pan.x;
-  const cursorScreenY = worldPos.y * editor.camera.zoom + editor.camera.pan.y;
-
-  for (let i = 0; i < bodies.length; i++) {
-    const body = bodies[i];
-    const pos = positions[i];
-    const dx = cursorScreenX - pos.screenX;
-    const dy = cursorScreenY - pos.screenY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (dist < CIRCLE_RADIUS) {
-      // Cursor is inside this circle — toggle if ready
-      if (arc.readyToToggle.has(body.id)) {
-        let wasAdded = false;
-        if (arc.tracerId) {
-          // Tracer mode: single-select — set tracer to this body
-          const tracer = mechanism.tracers[arc.tracerId];
-          if (tracer && tracer.bodyId !== body.id) {
-            mechanism.updateTracerBody(arc.tracerId, body.id);
-            wasAdded = true;
-          }
-        } else if (arc.colliderId) {
-          const collider = mechanism.colliders[arc.colliderId];
-          if (collider) {
-            if (collider.bodyIds.includes(body.id)) {
-              mechanism.removeBodyFromCollider(arc.colliderId, body.id);
-              wasAdded = false;
-            } else {
-              mechanism.addBodyToCollider(arc.colliderId, body.id);
-              wasAdded = true;
-            }
-          }
-        } else if (arc.jointId) {
-          const joint = mechanism.joints[arc.jointId];
-          if (joint) {
-            if (body.jointIds.includes(arc.jointId)) {
-              mechanism.removeJointFromBody(arc.jointId, body.id);
-              wasAdded = false;
-            } else {
-              mechanism.addJointToBody(arc.jointId, body.id);
-              wasAdded = true;
-            }
-          }
-        }
-        if (arc.tracerId) {
-          // Single-select: keep all bodies ready, just record the change
-          editor.setArcSelector({ ...arc, lastToggleTime: Date.now(), lastToggle: { bodyId: body.id, wasAdded } });
-        } else {
-          const newReady = new Set(arc.readyToToggle);
-          newReady.delete(body.id);
-          editor.setArcSelector({ ...arc, readyToToggle: newReady, lastToggleTime: Date.now(), lastToggle: { bodyId: body.id, wasAdded } });
-        }
-      }
-    } else {
-      // Cursor is outside — mark as ready to toggle again
-      if (!arc.readyToToggle.has(body.id)) {
-        const newReady = new Set(arc.readyToToggle);
-        newReady.add(body.id);
-        editor.setArcSelector({ ...arc, readyToToggle: newReady });
-      }
-    }
-  }
-
-  // "Add Body" button hover toggle (one-way: create only, no undo on re-hover)
-  if (!arc.createdBodyId) {
-    const addPos = getArcAddButtonPosition(arc.position, bodies.length, editor.camera);
-    const addDx = cursorScreenX - addPos.screenX;
-    const addDy = cursorScreenY - addPos.screenY;
-    const addDist = Math.sqrt(addDx * addDx + addDy * addDy);
-
-    if (addDist < 10 && arc.readyToToggle.has('__add_body__')) {
-      const freshMech = useMechanismStore.getState();
-      const newBodyId = freshMech.addBody('Body');
-      const freshMech2 = useMechanismStore.getState();
-      if (arc.jointId) {
-        freshMech2.addJointToBody(arc.jointId, newBodyId);
-      } else if (arc.colliderId) {
-        freshMech2.addBodyToCollider(arc.colliderId, newBodyId);
-      }
-      const newReady = new Set(arc.readyToToggle);
-      newReady.delete('__add_body__');
-      editor.setArcSelector({ ...arc, readyToToggle: newReady, createdBodyId: newBodyId });
-    }
-  }
+  if (!arc || arc.openMode === 'context') return;
+  const rect = canvas.getBoundingClientRect(), target = arcTarget(arc);
+  const layout = currentRadialLayout(rect.width, rect.height, typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
+  const key = radialHit(layout, { x: worldPos.x * editor.camera.zoom + editor.camera.pan.x, y: worldPos.y * editor.camera.zoom + editor.camera.pan.y });
+  if (!key?.startsWith('body:') || (radialUsesToggle(target) && !arc.readyToToggle.has(key.slice(5)))) return;
+  chooseRadialBody(target, key.slice(5));
+  if (!radialUsesToggle(target)) return;
+  const readyToToggle = new Set(arc.readyToToggle); readyToToggle.delete(key.slice(5));
+  useEditorStore.getState().setArcSelector({ ...arc, readyToToggle });
 }
 
 /** Exit outline editing mode and update frozen world points. */
@@ -934,7 +808,7 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
 
   // Arc selector hover toggle logic
   if (editor.arcSelector) {
-    handleArcHover(worldPos, editor);
+    handleArcHover(worldPos, editor, canvas);
     return; // block all other interactions while arc is shown
   }
 
@@ -1116,33 +990,18 @@ export function handleMouseUp(_e?: PointerEvent | MouseEvent, _canvas?: HTMLCanv
   longPressJointId = null;
   longPressStartScreen = null;
 
-  // Arc selector: revert last-moment accidental toggle, then collapse
   if (!_e) editor.setArcSelector(null);
-  if (_e && editor.arcSelector && !editor.arcSelector.collapseTime) {
-    const arc = editor.arcSelector;
-    const mech = useMechanismStore.getState();
-
-    // Revert toggle if it happened within 150ms of release (accidental swipe)
-    const GRACE_MS = 150;
-    if (arc.lastToggle && (Date.now() - arc.lastToggleTime) < GRACE_MS) {
-      const { bodyId, wasAdded } = arc.lastToggle;
-      if (arc.colliderId) {
-        if (wasAdded) mech.removeBodyFromCollider(arc.colliderId, bodyId);
-        else mech.addBodyToCollider(arc.colliderId, bodyId);
-      } else if (arc.jointId) {
-        if (wasAdded) mech.removeJointFromBody(arc.jointId, bodyId);
-        else mech.addJointToBody(arc.jointId, bodyId);
-      }
+  if (_e && _canvas && editor.arcSelector && editor.arcSelector.openMode !== 'context') {
+    const arc = editor.arcSelector, target = arcTarget(arc), rect = _canvas.getBoundingClientRect();
+    const layout = currentRadialLayout(rect.width, rect.height, typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
+    if (layout.variant === 'list') {
+      editor.setArcSelector({ ...arc, openMode: 'context' });
+    } else {
+      const key = radialHit(layout, { x: _e.clientX - rect.left, y: _e.clientY - rect.top });
+      editor.setArcSelector(null);
+      if (key === '__add_body__' || key === '__delete__') radialAction(target, key);
+      else if (key?.startsWith('body:') && (!radialUsesToggle(target) || arc.readyToToggle.has(key.slice(5)))) chooseRadialBody(target, key.slice(5));
     }
-
-    const bodyCount = Object.keys(mech.bodies).length;
-    const collapsingArc = { ...arc, collapseTime: Date.now() };
-    editor.setArcSelector(collapsingArc);
-    const staggerPerCircle = bodyCount > 1 ? Math.min(50, 400 / (bodyCount - 1)) : 50;
-    const totalDuration = (bodyCount - 1) * staggerPerCircle + 250;
-    setTimeout(() => {
-      if (useEditorStore.getState().arcSelector === collapsingArc) useEditorStore.getState().setArcSelector(null);
-    }, totalDuration);
   }
 
   // Clean up temporary joint from shape dragging
@@ -1181,9 +1040,15 @@ export function handleWheel(e: WheelEvent, canvas: HTMLCanvasElement) {
 export function handleKeyDown(e: KeyboardEvent) {
   if (document.querySelector('dialog[open]')) return;
   const target = e.target;
-  if (target instanceof HTMLElement && target.closest('input, textarea, select, dialog, [contenteditable="true"], [role="dialog"]')) return;
+  if (target instanceof HTMLElement && target.closest('input, textarea, select, dialog, .radial-menu, [contenteditable="true"], [role="dialog"]')) return;
   const editor = useEditorStore.getState();
   const mechanism = useMechanismStore.getState();
+
+  if (editor.mode === 'create' && (e.key === 'ContextMenu' || e.key === 'F10' && e.shiftKey)) {
+    const selected = [...editor.selectedIds].map(targetForId).find(t => t !== null);
+    if (selected) { e.preventDefault(); openRadialMenu(selected, radialAnchor(selected)); }
+    return;
+  }
 
   // In simulate mode, disable creation shortcuts
   if (editor.mode === 'simulate') {

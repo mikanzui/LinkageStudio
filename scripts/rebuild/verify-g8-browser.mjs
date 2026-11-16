@@ -436,6 +436,9 @@ async function main() {
         async waitDraft(name) { let drafts; await t.poll(async () => { drafts = await recoveryBoundary(page); return drafts.some(d => d.displayName === name && typeof d.text === 'string'); }, `No recovery draft for ${name}`); return drafts; },
         async selectDraft(name) {
           const modal = t.dialog('Recovery Drafts'), row = modal.locator('label').filter({ has: page.locator('strong').filter({ hasText: name }) });
+          const readiness = await modal.evaluate(el => ({ busy: el.getAttribute('aria-busy') === 'true', rows: el.querySelectorAll('.recovery-list input').length }));
+          if (readiness.busy) assert.equal(readiness.rows, 0, 'Initial refresh must not expose moving recovery rows');
+          await page.waitForFunction(() => document.querySelector('dialog[aria-labelledby="recovery-title"][open]')?.getAttribute('aria-busy') === 'false');
           assert.equal(await row.count(), 1, 'Unique named recovery row'); await t.target(row, 'Recovery draft row'); await t.activate(row.getByRole('radio'));
           await t.poll(async () => await row.getByRole('radio').isChecked()
             && await modal.getByRole('link', { name: 'Download recovery file', exact: true }).getAttribute('aria-disabled') !== 'true', 'Selected draft text did not load');

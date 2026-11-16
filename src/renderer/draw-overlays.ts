@@ -240,7 +240,7 @@ export function drawLinkGhost(
 
 export function drawHUD(
   ctx: CanvasRenderingContext2D,
-  _canvasWidth: number,
+  canvasWidth: number,
   canvasHeight: number,
   dof: number,
   cursorWorld: Vec2 | null,
@@ -250,8 +250,9 @@ export function drawHUD(
 
   // DOF badge
   const dofText = `Design DOF: ${dof}`;
+  const badgeWidth = ctx.measureText(dofText).width + 12;
   ctx.fillStyle = dof === 1 ? '#4CAF50' : dof === 0 ? '#FF9800' : dof < 0 ? '#E53935' : '#2196F3';
-  ctx.fillRect(8, canvasHeight - 28, ctx.measureText(dofText).width + 12, 22);
+  ctx.fillRect(8, canvasHeight - 28, badgeWidth, 22);
   ctx.fillStyle = '#fff';
   ctx.fillText(dofText, 14, canvasHeight - 10);
 
@@ -259,7 +260,9 @@ export function drawHUD(
   if (cursorWorld) {
     const coordText = `(${cursorWorld.x.toFixed(1)}, ${cursorWorld.y.toFixed(1)})`;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(coordText, 90, canvasHeight - 10);
+    const x = 8 + badgeWidth + 12;
+    if (x + ctx.measureText(coordText).width <= canvasWidth - 8) ctx.fillText(coordText, x, canvasHeight - 10);
+    else ctx.fillText(coordText, 8, canvasHeight - 34, Math.max(1, canvasWidth - 16));
   }
 
 }

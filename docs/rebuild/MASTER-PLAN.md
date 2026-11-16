@@ -17,6 +17,20 @@ G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 
 ## Start Here Every Session
 
+### UI-16 Follow-Up
+
+The user requested reintegration of the earlier fork's upgraded hold-click UI and
+checkbox/slider appearance. This is a scoped G4/C03/C04/C08/C10/C12/C13 follow-up,
+not a replacement of the rebuilt solver/document/cloud layers. Historical reference:
+fork commit `545051374fd176a74d3ce18f8fe6dfe99595dcf5` and the preserved root styles.
+Candidate version: `0.16.0-rebuild.3`. Labeled radial body actions, explicit
+release-only add/delete, native input styling and non-hold access are implemented.
+Scoped code/browser contract accepted: 950 domain/27 tooling tests and 24 qualifying
+regression suite/engine results on unchanged final source, with a G9 harness-only
+retry explicitly recorded. Recovery's initial busy-list race was also repaired.
+Acceptance/evidence: `evidence/ui16/acceptance.md`.
+Physical-device and unrelated Azure/target qualifications remain explicitly open.
+
 1. Read this file and [progress tracker](progress-tracker.md).
 2. Read [visual and usability comparisons](visual-usability-comparison.md) for the
    surface being changed, plus [verification gates](validation-gates.md).

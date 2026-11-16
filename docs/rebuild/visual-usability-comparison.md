@@ -44,8 +44,35 @@ disclosed in acceptance. G5 will compare shape/image/mirror interactions separat
 
 ## Reference Rules
 
+### UI-16 Reintegration Comparison
+
+2026-11-16 follow-up, candidate `0.16.0-rebuild.3`; reference fork commit `5450513`
+(`WorldContextMenu.tsx`, fork `Layout.css`). Comparison is source/history plus fresh
+candidate screenshots, not a claimed pixel-identical historical browser capture.
+Acceptance and exact run paths: [UI-16 evidence](evidence/ui16/acceptance.md).
+
+| Rows | Before / Historical Upgrade | Reintegrated Contract And Intentional Difference |
+| --- | --- | --- |
+| C03/C04 | Upstream canvas arcs use small unlabeled body circles. Fork adds labeled angled pills, color dots, selected blue state, plus and trash | DOM radial pills restore those signals; shared command APIs retain rebuilt body/Base/undo semantics. Add/delete occur only on release, never hover; a held sweep is one undo |
+| C04/C12/C13 | Fork long press/global release paths can require precise gesture timing | Right-click, Shift+F10/ContextMenu and Selection options > Object actions use the same commands. Native named buttons support arrow/Home/End/Enter/Space, Escape and focus return; dismissal consumes the outside click |
+| C08/C13 | Rebuild retained browser-default blue ticks and thumbs; fork uses inset pale square/dot indicators and thin blue-gray tracks/pale round thumbs | Native checkbox/radio/range elements regain fork paint, visible keyboard focus, disabled/checked/indeterminate states and high-contrast native fallback. Numeric fields remain precise and unchanged |
+| C10/C13 | Historical range visual height is only 4px; radial controls can escape screen edges or crowd with many bodies | Track stays 4px but input hit height is 24px desktop/44px coarse; checkbox glyph 14px within 44px coarse labels. Radial rows 32/44px, exact rotated bounds clamp to canvas; many bodies/small canvas use a bounded scrolling list |
+| C10/C12 | Older global menu listeners mix pointer ownership and cancellation | Existing gesture owner/checkpoint remains authoritative: no new finger hold delay, pen ignores palm, Escape/resize/lost capture/project change cancels stale edits. Held-to-list release transitions to persistent tap controls |
+| C07 | Longer Design DOF badge can overlap fixed-x coordinate readout | Coordinate placement measures badge width and wraps above on narrow canvases; unit regression covers long coordinate labels |
+| C02/C11/C12 | Initial recovery flush can add a row and recenter the dialog during a native radio click | Recovery exposes busy state and withholds rows until the initial flush/list/read settles. Later explicit radio selection remains native; close/cancel keeps request ownership |
+
+Reviewed candidate desktop/portrait/Split View radial, control and many-body
+screenshots: labeled pills/color dots, selected blue fill, inset state indicators,
+pale thumbs and readable/clamped body list. Actual localhost tab visibly displays
+`.3` with the same controls. Screen-reader/physical iPad/Pencil qualification is
+not inferred from native semantics, browser automation or screenshots.
+
 Current qualification: G0-G7 accepted; G8 code/browser/DXF checkpoint verified;
-SolidWorks target remains open. Stop at 0.16.0-rebuild.1 before G9 as requested.
+G9/G10 implementation checkpoints verified; bounded live OneDrive QA also passes.
+UI-16 code/browser contract accepted with 24 qualifying suite/engine results;
+the G9 harness-only retry is recorded, not hidden as a continuous-run PASS.
+Physical iPad/SolidWorks and named external
+qualifications remain open. The earlier requested .1 stopping point was resumed.
 
 G8 checkpoint: C02/C10/C11/C12 now have native
 Save-first/Open/Clear, Recovery and CAD dialogs instead of immediate DXF export

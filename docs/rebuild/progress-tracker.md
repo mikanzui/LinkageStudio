@@ -1,18 +1,49 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Current task: actual localhost authentication and disposable OneDrive workflow
-PASS after repairing a live projected-metadata download failure. Post-repair
-cumulative yF897B PASS, 22/22; see evidence/g9/live-qualification.md.
+Current task: UI-16 hold-menu and native control-style reintegration in
+0.16.0-rebuild.3. Scoped code/browser contract PASS: 950 domain/27 tooling tests;
+24 qualifying regression suite/engine results on one unchanged artifact. G9 retry
+after a harness-only readiness repair is explicit, not a single-run PASS claim.
+Earlier localhost/disposable OneDrive workflow PASS after projected-metadata
+repair; cumulative yF897B PASS, 22/22; see evidence/g9/live-qualification.md.
 User's Azure skill applied through azure-integration-review.md; AZ-01 CSP and
 AZ-02 token-network error classification remain explicit hardening follow-ups.
 Device/target/licensing qualifications
 remain OPEN. No deployment.
-G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.2.
+G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.3.
 User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.
-Detailed remaining work: remaining-updates.md. G10 and final scrub follow G9.
+Detailed remaining work: remaining-updates.md; G9/G10 checkpoints and scrub are
+recorded, with explicit external qualifications and current UI-16 follow-up.
 Codex owns verification and gate decisions; routine user sign-off is not required.
 Execution mode: one lead with zero to two focused workers; first measured pilot at G0.
+
+## UI-16 Reintegration (Accepted Code/Browser Contract)
+
+2026-11-16 user requests earlier fork hold-click menu and checkbox/slider styling.
+Scope C02/C03/C04/C07/C08/C10/C11/C12/C13, G4/G5/G8 regression contract. Candidate branch only;
+root compatibility experiments remain preserved. Lead owns menu/shared input,
+integration and verification. Pasteur completed the disjoint ControlTheme.css
+implementation and is CLOSED. Linnaeus (`01a1e497-30c3-7293-9e92-202d7101e7c3`)
+completed bounded read-only command/history/cancellation review and is CLOSED.
+Lead reproduced/repaired wrong-context targeting and single-assignment revisit
+findings with domain/native browser regressions. Cumulative WebKit also exposed
+a recovery list insertion mid-click; lead fixed initial busy-list readiness and
+repeated the failing case six times successfully. Final source is pinned in
+evidence/ui16/acceptance.md. No shared writes/browser ownership; time/usage unknown.
+
+| ID | Deliverable / Evidence | Status |
+| --- | --- | --- |
+| UI16-01 | Compared fork 5450513/current root radial menu and control styles against b29ad7c; preserve native semantics, no old physics/store replacement | DONE |
+| UI16-02 | Labeled radial hold/context UI, explicit add/delete, bounded edges/body counts, cancellation/undo and non-hold keyboard/touch route | DONE for feature contract |
+| UI16-03 | Matched checkbox/radio/range appearance with focus/checked/disabled/forced-color and coarse target states | DONE for code/browser contract |
+| UI16-04 | Actual hold/release, tap/keyboard, touch/cancel/viewport, both real-model motion, saved controls and regression coverage; screenshots/evidence | DONE; 950 domain, 27 tooling, type/lint/build PASS; focused Chrome/WebKit/Firefox PASS; 24 qualifying suite/engine results, with G9 harness-only retry explicitly recorded; evidence/ui16/acceptance.md |
+
+Physical iPad remains a qualification limit, not a routine user unlock. Existing
+Azure hardening follow-ups remain separate; this task does not authorize deployment.
+Codex accepts the scoped UI-16 implementation. Both original/reopened mechanisms
+move in the final browser regressions; 48 actual CAD downloads pass the independent
+reader. User-facing localhost5187 is running the new version. No routine QA unlock.
 
 ## Status Rules
 

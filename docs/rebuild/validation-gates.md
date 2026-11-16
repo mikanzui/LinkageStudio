@@ -77,6 +77,28 @@ be deferred until after shipping that feature.
 
 ## Airer / WorkingScreen End-To-End Contract
 
+### UI-16 G4 Regression Contract
+
+Scoped follow-up in `0.16.0-rebuild.3`; see `evidence/ui16/acceptance.md` and the
+UI-16 comparison ledger. Required assertions before accepting reintegration:
+
+- Actual mouse hold/sweep/release changes membership once, with complete undo/redo.
+- Add/delete only mutate on release; cancellation and late release cannot restore
+  an abandoned edit. Pen/palm, Escape, resize and existing ownership tests remain.
+- Context and non-hold tap/keyboard routes invoke the same commands. Check focus
+  entry/return, Escape, arrows/Enter, outside-click dismissal and all four edges.
+- Many-body/long-name list stays bounded/reachable. Coarse hit surfaces are at
+  least 44px while native indicators retain the intended appearance.
+- Native Space/arrow control changes reach simulation settings and downloaded
+  documents; checked/focus/high-contrast states remain distinguishable.
+- Recovery's initial flush/list/read exposes busy state and withholds rows until
+  ready, so list insertion cannot move the native radio during a click. Corrupt
+  drafts stay downloadable; restore refusal and discard remain scoped/atomic.
+- Source-pinned Chrome/WebKit cumulative G1-G10, including both original and
+  reopened private mechanisms, pass after integration. Focused Firefox is separate
+  with any file-picker automation boundary explicitly qualified.
+- Record physical iPad/VoiceOver/Pencil as unverified where unavailable, not passed.
+
 1. Verify exact fixture hash; preserve source bytes. Open via local file UI in the
    upstream and candidate builds, using separate origins/profiles.
 2. Capture visible joint IDs/positions, memberships, slider definitions, collider

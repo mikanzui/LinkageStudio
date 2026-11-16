@@ -6,7 +6,7 @@ import { DEFAULT_GRID_SIZE } from '../utils/constants';
 import { clampZoom } from '../renderer/viewport';
 import { useMechanismStore } from './mechanism-store';
 import { resetHitTesting } from '../interaction/hit-test';
-import type { SelectMode, SelectionGesture } from '../types/editor';
+import type { SelectMode, SelectionGesture, RadialTarget } from '../types/editor';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 
 const GRID_DIVISOR: Record<GridLevel, number> = {
@@ -113,6 +113,8 @@ interface EditorStore {
 
   /** Long-press arc body selector state */
   arcSelector: {
+    target?: RadialTarget;
+    openMode?: 'hold' | 'context';
     /** Joint ID when assigning joint body membership */
     jointId: string | null;
     /** Collider ID when assigning collider barrier bodies */

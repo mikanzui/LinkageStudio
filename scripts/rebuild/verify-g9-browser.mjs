@@ -150,7 +150,7 @@ try {
     const t={page,dialog,cloud,dir,click:e=>profile.touch?e.tap():e.click(),read:()=>page.evaluate(()=>({graph:__LINKAGE_G0_READ__.mechanism(),editor:__LINKAGE_G0_READ__.editor(),simulation:__LINKAGE_G0_READ__.simulation(),project:__LINKAGE_G0_READ__.project()})),
       async poll(f){const start=Date.now();while(Date.now()-start<12000){if(await f())return;await page.waitForTimeout(60);}assert.fail('Condition did not become true');},
       async status(re){await t.poll(async()=>re.test(await dialog.locator('.cloud-status').innerText()));await t.poll(async()=>await dialog.getAttribute('aria-busy')==='false');},
-      async library(){await t.click(page.getByRole('button',{name:'Projects',exact:true}));await dialog.waitFor();if(!cloud.authFail)await t.status(cloud.offline?/could not reach/:/refreshed/);await t.checkModal();},
+      async library(){await t.click(page.getByRole('button',{name:'Projects',exact:true}));await dialog.waitFor();await t.status(cloud.authFail?/unavailable/:cloud.offline?/could not reach/:/refreshed/);await t.checkModal();},
       async close(){await t.click(dialog.getByRole('button',{name:'Close projects',exact:true}));await dialog.waitFor({state:'hidden'});},
       async select(name,cached){const label=dialog.locator('.cloud-list label').filter({has:page.getByText(name,{exact:true})}).filter({has:page.getByText(cached?/Offline draft|Cached copy|cached copy/:/^OneDrive$/)});assert.equal(await label.count(),1);await t.click(label);},
       async renameProject(name){await t.click(page.getByTitle('Rename project',{exact:true}));const field=page.getByRole('textbox',{name:'Project name',exact:true});await field.fill(name);await field.press('Enter');},

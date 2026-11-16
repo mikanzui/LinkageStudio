@@ -7,6 +7,14 @@ gate decisions; no routine user sign-off. No deployment is authorized.
 
 ## G9: Optional Cloud Projects
 
+Latest user follow-up: UI-16 restores the fork's upgraded hold menu and native
+control styling in `0.16.0-rebuild.3`, without replacing rebuilt subsystem logic.
+Scoped implementation accepted: 950 domain/27 tooling tests and 24 qualifying
+regression suite/engine results (G9 harness-only retry explicitly recorded).
+Track final evidence in
+`evidence/ui16/acceptance.md` and progress-tracker.md. Existing external/Azure
+qualifications below remain unchanged by this frontend-only task.
+
 | ID | Deliverable | Acceptance | Status |
 | --- | --- | --- | --- |
 | G9-01 | Explicit account/auth port, document ownership and Graph/cache contracts | Guest editor never waits for auth; account/project changes invalidate stale callbacks; no credential logging or background popup | DONE for code/browser; live registration OPEN |

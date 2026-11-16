@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.16.0-rebuild.3 - 2026-11-16
+
+- Reintegrated the fork's labeled radial hold menu, body-color indicators and
+  explicit add/delete actions without replacing rebuilt physics or persistence.
+- Added right-click, keyboard and tap-accessible object actions, bounded edge and
+  many-body layouts, one-gesture undo and cancellation/palm safeguards.
+- Restored inset native checkbox/radio indicators and pale range thumbs with
+  keyboard focus, high-contrast fallback and larger coarse-pointer hit surfaces.
+- Prevented coordinate text overlapping the Design DOF badge. Added command,
+  layout and actual browser input regressions to the cumulative suite.
+- Kept recovery rows unavailable until the initial flush/list refresh settles,
+  preventing a row insertion from moving a radio between pointer-down and up.
+- Physical iPad qualification remains open; this is not deployment approval.
+
 ## 0.16.0-rebuild.2 - 2026-11-16
 
 ### Projects And Offline Updates
