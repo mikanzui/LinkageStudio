@@ -19,6 +19,14 @@ G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 
 ### Version 17.0.0 And Projects Examples
 
+PUBLISHED / scoped PASS: source ef70ed6, hosted run43966910340/deployment7837974306,
+tag/releasev17.0.0 with11 verified assets. Actual live Chrome/WebKit and retained
+in-app Projects > Examples PASS; final frozen cumulative24/24 and980 domain tests
+PASS. Earlier hosted coarse-row failure was repaired before deployment; follow
+`evidence/v17/acceptance.md` for the retained failure, final identities and limits.
+Next work is the prioritized feature/patch/tutorial backlog, not automatic scope
+expansion or a claim of physical-device/engineering certification.
+
 Active user scope: release17.0.0, put examples inside Projects, publish prior and
 user-supplied models plus one new interesting mechanism, and consolidate future
 features/patches including a tutorial. Work remains in the isolated candidate;

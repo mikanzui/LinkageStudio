@@ -1,6 +1,6 @@
 # Rebuild Progress Tracker
 
-## Version 17.0.0 (Active)
+## Version 17.0.0 (Published)
 
 2026-11-16 user requests17.0.0, a published examples folder, supplied/prior models,
 one more interesting linkage, an actionable feature/patch backlog (including a
@@ -16,11 +16,11 @@ hosted CI, release17.0.0 and live Projects > Examples. Physical iPad remains ope
 
 | ID | Deliverable | Status / Evidence |
 | --- | --- | --- |
-| V17-01 | Seven-example catalog, supplied originals and new scissor lift | IMPLEMENTED; original hashes preserved;18 new domain tests,980 total PASS |
+| V17-01 | Seven-example catalog, supplied originals and new scissor lift | DONE; original hashes preserved;18 new domain tests,980 total PASS |
 | V17-02 | Projects Examples tab, search/download, dirty/cancel/stale guards and cloud independence | DONE for final scoped contract; Chrome9kFFOv/WebKit0rBaQX48 groups PASS; computed76px enforced after hosted cascade failure |
-| V17-03 | Offline source assets, public compatibility CI and17.0.0 packaging | DONE locally; first-open offline28-entry precache, exact original Git blobs and nine-entry ZIP verified; hosted CI pending |
+| V17-03 | Offline source assets, public compatibility CI and17.0.0 packaging | DONE; offline28-entry precache, exact original Git blobs and nine-entry ZIP verified; hosted980 tests/zero skips PASS |
 | V17-04 | Prioritized feature/patch/tutorial backlog and visual comparison | DONE; FEATURE-BACKLOG.md, release/example guides, comparison and gate updated |
-| V17-05 | Frozen full regression, commit/tag/release/Pages and live verification | Final through-g10-KtdB1G PASS24/24,21m15.356s; hosted retry ACTIVE; first run43961565653 blocked deploy; release DRAFT |
+| V17-05 | Frozen full regression, commit/tag/release/Pages and live verification | DONE / scoped PASS; KtdB1G24/24, hosted43966910340/deploy7837974306 PASS; actual live Chrome/WebKit PASS; v17.0.0 published at ef70ed6 with11 assets |
 
 Selective worker: Bacon `01a1e61e-bac6-7ac3-a1f7-ebc52bcbe261`, base22f82c6,
 DONE/CLOSED. Exclusive candidate files: scripts/examples/create-scissor-lift.ts,
@@ -35,9 +35,13 @@ review, DONE/CLOSED; no edits or browser ownership, no concrete findings. Static
 review is not runtime evidence. Duration/usage UNKNOWN. Only one worker at a time.
 WebKit preliminary QEDENe/NVzZru exposed harness auto-collapse timing and unsupported
 mobile mouse wheel; fixed waits and actual Zoom buttons, not app/solver edits.
+Final live x7sCBk/zzt00K PASS; separate retained in-app tab13 safely updated from
+cached .4 to17.0.0 and visibly opens Projects > Examples. Final details and all
+retained corrections/limits: evidence/v17/acceptance.md. Next product work follows
+FEATURE-BACKLOG.md, especially tutorial/help and explicitly open qualifications.
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Latest task: coauthor credits and first rebuilt Pages publication DONE / scoped PASS.
+Latest task:17.0.0 Projects examples and release DONE / scoped PASS above.
 Local checks, hosted CI/deployment and actual live Chrome/WebKit checks PASS.
 Mechanism Playground example DONE;962 domain tests and six native profiles PASS.
 UI16-05 historical hold-menu correction is DONE / scoped code-browser contract PASS.
@@ -53,7 +57,7 @@ AZ-02 token-network error classification remain explicit hardening follow-ups.
 Device/target/service qualifications remain OPEN. Hugo's publication permission
 is user-confirmed; this is not a new license grant. Earlier outcome is below.
 G9 implementation checkpoint commit:43d440d. Previous release0.16.0-rebuild.4;
-current isolated working version17.0.0, release gate ACTIVE above.
+current isolated/published version17.0.0, scoped release gate PASS above.
 User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.
 Detailed remaining work: remaining-updates.md; G9/G10 checkpoints and scrub are
 recorded, with explicit external qualifications and current UI-16 follow-up.

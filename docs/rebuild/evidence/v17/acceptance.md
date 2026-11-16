@@ -1,9 +1,36 @@
 # Version 17.0.0 Acceptance
 
-2026-11-16. Lead: Codex. Status: final local scoped contract PASS; hosted retry ACTIVE.
+2026-11-16. Lead: Codex. Status: scoped release PASS / PUBLISHED.
 Scope: Projects > Examples, seven public downloadable models including supplied
 originals and a new spring-assisted two-stage scissor lift, offline packaging,
 17.0.0 release and prioritized feature/patch/tutorial documentation.
+
+## Final Outcome
+
+- Published app source:ef70ed67e770cc40c7997be93c5a040e8ca825f4 on the isolated
+  codex/rebuild-cloud-pwa branch. Original master/main remain9954fca; no forced refs.
+- [Hosted run43966910340](https://github.com/mikanzui/LinkageStudio/actions/runs/43966910340)
+  PASS build/deploy:980 domain/zero skips,27 tooling/zero skips, type/lint/audit,
+  normal production build, both real production/offline browser suites and all
+  six native gallery profiles. The Linux coarse-row negative control is repaired,
+  not bypassed. Deployment7837974306 success2026-11-16T22:18:44Z.
+- [Live app](https://mikanzui.github.io/LinkageStudio/): Chrome x7sCBk / WebKit
+  zzt00K PASS five checks each, no observer or auth mock. Exact bytes for all seven
+  sources; Projects/native download; three moving playground systems; original
+  design Save retention;512x440 search/commands; all seven open after offline
+  reload and actual scissor platform pixels move. No console/page errors.
+- Actual retained in-app tab13 starts on the cached .4 app, then safely upgrades
+  through Update available > Restart with recovery to17.0.0. Recovery is closed,
+  not deleted. Projects > Examples visibly lists all seven; selected tab retained
+  as the user-facing deliverable. Existing user tabs/designs are not replaced.
+- [v17.0.0 release](https://github.com/mikanzui/LinkageStudio/releases/tag/v17.0.0)
+  published2026-11-16T22:22:23Z, not draft/prerelease. Tag targets ef70ed6. Eleven
+  assets: seven models, example ZIP, guide, catalog and SHA256SUMS. GitHub upload
+  digests match all model/source values and ZIP SHA256
+  1f352c21438f0f9c40bb2961c48fb179d454c0775d2d1618a2b6a4c92c6dc4fb.
+- Final local frozen24/24, six native gallery profiles and normal no-observer
+  checks below are accepted by the lead. Earlier failures and qualifications stay
+  explicit. No routine user QA/gate unlock was requested.
 
 User explicitly authorizes publishing the examples in this release. Earlier
 reports describing private originals retain their historical scope. Original
@@ -58,7 +85,7 @@ Only the isolated candidate branch is released; no forced master/main changes.
 - Lead accepts local V17 code/browser contract. Hosted build/deploy/live-site and
   tag/release are still ACTIVE, not inferred from the local test results.
 
-## Release Acceptance Still Required
+## Publication Sequence And Corrections
 
 First publication candidate19929697faf4da3770a8881dcc7ca51a8a076f28 was pushed,
 but hosted run43961565653 correctly stopped deployment at the new portrait row
@@ -99,9 +126,9 @@ type/lint/normal build PASS; package/toolchain is unchanged from the prior27
 tooling pass. Lead accepts the final local scoped code/browser contract.
 No hosted retry/tag/publication PASS is inferred from this result.
 
-Record exact final source identities, browser reports, cumulative result,
-normal artifact, clean hosted test/deploy, source commit/tag/release assets and
-actual live-site checks. Only then change status and tracker tasks to DONE.
+The final outcome above records exact identities, browser reports, cumulative
+result, normal artifact, clean hosted test/deploy, source commit/tag/release assets
+and actual live checks. Acceptance was completed only after those observations.
 No credentials, tenant/token details, user cloud files or ignored raw browser
 snapshots are release assets. The public models/catalog and user-facing guide are.
 

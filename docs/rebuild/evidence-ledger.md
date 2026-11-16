@@ -380,3 +380,16 @@ is now asserted before modal Escape. Final full cumulativeKtdB1G PASS24/24,
 mock7046718b4e69dbeec3fda39081de49baec5f418135b01996461223a6422f65f8.
 Earlier identities above are first-candidate evidence, not final-source acceptance.
 Hosted retry/live publication still pending; no success assumed from a push.
+
+Final publication PASS: ef70ed67e770cc40c7997be93c5a040e8ca825f4, hosted43966910340,
+deployment7837974306 success22:18:44 UTC. Hosted980 domain/27 tooling, zero skips,
+normal build/audit/both production browsers and all six gallery profiles PASS.
+Live HTTPS no-observer Chrome x7sCBk/WebKit zzt00K PASS five checks each: seven
+exact public models, Projects opening/download, real canvas movement, saved design
+retention, keyboard-height512x440 controls and offline all-model open/lift motion.
+Separate retained in-app tab13 safely updates cached .4 through recovery to17,
+then visibly opens Projects > Examples. No original user tab/draft was deleted.
+v17.0.0 published22:22:23 UTC at ef70ed6 with11 verified attachments; exact model
+and ZIP digests match. Scoped release accepted; physical iPad, broader live auth,
+engineering-load and AZ-01/AZ-02 qualifications remain open. Final evidence owns
+the retained first-candidate/harness failures; no claimed worker cost savings.

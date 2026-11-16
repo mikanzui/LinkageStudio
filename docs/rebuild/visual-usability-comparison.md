@@ -488,7 +488,9 @@ greater specificity: example rows computed44px minimum, despite a76px catalog
 rule. Windows font content masked the missing minimum; Linux did not. Scope the
 row rule with app-layout, leaving ControlTheme and all other controls unchanged.
 Final native Chrome9kFFOv/WebKit0rBaQX check computed76px as well as actual height
-and text insets in all six profiles; final cumulativeKtdB1G PASS24/24, redeploy pending.
+and text insets in all six profiles; final cumulativeKtdB1G PASS24/24. Hosted
+run43966910340/deploy7837974306 PASS and actual live x7sCBk/zzt00K PASS. In-app
+tab13 visibly upgrades safely from .4 to17.0.0 and retains the Examples tab.
 Normal no-observer production ChromeajmqUe/WebKitprm5ia also pass512x440 search,
 reachable commands and offline model opening/motion. These are loopback preview
 reports, not proof of hosted17 publication. Chrome clears a focused search query
