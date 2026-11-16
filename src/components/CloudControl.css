@@ -1,0 +1,13 @@
+.cloud-dialog { width: 650px; color-scheme: dark; }
+.cloud-account-row, .cloud-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cloud-account-row .dialog-field { flex: 1 1 220px; margin: 0; }
+.cloud-account-row select { flex: 1; max-width: 100%; }
+.cloud-status { min-height: 36px; padding: 8px 0; font-size: 12px; overflow-wrap: anywhere; }
+.cloud-status[role=alert] { color: #ffa89e; }
+.cloud-list { max-height: 280px; overflow-y: auto; margin-bottom: 12px; }
+.cloud-list small { display: block; color: #aaa; margin-top: 4px; }
+.cloud-dialog input:not([type=radio]):not([type=checkbox]) { background: #333; color: inherit; border: 1px solid #777; border-radius: 3px; padding: 6px; font: inherit; flex: 1; }
+.cloud-autosave { min-height: 44px; margin-top: 12px; }
+.cloud-autosave input { width: 20px; height: 20px; }
+.cloud-dialog h3 { font-size: 14px; margin: 0 0 12px; }
+@media (max-width: 560px) { .cloud-account-row .dialog-field { flex-basis: 100%; } .cloud-list { max-height: 180px; } }

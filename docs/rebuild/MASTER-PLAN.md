@@ -1,8 +1,9 @@
 # Linkage Studio Rebuild Master Plan
 
 Updated: 2026-11-16. Owner: Codex; product scope follows user direction.
-Current stage: G0-G7 accepted; G8 code/browser/DXF checkpoint verified. Stopping
-at version 0.16.0-rebuild.1 per user instruction; G9 not started. See
+Current stage: G0-G7 accepted; G8 code/browser/DXF checkpoint verified. User resumed
+remaining updates after 0.16.0-rebuild.1; G9 code/browser checkpoint verified,
+Microsoft target OPEN; G10 ACTIVE. See remaining-updates.md and
 [G0 acceptance](evidence/g0/acceptance.md), [G1 acceptance](evidence/g1/acceptance.md)
 [G2 acceptance](evidence/g2/acceptance.md), [G3 acceptance](evidence/g3/acceptance.md)
 and [G4 acceptance](evidence/g4/acceptance.md), [G5 acceptance](evidence/g5/acceptance.md).
@@ -273,6 +274,7 @@ adding these to the rebuild.
 | D20 | Use bounded SHAKE/RATTLE stepping only for undamped anchored positive-distance graphs without contact, springs or active grab; retain established PBD elsewhere | G7 2026-11-16; measured brute-force refinement rejected for frame-time/timestep regression; unchanged 2% pendulum bounds and both real undamped fixture timesteps now pass; this does not certify conservative energy for coupled/contact graphs |
 | D21 | Separate verified implementation from unavailable external target qualification: unresolved functional failures still block progression; explicitly tracked CAD/SolidWorks or real-account qualification may remain OPEN while independent implementation continues | 2026-11-16; follows autonomous progression D14/D15. Never label an unrun target check PASS or mark overall delivery complete. G8 code/browser acceptance still requires the entire cumulative suite; target-app rows remain unverified until actually executed. Software-launch permission is separate from routine QA/sign-off. |
 | D22 | Stop at the files/recovery/export checkpoint and create a versioned GitHub commit; do not start G9 | User direction 2026-11-16 supersedes continuous progression for this session. Use 0.16.0-rebuild.1 on a separate codex branch, retain qualification limits and the untouched original workspace; no master replacement or deployment. |
+| D23 | Resume G9/G10 and final scrub after the published checkpoint, with Codex-owned progression | User direction 2026-11-16 supersedes D22's stop. remaining-updates.md maps deliverables; codex/rebuild-cloud-pwa continues from 1b6f723 without changing its tag or original master. External qualifications remain explicit under D15/D21. |
 
 When changing a decision, add date, evidence and affected tasks/comparison rows.
 Do not replace this record with assumptions buried in code or chat.

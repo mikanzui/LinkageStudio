@@ -308,3 +308,21 @@ G7 engine evidence is `chromium-browser-HBee42` and `webkit-browser-VBcqHR`, wit
 minimum-width fields, static traces/forces, empty-COM arrows and blank name commits
 included. See [G7 acceptance](evidence/g7/acceptance.md). No task-time improvement, physical
 iPad, Pencil, VoiceOver or calibrated SI accuracy is claimed.
+
+## G9 Library Comparison (Active)
+
+2026-11-16; F19/F20, C01/C02/C10/C11/C12. Upstream guest-first editor remains
+the starting screen. Unlike the archived fork's mandatory project-library entry,
+the candidate opens a native Projects dialog only on request. Local Save/Open
+remain independent; cloud sign-in failure does not prevent local editing.
+Cloud/account choice uses a native select, project rows use labeled radios, and
+autosave is an explicit opt-in after cloud binding. Remote and cached drafts are
+distinct rows. Immutable cloud identity survives rename; delete preserves the
+local graph and cached copy. Conflict choices never force-overwrite the remote
+revision: preserve/open a draft or save a separately named new copy.
+
+The mounted-app suite covers desktop, portrait tablet and 512px Split View, modal
+focus/escape, 44px coarse controls, cache reload and the original handle motion
+after cloud import. Current status ACTIVE; final artifacts/screenshots and results
+will be linked after acceptance. No task-time improvement, live Microsoft service
+or physical iPad qualification is claimed from dependency-boundary mocks.

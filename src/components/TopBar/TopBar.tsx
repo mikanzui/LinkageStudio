@@ -10,6 +10,7 @@ import { saveProjectLocally } from '../../document/local-save';
 import { RecoveryControl } from '../RecoveryControl';
 import type { RecoveryActions } from '../RecoveryControl';
 import { CadExportControl } from '../CadExportControl';
+import { CloudControl } from '../CloudControl';
 import { cancelInteractions } from '../../interaction/session';
 import { containDialogTab } from '../../interaction/dialog-focus';
 import './TopBar.css';
@@ -190,6 +191,7 @@ export function TopBar() {
           <span className="top-bar-label">Open</span>
         </button>
         <RecoveryControl ref={recovery}/>
+        <CloudControl flush={async () => { await recovery.current?.flush(); }} saveLocal={handleSave}/>
       </div>
 
       <div className="top-bar-separator" />

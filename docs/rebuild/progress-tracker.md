@@ -1,8 +1,9 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Current stop point: 0.16.0-rebuild.1 after G8, before G9, as requested. The source
-checkpoint is identified by its matching Git tag on codex/rebuild-v0.16.0.
+Current task: G10 production/PWA/offline/readiness on codex/rebuild-cloud-pwa.
+User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.
+Detailed remaining work: remaining-updates.md. G10 and final scrub follow G9.
 Codex owns verification and gate decisions; routine user sign-off is not required.
 Execution mode: one lead with zero to two focused workers; first measured pilot at G0.
 
@@ -54,8 +55,8 @@ requires its own gate report plus all previously accepted tests.
 | G6 | Springs, dampers, torsion, anchors and editors | G5 | PASS | 7a6dd39; 434 tests/build/lint, 14 cumulative engine/suite passes; evidence/g6/acceptance.md |
 | G7 | Tracers and qualified force/sensor analysis | G6 | PASS | 5b5431f; 519 tests/type/build/lint and sixteen cumulative runs; evidence/g7/acceptance.md; explicit model and physical-device limits |
 | G8 | Complete files/recovery and independently read CAD exports | G7 | VERIFIED CHECKPOINT / TARGET OPEN | 0.16.0-rebuild.1; 663 tests, 18 cumulative runs, independent CAD reader and actual LibreCAD mm GUI check; SolidWorks execution unverified; evidence/g8/acceptance.md |
-| G9 | Optional projects/auth/cloud, autosave and conflicts | G8 | TODO | F19-F20; guest independence, offline/reconnect and account tests |
-| G10 | Production/PWA/offline/update; soak; release decision | G9 | TODO | F21; full device/browser suite, provenance and rollback |
+| G9 | Optional projects/auth/cloud, autosave and conflicts | G8 implementation checkpoint | VERIFIED CHECKPOINT / TARGET OPEN | 898 domain tests/0 skips, type/lint/build and 20 cumulative suite/engine passes; 18 cloud scenarios per engine; evidence/g9/acceptance.md; live Microsoft qualification OPEN |
+| G10 | Production/PWA/offline/update; soak; release decision | G9 implementation checkpoint | ACTIVE | F21; integrate prepared toolchain/restart/portable packages, verify real worker transitions and final scrub; external qualifications remain open |
 
 The requested final whole-app functionality scrub remains planned after
 feature integration: actual controlled UI workflows plus backend regression tests,
@@ -67,6 +68,23 @@ editing. Each must name its input, expected behavior, comparison rows, test and
 evidence destination. Do not open the next stage to avoid an unresolved failure.
 
 ## Delegation Queue And Pilot
+
+G9 active ownership (2026-11-16): lead owns shared types, auth, document coordinator,
+UI, integration and acceptance. Noether (`01a1e367-5142-7581-862b-9c3890f3f9fe`)
+owns only `.rebuild.local/packages/g9-graph`; Chandrasekhar
+(`01a1e367-520c-76e1-9b98-b227d330f24e`) owns only
+`.rebuild.local/packages/g9-cache`. Both use the frozen cloud contract. Actual
+model cost/usage unavailable; no savings estimate claimed.
+
+Both G9 workers completed and were CLOSED after handoff. Lead integrated cache
+(49 tests) and transport (151 tests), repaired candidate lint issues, added lazy
+auth (8 tests) and coordinator (23 tests). Combined suite: 894 tests, zero skips,
+TypeScript/lint PASS. Mounted G9 library suite ACTIVE, not accepted: initial
+autosave check observed server receipt before acknowledgement; assertion now waits
+for current document baseline. Added pre-upload action lock after recovery flush.
+Beforeunload reload harness now explicitly accepts its planned navigation prompt.
+Noether resumed for disjoint G10-01 dependency experiment in
+`.rebuild.local/packages/g10-toolchain`; candidate read-only. Lead remains G9.
 
 ## G8 Work Packages
 

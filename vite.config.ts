@@ -6,6 +6,7 @@ import pkg from './package.json' with { type: 'json' }
 // https://vite.dev/config/
 export default defineConfig({
   base: '/linkage-studio/',
+  build: { rollupOptions: { input: { main: 'index.html', redirect: 'redirect.html' } } },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
