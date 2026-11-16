@@ -366,3 +366,17 @@ mocked source2695116642b26c1df97b84d327c0caafe4d318041cd60ffff06851adb5f59328.
 See evidence/v17/acceptance.md for retained preliminary harness/source-freeze
 failures, bounded worker/reviewer handoffs and physical/service/model limits.
 No17 hosted success is inferred before the actual deployment/live checks.
+
+Hosted first run43961565653 failed the portrait row minimum and skipped deploy;
+release stayed DRAFT. Shared coarse radio specificity overrode catalog minimum76
+to44px, masked by Windows content height. Narrow app-layout qualifier fixes only
+catalog rows; new native assertion checks computed76px as well as text/height.
+Final Chrome9kFFOv/WebKit0rBaQX PASS48 groups; no-observer normal preview
+ChromeajmqUe/WebKitprm5ia PASS including512x440 search/commands and offline motion.
+Chromeu8aX9Q search-Escape helper timeout retained; native query-clear behavior
+is now asserted before modal Escape. Final full cumulativeKtdB1G PASS24/24,
+21m15.356s (21:43:31.568-22:04:46.924 UTC), final980 domain/type/lint/build PASS,
+48 new G8 CAD downloads independently parsed. Final real653412daff5926de89c8959c8e7571365f4a032f49dd673d8c35f97c1046e919;
+mock7046718b4e69dbeec3fda39081de49baec5f418135b01996461223a6422f65f8.
+Earlier identities above are first-candidate evidence, not final-source acceptance.
+Hosted retry/live publication still pending; no success assumed from a push.

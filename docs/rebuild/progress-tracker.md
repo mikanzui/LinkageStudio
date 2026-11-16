@@ -17,10 +17,10 @@ hosted CI, release17.0.0 and live Projects > Examples. Physical iPad remains ope
 | ID | Deliverable | Status / Evidence |
 | --- | --- | --- |
 | V17-01 | Seven-example catalog, supplied originals and new scissor lift | IMPLEMENTED; original hashes preserved;18 new domain tests,980 total PASS |
-| V17-02 | Projects Examples tab, search/download, dirty/cancel/stale guards and cloud independence | DONE for scoped browser contract; Chrome bHEvxY / WebKit hjTNxp,48 result groups across six profiles PASS |
+| V17-02 | Projects Examples tab, search/download, dirty/cancel/stale guards and cloud independence | DONE for final scoped contract; Chrome9kFFOv/WebKit0rBaQX48 groups PASS; computed76px enforced after hosted cascade failure |
 | V17-03 | Offline source assets, public compatibility CI and17.0.0 packaging | DONE locally; first-open offline28-entry precache, exact original Git blobs and nine-entry ZIP verified; hosted CI pending |
 | V17-04 | Prioritized feature/patch/tutorial backlog and visual comparison | DONE; FEATURE-BACKLOG.md, release/example guides, comparison and gate updated |
-| V17-05 | Frozen full regression, commit/tag/release/Pages and live verification | Local24/24 cumulative PASS; publication ACTIVE, no hosted17 success claimed yet |
+| V17-05 | Frozen full regression, commit/tag/release/Pages and live verification | Final through-g10-KtdB1G PASS24/24,21m15.356s; hosted retry ACTIVE; first run43961565653 blocked deploy; release DRAFT |
 
 Selective worker: Bacon `01a1e61e-bac6-7ac3-a1f7-ebc52bcbe261`, base22f82c6,
 DONE/CLOSED. Exclusive candidate files: scripts/examples/create-scissor-lift.ts,

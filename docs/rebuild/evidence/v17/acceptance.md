@@ -1,6 +1,6 @@
 # Version 17.0.0 Acceptance
 
-2026-11-16. Lead: Codex. Status: local scoped contract PASS; publication ACTIVE.
+2026-11-16. Lead: Codex. Status: final local scoped contract PASS; hosted retry ACTIVE.
 Scope: Projects > Examples, seven public downloadable models including supplied
 originals and a new spring-assisted two-stage scissor lift, offline packaging,
 17.0.0 release and prioritized feature/patch/tutorial documentation.
@@ -59,6 +59,45 @@ Only the isolated candidate branch is released; no forced master/main changes.
   tag/release are still ACTIVE, not inferred from the local test results.
 
 ## Release Acceptance Still Required
+
+First publication candidate19929697faf4da3770a8881dcc7ca51a8a076f28 was pushed,
+but hosted run43961565653 correctly stopped deployment at the new portrait row
+minimum assertion. All seven desktop models had moved/saved/reopened first.
+The existing ControlTheme coarse radio selector has specificity(0,2,2), beating
+the new example-row selector(0,2,1) and changing computed min-height from76 to44px.
+Windows font content happened to exceed76px; Linux exposed the missing minimum.
+This is a catalog CSS cascade defect, not a model motion failure. Local bundled
+Chromium diagnostics explicitly measure44px computed minimum before the patch.
+
+Fix: add the app-layout qualifier only to the example-row rule(0,3,1). Keep the
+assertion strict and additionally require computed min-height76px; log exact row
+height/text insets. No solver/document/auth/global control rule changed. All
+three local final-source browser runs (full24 cumulative plus six gallery
+profiles) are restarted; earlier source identities above remain historical, not
+final-source acceptance. Releasev17.0.0 stays DRAFT targeting1992969 until final
+qualification, successful deployment and live verification. Its11 uploaded asset
+digests match source, including the seven models and verified ZIP.
+
+Post-fix gallery Chrome9kFFOv/WebKit0rBaQX PASS48 groups/six profiles, now requiring
+computed76px and fitting row text. Final real-source fingerprint is
+653412daff5926de89c8959c8e7571365f4a032f49dd673d8c35f97c1046e919 (143 files).
+No-observer normal production preview http://127.0.0.1:5192/LinkageStudio/:
+ChromeajmqUe/WebKitprm5ia PASS five checks each, including native source download,
+512x440 keyboard-height search/commands and offline first open/motion. These
+preview reports are not hosted-site evidence. An earlier Chromeu8aX9Q helper
+timed out because native search Escape cleared its query before dialog cancel;
+the helper now explicitly asserts query clearing, then tests modal Escape from
+button focus. The premature commentary claim was corrected; final results above
+are observed, not inferred. Full final-source cumulative remains ACTIVE.
+
+Final cumulative through-g10-KtdB1G PASS24/24 on unchanged source. Mocked boundary
+7046718b4e69dbeec3fda39081de49baec5f418135b01996461223a6422f65f8 (144 files),
+real boundary653412daff5926de89c8959c8e7571365f4a032f49dd673d8c35f97c1046e919.
+Measured21:43:31.568-22:04:46.924 UTC =21m15.356s. Both final G8 exports
+(WebKito01JaR/ChromeMOJ1N2) independently pass48 CAD downloads. Final980 domain,
+type/lint/normal build PASS; package/toolchain is unchanged from the prior27
+tooling pass. Lead accepts the final local scoped code/browser contract.
+No hosted retry/tag/publication PASS is inferred from this result.
 
 Record exact final source identities, browser reports, cumulative result,
 normal artifact, clean hosted test/deploy, source commit/tag/release assets and

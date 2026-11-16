@@ -56,9 +56,12 @@ try {
       await page.getByRole('searchbox', { name: 'Search examples' }).fill('torsion'); assert.equal(await page.locator('input[name="example-project"]').count(), 2);
       await page.getByRole('searchbox', { name: 'Search examples' }).fill('no-match-xyz'); await page.getByText('No matching examples', { exact: true }).waitFor(); assert(await button('Open example').isDisabled());
       await page.getByRole('searchbox', { name: 'Search examples' }).fill('');
-      const rowsFit = await page.locator('.example-list label').evaluateAll(rows => rows.every(row => {
-        const r = row.getBoundingClientRect(), text = row.querySelector('span').getBoundingClientRect(); return r.height >= 76 && text.top >= r.top && text.bottom <= r.bottom;
-      })); assert(rowsFit, 'Rows must retain their target height without overlapping their text');
+      const rowBounds = await page.locator('.example-list label').evaluateAll(rows => rows.map(row => {
+        const r = row.getBoundingClientRect(), text = row.querySelector('span').getBoundingClientRect();
+        return { height: r.height, textTopInset: text.top - r.top, textBottomInset: r.bottom - text.bottom, minHeight: getComputedStyle(row).minHeight };
+      }));
+      console.log(JSON.stringify({ profile: profile.id, rowBounds }));
+      assert(rowBounds.length === 7 && rowBounds.every(r => r.minHeight === '76px' && r.height >= 76 && r.textTopInset >= 0 && r.textBottomInset >= 0), 'Rows must retain their target height without overlapping their text: ' + JSON.stringify(rowBounds));
       await page.screenshot({ path: join(output, profile.id + '-catalog.png') });
       if (profile.touch) for (const locator of [page.getByRole('tab', { name: 'Examples', exact: true }), button('Open example'), page.getByRole('link', { name: 'Download example' })]) { const r = await locator.boundingBox(); assert(r.height >= 44 && r.width >= 44, JSON.stringify(r)); }
       await activate(button('Close projects'));

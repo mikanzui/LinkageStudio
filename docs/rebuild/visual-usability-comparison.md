@@ -482,3 +482,15 @@ normal model-unit and incomplete-reaction qualifications still apply.
 Evidence and final acceptance: `evidence/v17/acceptance.md`. Physical iPad/Pencil/
 VoiceOver remains unverified; WebKit and trusted Chromium touch do not replace it.
 Future UI/tutorial/qualification work is consolidated in `FEATURE-BACKLOG.md`.
+
+Hosted negative control43961565653 exposed the shared coarse radio selector's
+greater specificity: example rows computed44px minimum, despite a76px catalog
+rule. Windows font content masked the missing minimum; Linux did not. Scope the
+row rule with app-layout, leaving ControlTheme and all other controls unchanged.
+Final native Chrome9kFFOv/WebKit0rBaQX check computed76px as well as actual height
+and text insets in all six profiles; final cumulativeKtdB1G PASS24/24, redeploy pending.
+Normal no-observer production ChromeajmqUe/WebKitprm5ia also pass512x440 search,
+reachable commands and offline model opening/motion. These are loopback preview
+reports, not proof of hosted17 publication. Chrome clears a focused search query
+on the first Escape; the harness asserts that native behavior before checking
+modal Escape from a button. The earlier u8aX9Q helper timeout is not an app pass.

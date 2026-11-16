@@ -9,7 +9,10 @@ const paths = resolveBrowserPaths(), engine = process.argv[2] ?? 'chromium';
 const pkg = JSON.parse(await readFile(join(paths.candidate, 'package.json'), 'utf8'));
 const catalog = JSON.parse(await readFile(join(paths.candidate, 'examples/catalog.json'), 'utf8'));
 assert(['chromium', 'webkit'].includes(engine));
-const url = 'https://mikanzui.github.io/LinkageStudio/';
+const url = process.argv[3] ?? 'https://mikanzui.github.io/LinkageStudio/';
+const target = new URL(url);
+assert(target.href === 'https://mikanzui.github.io/LinkageStudio/' ||
+  (target.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(target.hostname) && target.pathname === '/LinkageStudio/'), 'Only the release site or an isolated loopback preview is supported');
 const parent = join(paths.local, 'evidence/pages'); await mkdir(parent, { recursive: true });
 const output = await mkdtemp(join(parent, engine + '-live-'));
 const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch({ channel: 'chrome' });
@@ -56,7 +59,7 @@ try {
   assert.equal(await page.getByRole('link', { name: 'Hugo Wilson', exact: true }).getAttribute('href'), 'https://github.com/Huggabiz/linkage-studio');
   assert(!/Claude Opus|VibeCoded by/.test(await page.locator('body').innerText()));
   await page.screenshot({ path: join(output, 'live-credits.png') });
-  checks.push('Live HTTPS cold/warm worker, actual version, credit text/links, no old tag or test observer');
+  checks.push('Cold/warm worker, actual version, credit text/links, no old tag or test observer');
   if (engine === 'webkit') await activate(button('Collapse toolbar'));
   const bridge = await context.request.get(url + 'redirect.html'); assert.equal(bridge.status(), 200);
   assert(!/src\/main|assets\/main-/.test(await bridge.text()));
@@ -90,12 +93,30 @@ try {
   const model = await sourceDownload, modelPath = join(output, 'downloaded-' + catalog[0].filename); await model.saveAs(modelPath);
   assert.deepEqual(await readFile(modelPath), await readFile(join(paths.candidate, 'examples', catalog[0].filename)));
   await page.screenshot({ path: join(output, 'live-projects-examples.png') }); await activate(button('Close projects'));
+  const originalViewport = page.viewportSize(); await page.setViewportSize({ width: 512, height: 440 });
+  await gallery(catalog[0]); await page.getByRole('searchbox', { name: 'Search examples' }).fill('scissor');
+  await page.waitForFunction(() => { const r = document.querySelector('dialog[open]')?.getBoundingClientRect(); return r && r.top >= 0 && r.bottom <= innerHeight; });
+  await button('Open example').scrollIntoViewIfNeeded();
+  for (const control of [button('Open example'), page.getByRole('link', { name: 'Download example' })]) {
+    const r = await control.boundingBox(); assert(r.y >= 0 && r.y + r.height <= 440 && r.height >= (engine === 'webkit' ? 44 : 34), 'Reachable short-viewport example command');
+  }
+  const rows = await page.locator('.example-list label').evaluateAll(rows => rows.map(row => ({ minimum: getComputedStyle(row).minHeight, height: row.getBoundingClientRect().height })));
+  assert.equal(rows.length, 1); assert(rows.every(row => row.minimum === '76px' && row.height >= 76));
+  await page.screenshot({ path: join(output, 'live-short-keyboard-viewport.png') }); await page.keyboard.press('Escape');
+  if (await page.getByRole('dialog', { name: 'Projects', exact: true }).isVisible()) {
+    assert.equal(await page.getByRole('searchbox', { name: 'Search examples' }).inputValue(), '', 'Native search Escape clears its query before modal cancellation');
+    await button('Close projects').focus(); await page.keyboard.press('Escape');
+  }
+  await page.getByRole('dialog', { name: 'Projects', exact: true }).waitFor({ state: 'hidden' }); await page.setViewportSize(originalViewport);
+  checks.push('Examples search and Open/download remain reachable in a 512x440 keyboard-height viewport; row minimum76px');
   await context.setOffline(true); await page.reload(); await page.locator('canvas').waitFor();
   for (const item of catalog) { await openExample(item); assert.equal(await button('Retry').count(), 0); }
   await openExample(catalog[0]); const liftPalette = { platform: [24, 142, 154] };
-  const liftBefore = await pixels(liftPalette); await mode('Simulate'); await page.waitForTimeout(1200); await activate(button('Pause')); const liftAfter = await pixels(liftPalette);
-  assert(liftBefore.platform.count > 40 && liftAfter.platform.count > 40);
-  assert(Math.hypot(liftAfter.platform.x-liftBefore.platform.x,liftAfter.platform.y-liftBefore.platform.y) > 2, 'Actual offline live scissor platform movement');
+  const liftBefore = await pixels(liftPalette), liftSamples = []; await mode('Simulate');
+  for (let i = 0; i < 5; i++) { await page.waitForTimeout(250); liftSamples.push(await pixels(liftPalette)); }
+  await activate(button('Pause'));
+  assert(liftBefore.platform.count > 40 && liftSamples.every(s => s.platform.count > 40));
+  assert(Math.max(...liftSamples.map(s => Math.hypot(s.platform.x-liftBefore.platform.x,s.platform.y-liftBefore.platform.y))) > 2, 'Actual offline live scissor platform movement');
   await page.screenshot({ path: join(output, 'live-offline-scissor-lift.png') }); await mode('Create'); await context.setOffline(false);
   checks.push('Native source download exact; all seven Projects examples open offline after reload; real offline scissor-lift pixels move');
   assert.deepEqual(errors, []); passed = true;
