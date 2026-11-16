@@ -418,3 +418,23 @@ existing explicit headless native-picker boundary. Final frozen cumulative
 through-g10-L2wRKj PASS24/24, with960 domain/27 tooling and fresh-install PASS.
 Lead accepts the documented scoped comparison, not intermediate runs or physical
 iPad certification. See the linked acceptance for precise adaptation limits.
+
+## Example Playground
+
+2026-11-16, C02/C05/C06/C08/C10/C12; F08-F12/F15-F17. Data-only example in the
+unchanged .4 application, not a new frontend/physics rewrite. Three separated
+systems replace the empty initial canvas for this delivered file: green/gold
+spring-driven crank-slider, cyan spring/damper carriage with a vertical stop,
+pink/purple torsion gripper. Colored persistent outlines, four body-local paths
+and two existing sensor charts expose the rebuilt mechanics through real data.
+Ground links stay hidden to avoid cross-scene bracing clutter. Preload starts
+motion immediately on Simulate; Create restores the design and Restart reloads it.
+
+Native Chrome/WebKit desktop, portrait and512px Split View workflows pass. Reviewed
+actual design/running screenshots show each system and moving traces; all three
+have measured motion rather than decorative shapes. Split View is a wide-world
+overview and needs zoom for small component details, not a claim of44px physical
+joint targets. Final native sensor selection/history-canvas ink checks PASS in
+all six profiles; ChromeeneUyt/WebKitcbN9dM. Model values
+remain explicitly non-SI, and physical iPad remains unverified. See
+[example acceptance](evidence/examples/acceptance.md) and `examples/README.md`.

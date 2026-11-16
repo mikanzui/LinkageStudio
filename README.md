@@ -10,6 +10,9 @@ OneDrive projects, offline drafts and recovery-verified PWA restarts. Live Micro
 registration/service and physical-device qualification remain explicitly open.
 See [changes](CHANGELOG.md) and [rebuild tracker](docs/rebuild/progress-tracker.md).
 
+Try the [Mechanism Playground](examples/README.md): a spring-driven crank-slider,
+damped carriage/end stop and torsion gripper, with tracers and load sensors.
+
 ## Run Locally
 
 Use Node 24.13.1 or later in the Node 24 line.

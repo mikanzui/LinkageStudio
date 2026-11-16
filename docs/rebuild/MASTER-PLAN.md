@@ -37,6 +37,15 @@ final frozen cumulative 24/24,960 domain/27 tooling and fresh public install PAS
 Lead accepts the scoped UI16-05 contract; follow `evidence/ui16-motion/acceptance.md`.
 Physical-device and unrelated Azure/target qualifications remain explicitly open.
 
+### Example Playground
+
+The user requested a demonstrator after UI16-05. Data/test/docs only: reproducible
+`examples/mechanism-playground.slinker`, with three spring/slider/torsion systems,
+outlines, four tracers and two model-load sensors. Existing .4 application source
+remains unchanged. Native six-profile import/motion/drag/save-reopen and actual
+sensor-chart ink PASS;962 domain tests/type/lint PASS. Standalone file delivered
+and opened; scoped example accepted. Track `evidence/examples/acceptance.md`.
+
 1. Read this file and [progress tracker](progress-tracker.md).
 2. Read [visual and usability comparisons](visual-usability-comparison.md) for the
    surface being changed, plus [verification gates](validation-gates.md).

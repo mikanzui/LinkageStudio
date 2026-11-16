@@ -1,8 +1,9 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Current task: UI16-05 historical hold-menu motion/appearance correction in
-0.16.0-rebuild.4. UI16-05 DONE / scoped code-browser contract PASS.
+Latest task: Mechanism Playground example DONE;962 domain tests and six native
+Chrome/WebKit example profiles PASS. Application remains0.16.0-rebuild.4 unchanged.
+UI16-05 historical hold-menu correction is DONE / scoped code-browser contract PASS.
 Previous .3 functional evidence is retained, but its historical appearance claim
 is rejected. Final-source native old/new comparisons now pass in Chromium/WebKit;
 both raw original files retain an 11/12-body fan and stationary hold/release leaves
@@ -20,6 +21,23 @@ Detailed remaining work: remaining-updates.md; G9/G10 checkpoints and scrub are
 recorded, with explicit external qualifications and current UI-16 follow-up.
 Codex owns verification and gate decisions; routine user sign-off is not required.
 Execution mode: one lead with zero to two focused workers; first measured pilot at G0.
+
+## Example Playground
+
+2026-11-16 user requests an example showcasing the rebuilt mechanisms. Lead-only,
+data/test/docs scope in the isolated candidate; no application or solver changes.
+Create a spring-driven crank-slider, damped carriage/end stop and torsion gripper
+with body-local outlines, tracers and load sensors. Verify codec/physics invariants
+and actual native import, automatic motion, drag, save/reopen and tablet/WebKit
+layout. Deliver a standalone .slinker and open a separate user-facing tab; preserve
+existing work. Physical iPad remains unverified; no publication authorized.
+
+DONE / scoped PASS: reproducible standalone .slinker delivered to Downloads and
+opened in a separate live tab. Ten-second constrained physics, full962 domain
+tests, type/lint and all six final native import/motion/drag/traces/sensors/visible
+chart/save-reopen profiles PASS. Final ChromeeneUyt/WebKitcbN9dM; evidence/examples/acceptance.md.
+App source still hashesdada8016; no solver/backend/UI implementation changed.
+Split View is a zoomable overview, not all-detail physical touch qualification.
 
 ## UI-16 Reintegration (Scoped Motion Contract Accepted)
 

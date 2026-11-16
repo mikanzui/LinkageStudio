@@ -310,3 +310,23 @@ locked install/peers/type/lint/tooling/build/zero-advisory production audit;
 945 unit PASS plus15 explicit private skips (workspace960 PASS, zero skips).
 Raw-file red/green replay FvERiD versus pk3Zxy/vSkEDg explicitly rejects the
 pre-guard stationary Body10 assignment and accepts unchanged final mechanisms.
+
+## Mechanism Playground Example (2026-11-16)
+
+Data/test/docs only on the unchanged0.16.0-rebuild.4 source hashdada8016. Delivered
+three systems in one reproducible .slinker: spring-driven crank-slider, damped
+carriage/end stop, torsion gripper; colored persistent outlines, four traces and
+two model-load sensors. File SHA25605137c40f07dcdd5adec1550b5dfbda970c361f059ffd5fd0cb6ab21e26eb454.
+Downloads delivery matches the public candidate example exactly; separate in-app
+tab visibly opened, Fit and Simulate. Original workspace/tabs preserved.
+
+962 domain tests/no skips and type/lint PASS. Ten-second invariant run measures
+~119 output/~180 carriage/~86 each-jaw travel, real stop contact and fixed-anchor
+preservation. Final native ChromeeneUyt/WebKitcbN9dM pass desktop/portrait/Split
+View import, automatic motion, drag, all trace/load series, actual chart ink,
+exact Create restore, real Save download/reopen/replay. Earlier missing-prompt-
+handler test failures retained as harness failures, not app faults. Prior passing
+EQLI3Y/gP4CZC runs omit the added visible chart assertion and are not misrepresented.
+Example guide and evidence/examples/acceptance.md qualify narrow overview zoom,
+mouse canvas-drag boundary, incomplete non-SI reactions and physical-device limits.
+No application release/deployment, live cloud mutation or worker/cost-saving claim.

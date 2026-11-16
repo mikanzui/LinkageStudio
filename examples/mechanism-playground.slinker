@@ -1,0 +1,649 @@
+{
+  "joints": {
+    "crank-pivot": {
+      "id": "crank-pivot",
+      "position": {
+        "x": 160,
+        "y": 220
+      },
+      "type": "fixed",
+      "connectedLinkIds": [
+        "crank-arm"
+      ],
+      "label": "Crank"
+    },
+    "crank-pin": {
+      "id": "crank-pin",
+      "position": {
+        "x": 220,
+        "y": 140
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "crank-arm",
+        "connecting-rod"
+      ]
+    },
+    "output": {
+      "id": "output",
+      "position": {
+        "x": 440,
+        "y": 220
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "connecting-rod"
+      ],
+      "label": "Output"
+    },
+    "crank-rail-a": {
+      "id": "crank-rail-a",
+      "position": {
+        "x": 280,
+        "y": 220
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "crank-rail-c": {
+      "id": "crank-rail-c",
+      "position": {
+        "x": 580,
+        "y": 220
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "cart-a": {
+      "id": "cart-a",
+      "position": {
+        "x": 1030,
+        "y": 160
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "cart-spine"
+      ],
+      "label": "Carriage"
+    },
+    "cart-b": {
+      "id": "cart-b",
+      "position": {
+        "x": 1030,
+        "y": 210
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "cart-spine"
+      ]
+    },
+    "cart-top-a": {
+      "id": "cart-top-a",
+      "position": {
+        "x": 760,
+        "y": 160
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "cart-top-c": {
+      "id": "cart-top-c",
+      "position": {
+        "x": 1130,
+        "y": 160
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "cart-bottom-a": {
+      "id": "cart-bottom-a",
+      "position": {
+        "x": 760,
+        "y": 210
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "cart-bottom-c": {
+      "id": "cart-bottom-c",
+      "position": {
+        "x": 1130,
+        "y": 210
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "stop-a": {
+      "id": "stop-a",
+      "position": {
+        "x": 850,
+        "y": 135
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "stop-b": {
+      "id": "stop-b",
+      "position": {
+        "x": 850,
+        "y": 235
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "gripper-pivot": {
+      "id": "gripper-pivot",
+      "position": {
+        "x": 460,
+        "y": 560
+      },
+      "type": "fixed",
+      "connectedLinkIds": [
+        "left-jaw-arm",
+        "right-jaw-arm"
+      ],
+      "label": "Gripper"
+    },
+    "jaw-left-tip": {
+      "id": "jaw-left-tip",
+      "position": {
+        "x": 370,
+        "y": 450
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "left-jaw-arm"
+      ],
+      "label": "Left jaw"
+    },
+    "jaw-right-tip": {
+      "id": "jaw-right-tip",
+      "position": {
+        "x": 550,
+        "y": 450
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "right-jaw-arm"
+      ],
+      "label": "Right jaw"
+    }
+  },
+  "links": {
+    "crank-arm": {
+      "id": "crank-arm",
+      "jointIds": [
+        "crank-pivot",
+        "crank-pin"
+      ],
+      "restLength": 100,
+      "mass": 1
+    },
+    "connecting-rod": {
+      "id": "connecting-rod",
+      "jointIds": [
+        "crank-pin",
+        "output"
+      ],
+      "restLength": 234.0939982143925,
+      "mass": 1
+    },
+    "cart-spine": {
+      "id": "cart-spine",
+      "jointIds": [
+        "cart-a",
+        "cart-b"
+      ],
+      "restLength": 50,
+      "mass": 1
+    },
+    "left-jaw-arm": {
+      "id": "left-jaw-arm",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-left-tip"
+      ],
+      "restLength": 142.12670403551897,
+      "mass": 1
+    },
+    "right-jaw-arm": {
+      "id": "right-jaw-arm",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-right-tip"
+      ],
+      "restLength": 142.12670403551897,
+      "mass": 1
+    }
+  },
+  "bodies": {
+    "crank": {
+      "id": "crank",
+      "name": "Crank",
+      "jointIds": [
+        "crank-pivot",
+        "crank-pin"
+      ],
+      "color": "#2e9d55",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "crank-pivot",
+          "crank-pin"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "rod": {
+      "id": "rod",
+      "name": "Connecting rod",
+      "jointIds": [
+        "crank-pin",
+        "output"
+      ],
+      "color": "#d28b12",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "crank-pin",
+          "output"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "cart": {
+      "id": "cart",
+      "name": "Damped carriage",
+      "jointIds": [
+        "cart-a",
+        "cart-b"
+      ],
+      "color": "#168aab",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "cart-a",
+          "cart-b"
+        ],
+        "angleOffset": -1.5707963267948966
+      }
+    },
+    "left-jaw": {
+      "id": "left-jaw",
+      "name": "Left gripper jaw",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-left-tip"
+      ],
+      "color": "#be4f86",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "gripper-pivot",
+          "jaw-left-tip"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "right-jaw": {
+      "id": "right-jaw",
+      "name": "Right gripper jaw",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-right-tip"
+      ],
+      "color": "#695cba",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "gripper-pivot",
+          "jaw-right-tip"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "base": {
+      "id": "base",
+      "name": "Ground",
+      "jointIds": [
+        "crank-pivot",
+        "crank-rail-a",
+        "crank-rail-c",
+        "cart-top-a",
+        "cart-top-c",
+        "cart-bottom-a",
+        "cart-bottom-c",
+        "stop-a",
+        "stop-b",
+        "gripper-pivot"
+      ],
+      "color": "#e15a4e",
+      "showLinks": false,
+      "useOutlineCOM": false
+    }
+  },
+  "baseBodyId": "base",
+  "sliders": {
+    "crank-slider": {
+      "id": "crank-slider",
+      "jointIdA": "crank-rail-a",
+      "jointIdB": "output",
+      "jointIdC": "crank-rail-c",
+      "t": 0.5333333333333333
+    },
+    "cart-top": {
+      "id": "cart-top",
+      "jointIdA": "cart-top-a",
+      "jointIdB": "cart-a",
+      "jointIdC": "cart-top-c",
+      "t": 0.7297297297297297
+    },
+    "cart-bottom": {
+      "id": "cart-bottom",
+      "jointIdA": "cart-bottom-a",
+      "jointIdB": "cart-b",
+      "jointIdC": "cart-bottom-c",
+      "t": 0.7297297297297297
+    }
+  },
+  "colliders": {
+    "carriage-stop": {
+      "id": "carriage-stop",
+      "jointIdA": "stop-a",
+      "jointIdC": "stop-b",
+      "bodyIds": [
+        "cart"
+      ]
+    }
+  },
+  "outlines": {
+    "crank-shape": {
+      "id": "crank-shape",
+      "bodyId": "crank",
+      "name": "Crank",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -50,
+          "y": -9
+        },
+        {
+          "x": 50,
+          "y": -9
+        },
+        {
+          "x": 50,
+          "y": 9
+        },
+        {
+          "x": -50,
+          "y": 9
+        }
+      ]
+    },
+    "rod-shape": {
+      "id": "rod-shape",
+      "bodyId": "rod",
+      "name": "Connecting rod",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -117.04699910719626,
+          "y": -7
+        },
+        {
+          "x": 117.04699910719626,
+          "y": -7
+        },
+        {
+          "x": 117.04699910719626,
+          "y": 7
+        },
+        {
+          "x": -117.04699910719626,
+          "y": 7
+        }
+      ]
+    },
+    "cart-shape": {
+      "id": "cart-shape",
+      "bodyId": "cart",
+      "name": "Carriage plate",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": 0,
+          "y": -38
+        },
+        {
+          "x": 60,
+          "y": -38
+        },
+        {
+          "x": 60,
+          "y": 38
+        },
+        {
+          "x": 0,
+          "y": 38
+        }
+      ]
+    },
+    "left-jaw-shape": {
+      "id": "left-jaw-shape",
+      "bodyId": "left-jaw",
+      "name": "Left gripper jaw",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": 10
+        },
+        {
+          "x": -71.06335201775948,
+          "y": 10
+        }
+      ]
+    },
+    "right-jaw-shape": {
+      "id": "right-jaw-shape",
+      "bodyId": "right-jaw",
+      "name": "Right gripper jaw",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": 10
+        },
+        {
+          "x": -71.06335201775948,
+          "y": 10
+        }
+      ]
+    }
+  },
+  "images": {},
+  "springs": {
+    "crank-return": {
+      "id": "crank-return",
+      "name": "Crank return spring",
+      "kind": "linear",
+      "anchorA": {
+        "type": "world",
+        "position": {
+          "x": 160,
+          "y": 60
+        }
+      },
+      "anchorB": {
+        "type": "joint",
+        "jointId": "crank-pin"
+      },
+      "stiffness": 1200,
+      "damping": 10,
+      "restLength": 50,
+      "prestressDelta": 0
+    },
+    "carriage-spring": {
+      "id": "carriage-spring",
+      "name": "Carriage return spring",
+      "kind": "linear",
+      "anchorA": {
+        "type": "joint",
+        "jointId": "cart-top-a"
+      },
+      "anchorB": {
+        "type": "joint",
+        "jointId": "cart-a"
+      },
+      "stiffness": 900,
+      "damping": 10,
+      "restLength": 150,
+      "prestressDelta": 0
+    },
+    "carriage-damper": {
+      "id": "carriage-damper",
+      "name": "Carriage dashpot",
+      "kind": "damper",
+      "anchorA": {
+        "type": "joint",
+        "jointId": "cart-bottom-a"
+      },
+      "anchorB": {
+        "type": "link",
+        "linkId": "cart-spine",
+        "t": 1
+      },
+      "stiffness": 0,
+      "damping": 40,
+      "restLength": 0,
+      "prestressDelta": 0
+    },
+    "gripper-torsion": {
+      "id": "gripper-torsion",
+      "name": "Gripper torsion spring",
+      "kind": "torsional",
+      "anchorA": {
+        "type": "link",
+        "linkId": "left-jaw-arm",
+        "t": 0
+      },
+      "anchorB": {
+        "type": "link",
+        "linkId": "right-jaw-arm",
+        "t": 0
+      },
+      "stiffness": 8000,
+      "damping": 3000,
+      "restLength": 0.5,
+      "prestressDelta": 0
+    }
+  },
+  "tracers": {
+    "crank-trace": {
+      "id": "crank-trace",
+      "bodyId": "crank",
+      "localPosition": {
+        "x": 50,
+        "y": 0
+      },
+      "name": "Crank circle",
+      "enabled": true
+    },
+    "rod-trace": {
+      "id": "rod-trace",
+      "bodyId": "rod",
+      "localPosition": {
+        "x": 0,
+        "y": 14
+      },
+      "name": "Coupler curve",
+      "enabled": true
+    },
+    "carriage-trace": {
+      "id": "carriage-trace",
+      "bodyId": "cart",
+      "localPosition": {
+        "x": 30,
+        "y": 0
+      },
+      "name": "Carriage travel",
+      "enabled": true
+    },
+    "jaw-trace": {
+      "id": "jaw-trace",
+      "bodyId": "left-jaw",
+      "localPosition": {
+        "x": 71.06335201775948,
+        "y": 0
+      },
+      "name": "Gripper arc",
+      "enabled": true
+    }
+  },
+  "forceSensors": {
+    "rod-load": {
+      "id": "rod-load",
+      "linkId": "connecting-rod",
+      "enabled": true,
+      "name": "Connecting rod load"
+    },
+    "jaw-load": {
+      "id": "jaw-load",
+      "linkId": "left-jaw-arm",
+      "enabled": true,
+      "name": "Left jaw load"
+    }
+  },
+  "projectName": "Mechanism Playground",
+  "simulationSettings": {
+    "gravityEnabled": false,
+    "gravityStrength": 250,
+    "damping": 0.98,
+    "dragMultiplier": 25,
+    "dragDamping": 0.25
+  },
+  "viewPreferences": {
+    "gridLevel": "normal",
+    "showLinks": true,
+    "showVectors": false,
+    "showRulers": true,
+    "showForceUnits": false,
+    "showLoads": false,
+    "showReactions": false
+  },
+  "documentFormat": "linkage-studio",
+  "schemaVersion": 1,
+  "sourceVersion": "0.16.0-rebuild.4",
+  "version": "0.16.0-rebuild.4",
+  "writerVersion": "0.16.0-rebuild.4",
+  "simulationModel": "saved-links-v1",
+  "springModel": "legacy-motion-v1",
+  "forceModel": "unit-particle-v1"
+}
