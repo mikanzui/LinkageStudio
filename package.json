@@ -1,7 +1,7 @@
 {
   "name": "linkage-studio",
   "private": true,
-  "version": "0.16.0-rebuild.3",
+  "version": "0.16.0-rebuild.4",
   "type": "module",
   "engines": {
     "node": ">=24.13.1 <25"

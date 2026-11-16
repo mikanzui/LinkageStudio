@@ -1,6 +1,6 @@
 # Slinker / Linkage Studio
 
-Version **0.16.0-rebuild.3**, an isolated rebuild candidate based on
+Version **0.16.0-rebuild.4**, an isolated rebuild candidate based on
 [Huggabiz / Hugo Wilson's Linkage Studio](https://github.com/Huggabiz/linkage-studio)
 v0.12.3 (`3dfe10512e105f863a582ce5cc4b3bb8a2006306`).
 

@@ -115,6 +115,8 @@ interface EditorStore {
   arcSelector: {
     target?: RadialTarget;
     openMode?: 'hold' | 'context';
+    holdPointerStart?: Vec2;
+    holdMoved?: boolean;
     /** Joint ID when assigning joint body membership */
     jointId: string | null;
     /** Collider ID when assigning collider barrier bodies */

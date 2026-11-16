@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.16.0-rebuild.4 - 2026-11-16
+
+- Corrected the incomplete .3 hold-menu restoration: translated/scaled 220ms
+  fan-out with 38ms per-body stagger, compact native-font pills, inward dots,
+  original orbit angles and faint ring/spokes, rather than an opacity-only fade.
+- Kept ordinary 11/12-body projects as fans. Expand crowded labels, clamp at
+  canvas edges and use the accessible list only when the fan cannot fit.
+- Corrected readable label rotation across the angle wrap. Require deliberate
+  pointer movement before release can activate a clamped body/add/delete action.
+- Added noninteractive reverse retraction without delaying commands or gesture
+  cleanup. Preserve immediate cancellation, reduced motion, keyboard/tap routes
+  and 44px coarse targets. Physics, persistence and cloud layers are unchanged.
+- Added actual animated reference comparisons and raw original-file hold checks;
+  settled screenshots alone are no longer treated as historical animation proof.
+- Physical iPad qualification remains open; no deployment is authorized.
+
 ## 0.16.0-rebuild.3 - 2026-11-16
 
 - Reintegrated the fork's labeled radial hold menu, body-color indicators and

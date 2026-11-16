@@ -23,12 +23,18 @@ The user requested reintegration of the earlier fork's upgraded hold-click UI an
 checkbox/slider appearance. This is a scoped G4/C03/C04/C08/C10/C12/C13 follow-up,
 not a replacement of the rebuilt solver/document/cloud layers. Historical reference:
 fork commit `545051374fd176a74d3ce18f8fe6dfe99595dcf5` and the preserved root styles.
-Candidate version: `0.16.0-rebuild.3`. Labeled radial body actions, explicit
+Candidate version: `0.16.0-rebuild.4`. Labeled radial body actions, explicit
 release-only add/delete, native input styling and non-hold access are implemented.
 Scoped code/browser contract accepted: 950 domain/27 tooling tests and 24 qualifying
 regression suite/engine results on unchanged final source, with a G9 harness-only
 retry explicitly recorded. Recovery's initial busy-list race was also repaired.
-Acceptance/evidence: `evidence/ui16/acceptance.md`.
+Earlier functional acceptance/evidence: `evidence/ui16/acceptance.md`.
+User feedback correctly reopened motion/appearance parity: .3 faded rather than
+fanned and switched both original files to a list. UI16-05 restores the historical
+220ms/38ms fan, geometry and paint, retaining bounded/touch/command safeguards.
+Native animated reference comparisons and both actual-file stationary holds pass;
+final frozen cumulative 24/24,960 domain/27 tooling and fresh public install PASS.
+Lead accepts the scoped UI16-05 contract; follow `evidence/ui16-motion/acceptance.md`.
 Physical-device and unrelated Azure/target qualifications remain explicitly open.
 
 1. Read this file and [progress tracker](progress-tracker.md).

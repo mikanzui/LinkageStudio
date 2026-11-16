@@ -1,24 +1,53 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Current task: UI-16 hold-menu and native control-style reintegration in
-0.16.0-rebuild.3. Scoped code/browser contract PASS: 950 domain/27 tooling tests;
-24 qualifying regression suite/engine results on one unchanged artifact. G9 retry
-after a harness-only readiness repair is explicit, not a single-run PASS claim.
+Current task: UI16-05 historical hold-menu motion/appearance correction in
+0.16.0-rebuild.4. UI16-05 DONE / scoped code-browser contract PASS.
+Previous .3 functional evidence is retained, but its historical appearance claim
+is rejected. Final-source native old/new comparisons now pass in Chromium/WebKit;
+both raw original files retain an 11/12-body fan and stationary hold/release leaves
+their full mechanisms unchanged. 960 domain/27 tooling, lint/type/build, fresh
+public install and frozen cumulative 24/24 suites PASS; evidence/ui16-motion/acceptance.md.
 Earlier localhost/disposable OneDrive workflow PASS after projected-metadata
 repair; cumulative yF897B PASS, 22/22; see evidence/g9/live-qualification.md.
 User's Azure skill applied through azure-integration-review.md; AZ-01 CSP and
 AZ-02 token-network error classification remain explicit hardening follow-ups.
 Device/target/licensing qualifications
 remain OPEN. No deployment.
-G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.3.
+G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.4.
 User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.
 Detailed remaining work: remaining-updates.md; G9/G10 checkpoints and scrub are
 recorded, with explicit external qualifications and current UI-16 follow-up.
 Codex owns verification and gate decisions; routine user sign-off is not required.
 Execution mode: one lead with zero to two focused workers; first measured pilot at G0.
 
-## UI-16 Reintegration (Accepted Code/Browser Contract)
+## UI-16 Reintegration (Scoped Motion Contract Accepted)
+
+### UI16-05 Motion And Appearance Correction (Accepted)
+
+User reports the held menu does not swirl/fan out or look like the historical fork.
+The prior functional checks did not establish animation parity: screenshots even
+disabled finite animations. Lead owns this tightly coupled correction; no workers
+needed. Reference is the actual archived fork WorldContextMenu/Layout.css, including
+220ms radial expansion, 38ms per-body stagger, 56/74px radius, 32-degree spacing,
+compact inward-dot pills, ring/spokes and reverse closing. Rejected .3 only fades
+120ms with larger 112x32 pills/100px radius and immediate removal: mismatch confirmed.
+
+| Task | Status | Required Evidence |
+| --- | --- | --- |
+| UI16-05A | DONE | Source 5450513 and native Chrome/WebKit recordings; .3 fails ring/motion negative controls; evidence/ui16-motion/acceptance.md |
+| UI16-05B | DONE | Restored 220ms/38ms fan, 20px native-font pills, inward dots/ring/spokes; corrected principal-angle rotation, 11/12-body fallback and stationary clamped release; no solver/persistence edits |
+| UI16-05C | DONE / scoped PASS | Final-source native comparisons and both raw originals PASS; 960 domain/27 tooling, normal build/type/lint, fresh checkout PASS; desktop/coarse/reduced-motion/Firefox PASS; frozen through-g10-L2wRKj 24/24 PASS, no final-run retries |
+
+Lead accepts UI16-05 for the documented desktop historical opening/paint and safe
+adaptive code/browser contract, not pixel-identical old closing or physical iPad
+certification. Final cumulative interval15:27:22.661-15:46:08.457 UTC (18m45.796s);
+this is measured test runtime, not total development time. No workers; usage unknown.
+All48 final browser CAD downloads pass the independent reader. Existing Azure/
+target/device/licensing qualifications remain open; no deployment/push/tag.
+
+Earlier UI16 acceptance below remains evidence for its functional tests, not proof
+that .3 matched the historical animation/look. Do not claim that visual parity PASS.
 
 2026-11-16 user requests earlier fork hold-click menu and checkbox/slider styling.
 Scope C02/C03/C04/C07/C08/C10/C11/C12/C13, G4/G5/G8 regression contract. Candidate branch only;
@@ -355,6 +384,7 @@ These are acceptance blockers, not claims that all preparation work is blocked.
 | 2026-11-16 | G6 springs and attachment identity | 7a6dd39; 434 tests and 14 cumulative runs; conservative torsion, world anchors, remap; negative reattach/feedback controls repaired | G7 started automatically; final whole-app scrub remains required |
 | 2026-11-16 | G7 tracing, sensors, model loads and node parity | 5b5431f; 519 tests and 16 cumulative runs; independent performance review and static/COM/name negatives repaired | G8 started automatically; parser/CAD preparation ready, final whole-app scrub still required |
 | 2026-11-16 | Versioned G8 files/recovery/export checkpoint | 0.16.0-rebuild.1; 663 tests/no skips, 18 cumulative passes, independent 48-file CAD checks and actual LibreCAD mm rod dimensions; public test portability verified; original workspace unchanged | Stop here per user instruction; G9/G10 and explicit target/device qualifications remain future work |
+| 2026-11-16 | UI16-05 historical fan correction after user feedback | 0.16.0-rebuild.4; native old/new motion/paint, actual-file red/green stationary hold,960 domain/27 tooling, fresh install and frozen24/24 cumulative PASS; lead accepts scoped contract | Local version commit; physical/Azure/target limits stay explicit, no push/deployment |
 
 ## Update Checklist
 

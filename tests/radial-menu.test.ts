@@ -9,7 +9,7 @@ import { snapshotMechanism } from '../src/core/compile-mechanism';
 import { computeBodyTransform, localToWorld } from '../src/core/body-transform';
 import { drawHUD } from '../src/renderer/draw-overlays';
 
-for (const coarse of [false, true]) for (const count of [0, 1, 2, 3, 4, 5, 6, 7, 20]) {
+for (const coarse of [false, true]) for (const count of [0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 20, 30]) {
   test('radial bounds/hits are stable at every edge: ' + coarse + '/' + count, () => {
     for (const [width, height] of [[1440, 900], [404, 800], [212, 480], [800, 180]]) for (const anchor of [{ x: 0, y: 0 }, { x: width, y: 0 }, { x: 0, y: height }, { x: width, y: height }, { x: width / 2, y: height / 2 }]) {
       const layout = radialLayout(anchor, Array.from({ length: count }, (_, i) => 'b' + i), true, width, height, coarse);
@@ -19,7 +19,7 @@ for (const coarse of [false, true]) for (const count of [0, 1, 2, 3, 4, 5, 6, 7,
         assert(bounds.left + layout.center.x >= 7.999); assert(bounds.top + layout.center.y >= 7.999);
         assert(bounds.right + layout.center.x <= width - 7.999); assert(bounds.bottom + layout.center.y <= height - 7.999);
         assert.equal(radialHit(layout, { x: layout.center.x + control.x, y: layout.center.y + control.y }), control.key);
-        assert(control.height >= (coarse ? 44 : 32));
+        assert(control.height >= (coarse ? 44 : 20));
       }
     }
   });
@@ -28,6 +28,32 @@ test('body identities cannot collide with delete/add/close action keys', () => {
   const layout = radialLayout({ x: 300, y: 300 }, ['__delete__', '__close__'], true, 800, 800);
   assert(layout.controls.some(c => c.key === 'body:__delete__'));
   assert.equal(layout.controls.filter(c => c.key === '__delete__').length, 1);
+});
+test('desktop orbit matches historical 74px/32-degree compact pills and no center action', () => {
+  const widths = [53.796875, 62.140625, 62.140625, 62.140625];
+  const layout = radialLayout({ x: 400, y: 400 }, ['base', 'body1', 'body2', 'body3'], true, 1000, 800, false, widths);
+  assert.equal(layout.radius, 74); assert(!layout.controls.some(c => c.key === '__close__'));
+  layout.controls.slice(0, 4).forEach((control, index) => {
+    const angle = (267 + 32 * index - 90) * Math.PI / 180;
+    assert(Math.abs(control.x - Math.cos(angle) * 74) < 1e-10);
+    assert(Math.abs(control.y - Math.sin(angle) * 74) < 1e-10);
+    assert.equal(control.height, 20); assert.equal(control.width, widths[index]);
+    const expectedRotation = [357, 29, 61, -87][index];
+    assert(Math.abs(((control.angle - expectedRotation + 540) % 360) - 180) < 1e-8);
+  });
+  assert.equal(layout.controls.find(c => c.key === '__add_body__')?.width, 20);
+  assert.equal(layout.controls.find(c => c.key === '__delete__')?.width, 30);
+  assert.equal(radialLayout({ x: 400, y: 400 }, ['base'], true, 1000, 800).radius, 56);
+});
+test('eleven/twelve-body projects remain fans; long labels expand before list fallback', () => {
+  for (const count of [11, 12]) {
+    const ids = Array.from({ length: count }, (_, i) => 'body' + i);
+    const compact = radialLayout({ x: 500, y: 450 }, ids, true, 1040, 900, false, ids.map(() => 68));
+    assert.equal(compact.variant, 'orbit'); assert.equal(compact.radius, 74);
+    const named = radialLayout({ x: 500, y: 450 }, ids, true, 1040, 900, false, ids.map(() => 145));
+    assert.equal(named.variant, 'orbit'); assert(named.radius > 74);
+    assert.equal(radialLayout({ x: 200, y: 300 }, ids, true, 212, 600, true, ids.map(() => 180)).variant, 'list');
+  }
 });
 test('Design DOF and cursor HUD never overlap at narrow widths or long values', () => {
   for (const width of [212, 404, 1024]) for (const dof of [-12, 1, 1234]) {
@@ -41,6 +67,32 @@ test('Design DOF and cursor HUD never overlap at narrow widths or long values', 
 });
 const initialM = m.getState(), initialE = e.getState();
 function reset() { m.setState(initialM, true); e.setState(initialE, true); }
+test('stationary hold release cannot activate a clamped body/add/delete control', () => {
+  for (const key of ['body:body2', '__add_body__', '__delete__']) {
+    reset(); e.setState({ camera: { zoom: 1, pan: { x: 0, y: 0 } } });
+    const id = m.getState().addJoint('revolute', { x: 300, y: 300 }, ['body1']);
+    openRadialMenu({ kind: 'joint', id }, { x: 300, y: 300 }, 'hold');
+    const layout = currentRadialLayout(1000, 800), control = layout.controls.find(c => c.key === key)!;
+    const point = { x: layout.center.x + control.x, y: layout.center.y + control.y };
+    e.setState({ arcSelector: { ...e.getState().arcSelector!, holdPointerStart: point } });
+    const before = snapshotMechanism(m.getState());
+    handleMouseUp({ clientX: point.x, clientY: point.y } as MouseEvent, { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 800 }) } as HTMLCanvasElement);
+    assert.deepEqual(snapshotMechanism(m.getState()), before);
+  }
+  reset();
+});
+test('held joint toggles once per entry and rearms after leaving the pills', () => {
+  reset(); e.setState({ camera: { zoom: 1, pan: { x: 0, y: 0 } } });
+  const id = m.getState().addJoint('revolute', { x: 300, y: 300 }, ['body1']);
+  openRadialMenu({ kind: 'joint', id }, { x: 300, y: 300 }, 'hold');
+  const canvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 800 }) } as HTMLCanvasElement;
+  const layout = currentRadialLayout(1000, 800), button = layout.controls.find(c => c.key === 'body:body2')!;
+  const point = { clientX: layout.center.x + button.x, clientY: layout.center.y + button.y } as MouseEvent;
+  handleMouseMove(point, canvas); handleMouseMove(point, canvas); assert(m.getState().bodies.body2.jointIds.includes(id));
+  handleMouseMove({ clientX: layout.center.x, clientY: layout.center.y } as MouseEvent, canvas);
+  handleMouseMove(point, canvas); assert(!m.getState().bodies.body2.jointIds.includes(id));
+  handleMouseUp(); reset();
+});
 test('held single-body assignment can revisit a body and final release wins', () => {
   reset(); e.setState({ camera: { zoom: 1, pan: { x: 0, y: 0 } } });
   const id = m.getState().addTracer('body1', { x: 300, y: 300 });

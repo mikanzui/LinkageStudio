@@ -7,12 +7,13 @@ gate decisions; no routine user sign-off. No deployment is authorized.
 
 ## G9: Optional Cloud Projects
 
-Latest user follow-up: UI-16 restores the fork's upgraded hold menu and native
-control styling in `0.16.0-rebuild.3`, without replacing rebuilt subsystem logic.
-Scoped implementation accepted: 950 domain/27 tooling tests and 24 qualifying
-regression suite/engine results (G9 harness-only retry explicitly recorded).
-Track final evidence in
-`evidence/ui16/acceptance.md` and progress-tracker.md. Existing external/Azure
+Latest follow-up: UI16-05 corrects the incomplete .3 historical restoration in
+`0.16.0-rebuild.4`. Actual animated old/new recordings, not settled screenshots,
+now assert the 220ms fan, 38ms stagger and compact historical paint. Both original
+11/12-body projects remain fans; stationary clamped hold/release cannot alter them.
+960 domain/27 tooling tests PASS; final frozen cumulative24/24 and fresh install
+PASS; scoped UI16-05 accepted by the lead. Track evidence
+in `evidence/ui16-motion/acceptance.md` and progress-tracker.md. Existing external/Azure
 qualifications below remain unchanged by this frontend-only task.
 
 | ID | Deliverable | Acceptance | Status |

@@ -1,5 +1,12 @@
 # UI-16 Reintegration Evidence
 
+Qualification correction, 2026-11-16: the following .3 results establish their
+stated functional coverage, NOT historical motion/appearance parity. User feedback
+and native animated comparison rejected that claim: .3 used a 120ms opacity fade,
+112x32 pills and an early list fallback. See [UI16-05 motion correction](../ui16-motion/acceptance.md)
+for the reopened investigation and replacement evidence. Preserve the old results;
+do not reinterpret animation-disabled settled screenshots as motion proof.
+
 2026-11-16. Candidate `codex/rebuild-cloud-pwa`, version `0.16.0-rebuild.3`,
 starting commit `b29ad7c1fced3b144ffd6eafb4c95ce24d881934` plus UI-16 patch.
 Status: PASS for scoped code/browser contract; 24 regression suite/engine results

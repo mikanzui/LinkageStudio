@@ -275,3 +275,38 @@ evidence/g9/live-qualification.md). G9 browser suites cvfMNk/mnCR2j each pass 21
 scenarios. G4 body retests uJ41mb/dwbREg pass. The failed piCBR2 remains retained,
 not promoted. Normal SDK build is observer/fake-auth free. Both original fixture
 hashes rechecked unchanged; public G0 fixture map untouched. No push or deployment.
+
+## UI16-05 Historical Motion Correction (2026-11-16)
+
+User feedback reopened historical hold-menu appearance. Prior .3 functional tests
+remain valid for their stated checks; its120ms fade/fixed112x32 pills/>6-body list
+did not reproduce the old220ms/38ms fan. Settled animation-disabled screenshots
+were inadequate evidence. Actual old/current native Chrome/WebKit RAF/video and
+computed-paint comparisons now establish the restored contract; .3 and the
+intermediate180-degree label-wrap implementation both fail independent negatives.
+Both raw original files remain11/12-body desktop fans. The native Airer comparison
+found an intermediate clamped stationary-release assignment; deliberate-movement
+guards and full before/after mechanisms now pass. No solver/cloud/codec edits.
+
+Version0.16.0-rebuild.4, real observer artifactg11-ewQKKJ, source
+dada801687a33439b6fe1d463ac192e6b21dd39239612200fee68179639a1a4f.
+Focused Chrome517UkY/WebKitSl1bpt (three layouts) and FirefoxpITEax (desktop) PASS;
+960 domain/27 tooling, type/lint/normal build PASS. Native motion evidence under
+ignored radial-motion; see evidence/ui16-motion/acceptance.md for full report/video
+names, computed tolerances and intentional adaptive/retraction differences.
+
+Final frozen cumulative through-g10-L2wRKj PASS24/24 on artifactg10-plpAuK/source
+553d8fd08ab05df524e90174ed232a0d9c3880a42ebb5cc58bebbd8836c8270c (mock boundary).
+Earlier D31ov2/tC0TjO invocations were deliberately cancelled for found corrections,
+retained and not counted as final acceptance. Root protected tracked diff and
+original fixture hashes match their pins. No worker/cost-saving claim. Physical
+iPad and existing external Azure/licensing/target qualifications remain open.
+
+Lead accepts UI16-05's scoped historical opening/paint and adaptive code/browser
+contract. No final-run retries; measured native cumulative interval18m45.796s,
+15:27:22.661-15:46:08.457 UTC. Both final G8 suites pass, and all48 real downloads
+pass independent ezdxf/macro checks. Fresh temporary public checkoute98ZED passes
+locked install/peers/type/lint/tooling/build/zero-advisory production audit;
+945 unit PASS plus15 explicit private skips (workspace960 PASS, zero skips).
+Raw-file red/green replay FvERiD versus pk3Zxy/vSkEDg explicitly rejects the
+pre-guard stationary Body10 assignment and accepts unchanged final mechanisms.

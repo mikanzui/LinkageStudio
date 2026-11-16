@@ -14,7 +14,7 @@ import { beginGeometry, moveGeometry, finishGeometry, commitOutline } from './ge
 import { placeSpring } from './spring-tools';
 import { hitTestSpring } from '../core/spring-geometry';
 import { setProjectMessage } from '../document/project';
-import { arcTarget, chooseRadialBody, currentRadialLayout, openRadialMenu, radialAction, targetForId, targetExists, radialAnchor, radialUsesToggle } from './radial-menu';
+import { arcTarget, chooseRadialBody, currentRadialLayout, dismissRadialMenu, openRadialMenu, radialAction, targetForId, targetExists, radialAnchor, radialUsesToggle } from './radial-menu';
 import { radialHit } from './radial-layout';
 
 /** Start the long-press arc selector timer for a given joint. No-op for touch input. */
@@ -29,6 +29,7 @@ function startArcTimer(jointId: string, screenX: number, screenY: number) {
       if (j && !j.hidden) {
         useEditorStore.getState().setArcSelector({
           jointId: longPressJointId,
+          holdPointerStart: { x: screenX, y: screenY }, holdMoved: false,
           colliderId: null, tracerId: null,
           position: { ...j.position },
           showTime: Date.now(),
@@ -56,6 +57,7 @@ function startColliderArcTimer(colliderId: string, worldPos: Vec2, screenX: numb
       useEditorStore.getState().setArcSelector({
         jointId: null,
         colliderId,
+        holdPointerStart: { x: screenX, y: screenY }, holdMoved: false,
         tracerId: null,
         position: { ...worldPos },
         showTime: Date.now(),
@@ -85,6 +87,7 @@ function startTracerArcTimer(tracerId: string, screenX: number, screenY: number)
           jointId: null,
           colliderId: null,
           tracerId,
+          holdPointerStart: { x: screenX, y: screenY }, holdMoved: false,
           position: { ...worldPt },
           showTime: Date.now(),
           collapseTime: null,
@@ -110,20 +113,38 @@ export function startObjectHold(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
   longPressTimer = setTimeout(() => {
     if (targetExists(target) && useEditorStore.getState().mode === 'create') {
       openRadialMenu(target, target.kind === 'joint' || target.kind === 'tracer' ? radialAnchor(target)
-        : screenToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top }, editor.camera), 'hold');
+        : screenToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top }, editor.camera), 'hold', { x: e.clientX, y: e.clientY });
       isDragging = false; dragJointId = null;
     }
     longPressTimer = null;
   }, LONG_PRESS_MS);
 }
 
+function hitRadialPointer(layout: ReturnType<typeof currentRadialLayout>, point: Vec2, canvas: HTMLCanvasElement): string | null {
+  if (typeof document === 'undefined') return radialHit(layout, point);
+  const rect = canvas.getBoundingClientRect();
+  const button = document.elementFromPoint(rect.left + point.x, rect.top + point.y)?.closest<HTMLButtonElement>('[data-radial-key]');
+  if (!button?.closest('.radial-menu:not(.closing)') || button.disabled || Number(getComputedStyle(button).opacity) < 0.05) return null;
+  return button.dataset.radialKey ?? null;
+}
 function handleArcHover(worldPos: Vec2, editor: ReturnType<typeof useEditorStore.getState>, canvas: HTMLCanvasElement) {
-  const arc = editor.arcSelector;
+  let arc = editor.arcSelector;
   if (!arc || arc.openMode === 'context') return;
   const rect = canvas.getBoundingClientRect(), target = arcTarget(arc);
+  if (!arc.holdMoved) {
+    const client = { x: rect.left + worldPos.x * editor.camera.zoom + editor.camera.pan.x, y: rect.top + worldPos.y * editor.camera.zoom + editor.camera.pan.y };
+    if (arc.holdPointerStart && Math.hypot(client.x - arc.holdPointerStart.x, client.y - arc.holdPointerStart.y) <= 3) return;
+    arc = { ...arc, holdMoved: true }; useEditorStore.getState().setArcSelector(arc);
+  }
   const layout = currentRadialLayout(rect.width, rect.height, typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
-  const key = radialHit(layout, { x: worldPos.x * editor.camera.zoom + editor.camera.pan.x, y: worldPos.y * editor.camera.zoom + editor.camera.pan.y });
-  if (!key?.startsWith('body:') || (radialUsesToggle(target) && !arc.readyToToggle.has(key.slice(5)))) return;
+  const key = hitRadialPointer(layout, { x: worldPos.x * editor.camera.zoom + editor.camera.pan.x, y: worldPos.y * editor.camera.zoom + editor.camera.pan.y }, canvas);
+  if (!key?.startsWith('body:')) {
+    if (radialUsesToggle(target) && arc.readyToToggle.size !== Object.keys(useMechanismStore.getState().bodies).length) {
+      useEditorStore.getState().setArcSelector({ ...arc, readyToToggle: new Set(Object.keys(useMechanismStore.getState().bodies)) });
+    }
+    return;
+  }
+  if (radialUsesToggle(target) && !arc.readyToToggle.has(key.slice(5))) return;
   chooseRadialBody(target, key.slice(5));
   if (!radialUsesToggle(target)) return;
   const readyToToggle = new Set(arc.readyToToggle); readyToToggle.delete(key.slice(5));
@@ -187,8 +208,8 @@ let lastPointerType: string = 'mouse';
 let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressJointId: string | null = null;
 let longPressStartScreen: Vec2 | null = null;
-const LONG_PRESS_MS = 300;
-const LONG_PRESS_MOVE_THRESHOLD_BASE = 8; // px screen movement to cancel (minimum)
+const LONG_PRESS_MS = 340;
+const LONG_PRESS_MOVE_THRESHOLD_BASE = 12; // Match the fork's hold/jitter threshold.
 let imageStartPos: Vec2 = { x: 0, y: 0 };
 
 export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) {
@@ -735,6 +756,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
         if (j && !j.hidden) {
           useEditorStore.getState().setArcSelector({
             jointId: newId,
+            holdPointerStart: { x: e.clientX, y: e.clientY }, holdMoved: false,
             colliderId: null, tracerId: null,
             position: { ...j.position },
             showTime: Date.now(),
@@ -997,10 +1019,11 @@ export function handleMouseUp(_e?: PointerEvent | MouseEvent, _canvas?: HTMLCanv
     if (layout.variant === 'list') {
       editor.setArcSelector({ ...arc, openMode: 'context' });
     } else {
-      const key = radialHit(layout, { x: _e.clientX - rect.left, y: _e.clientY - rect.top });
-      editor.setArcSelector(null);
-      if (key === '__add_body__' || key === '__delete__') radialAction(target, key);
-      else if (key?.startsWith('body:') && (!radialUsesToggle(target) || arc.readyToToggle.has(key.slice(5)))) chooseRadialBody(target, key.slice(5));
+      const key = hitRadialPointer(layout, { x: _e.clientX - rect.left, y: _e.clientY - rect.top }, _canvas);
+      const moved = arc.holdMoved || !!arc.holdPointerStart && Math.hypot(_e.clientX - arc.holdPointerStart.x, _e.clientY - arc.holdPointerStart.y) > 3;
+      dismissRadialMenu();
+      if (moved && (key === '__add_body__' || key === '__delete__')) radialAction(target, key);
+      else if (moved && key?.startsWith('body:') && (!radialUsesToggle(target) || arc.readyToToggle.has(key.slice(5)))) chooseRadialBody(target, key.slice(5));
     }
   }
 

@@ -48,6 +48,12 @@ export function pickRadialTarget(point: Vec2): RadialTarget | null {
 }
 export function radialUsesToggle(target: RadialTarget): boolean { return target.kind === 'joint' || target.kind === 'collider'; }
 export function canAssignBody(target: RadialTarget): boolean { return ['joint', 'collider', 'tracer', 'outline', 'image'].includes(target.kind); }
+export function canAddRadialBody(target: RadialTarget): boolean { return canAssignBody(target) && target.kind !== 'tracer'; }
+export function dismissRadialMenu(): void {
+  const e = useEditorStore.getState(), arc = e.arcSelector;
+  if (arc) e.setArcSelector({ ...arc, collapseTime: Date.now() });
+  e.setArcSelector(null);
+}
 export function radialBodies(target: RadialTarget) {
   const m = useMechanismStore.getState();
   return canAssignBody(target) ? Object.values(m.bodies).sort((a, b) => a.id === m.baseBodyId ? -1 : b.id === m.baseBodyId ? 1 : 0) : [];
@@ -88,11 +94,11 @@ export function radialAction(target: RadialTarget, action: string): void {
     deleteSelectedEntities();
   }
 }
-export function openRadialMenu(target: RadialTarget, position: Vec2, openMode: 'hold' | 'context' = 'context'): void {
+export function openRadialMenu(target: RadialTarget, position: Vec2, openMode: 'hold' | 'context' = 'context', holdPointerStart?: Vec2): void {
   if (useEditorStore.getState().mode !== 'create' || !targetExists(target)) return;
   if (openMode === 'context') cancelInteractions();
   useEditorStore.getState().setArcSelector({
-    target, openMode, jointId: target.kind === 'joint' ? target.id : null, colliderId: target.kind === 'collider' ? target.id : null,
+    target, openMode, holdPointerStart, holdMoved: false, jointId: target.kind === 'joint' ? target.id : null, colliderId: target.kind === 'collider' ? target.id : null,
     tracerId: target.kind === 'tracer' ? target.id : null, position: { ...position }, showTime: Date.now(), collapseTime: null,
     readyToToggle: new Set(radialBodies(target).map(b => b.id)), createdBodyId: null, lastToggleTime: 0, lastToggle: null,
   });
@@ -115,9 +121,19 @@ export function radialAnchor(target: RadialTarget): Vec2 {
   }
   return { x: 100, y: 100 };
 }
+let textContext: CanvasRenderingContext2D | null = null;
 export function currentRadialLayout(width: number, height: number, coarse = false) {
   const e = useEditorStore.getState(), arc = e.arcSelector!;
   const target = arcTarget(arc), p = arc.position;
+  const bodies = radialBodies(target);
+  if (!textContext && typeof document !== 'undefined') textContext = document.createElement('canvas').getContext('2d');
+  const nativeButton = typeof document === 'undefined' ? null : document.querySelector('.top-bar-btn');
+  const family = nativeButton ? getComputedStyle(nativeButton).fontFamily : 'Arial';
+  if (textContext) textContext.font = '500 ' + (coarse ? 12 : 10) + 'px ' + family;
+  const widths = bodies.map(b => {
+    const text = b.name.replace(/[ \t\r\n\f]+/g, ' ').replace(/^ | $/g, '');
+    return Math.ceil(((textContext?.measureText(text).width ?? text.length * (coarse ? 7 : 6)) + 31) * 64) / 64;
+  });
   return radialLayout({ x: p.x * e.camera.zoom + e.camera.pan.x, y: p.y * e.camera.zoom + e.camera.pan.y },
-    radialBodies(target).map(b => b.id), canAssignBody(target), width, height, coarse);
+    bodies.map(b => b.id), canAddRadialBody(target), width, height, coarse, widths);
 }

@@ -195,3 +195,47 @@ output. Keep cloud tests in disposable test projects with original user files in
 Every stage needs one implementation change set, one evidence bundle and a concise
 gate report. A failed prior scenario blocks promotion. Do not batch unrelated tool,
 solver, persistence and UI rewrites into a single feature stage.
+
+## UI16-05 Native Motion Gate
+
+This follow-up reopens only the historical hold-menu presentation claim; preserve
+earlier functional results but do not treat them as motion evidence. Lead owns
+acceptance, no routine user gate unlock. Required before accepting .4:
+
+1. Read the historical fork source and mount that unchanged reference independently.
+   Native hold must produce its compact fan. Capture computed geometry/paint and
+   real RAF transforms/keyframes at native speed, plus a video; do not disable or
+   fast-forward animation for these assertions.
+2. The new desktop fan matches 220ms translation/scale .7-to-1, easing
+   cubic-bezier(.4,0,.2,1), 38ms body stagger, principal-angle readable labels,
+   inward dots, historical native font/paint, 20px pills, ring/spokes and no extra
+   center X. Normal compact radius/angle geometry must match. Width tolerance
+   .25 CSS px covers native button/canvas text-metric kerning only.
+3. Prove the old .3 fade fails (120 versus220ms and missing guides). Prove the
+   intermediate wrong-angle implementation fails label rotation. A comparator
+   that passes both incorrect controls is not valid evidence.
+4. Open both original raw fixture bytes through the actual chooser. Assert11/12
+   body fans in the desktop candidate, immutable original hashes and complete
+   mechanism equality before/after stationary hold/release. Compare historical
+   paint and motion while separately disclosing adaptive radius/edge clamping.
+5. Native held sweep/release must assign exactly once per entry, rearm after
+   leaving, allow revisiting single assignments, and preserve one-action undo.
+   Add/delete execute only on deliberate moved release; stationary clamped
+   controls must not mutate. Escape/resize/blur/cancel must not allow late edits.
+6. Closing is a frozen inert/disabled/aria-hidden presentation, removed after230ms;
+   commands and gesture ownership end immediately. Verify actual multiple reverse
+   transforms, not just CSS text. Disclose this intended reverse versus the old
+   browser's completed-animation opacity snap. Reduced motion skips both motions.
+7. Verify keyboard/context/tap alternatives, 44px coarse targets, desktop/tablet/
+   512px Split View, large bounded scrolling list, 12-body fan, native checkbox/
+   range keyboard persistence, forced-colors and trusted pen/palm checks where
+   supported. WebKit/touch is not physical iPad certification.
+8. Full domain/tooling/type/lint/build and cumulative G1-G10 Chrome/WebKit suites
+   must pass on one frozen application source. Retain failures and deliberately
+   cancelled preliminary runs. Link [comparison](visual-usability-comparison.md#ui16-05-historical-fan-correction)
+   and [acceptance](evidence/ui16-motion/acceptance.md), with explicit limits.
+
+Tools: `inspect-radial-reference.mjs ENGINE KIND URL [FILE] [HANDLE_ID]`,
+`compare-radial-captures.mjs REFERENCE_REPORT CANDIDATE_REPORT` (adaptive option
+skips only absolute orbit position for documented clamping/radius adaptations),
+and the enhanced `verify-ui16-browser.mjs` integrated in `verify-cumulative.mjs`.

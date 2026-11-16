@@ -381,3 +381,40 @@ offline file use, update refusal/recovery, two-tab preservation and short/rotate
 viewports. Firefox uses a disclosed native-picker boundary limit. Final cumulative
 CxnIL6 passes 22/22; both ten-minute soaks ouoswt/ssVS7p pass after the idle fast path. Physical keyboard/Home Screen qualification
 cannot be inferred from resize/viewport emulation. See evidence/g10/scrub-issues.md.
+
+## UI16-05 Historical Fan Correction
+
+2026-11-16, C03/C04/C08/C10/C12/C13. User feedback reopened historical appearance
+parity. The .3 functional tests were real but its settled screenshots did not test
+motion; the earlier restoration description was too broad. Compare actual native
+old/new hold recordings and computed paint, not a hand-made imitation or animation-
+disabled snapshot. Source reference is fork `545051374fd176a74d3ce18f8fe6dfe99595dcf5`
+and unchanged archived WorldContextMenu/Layout.css. Evidence and qualification:
+[motion acceptance](evidence/ui16-motion/acceptance.md).
+
+| Property | Historical Fork | Rejected .3 | .4 Contract / Evidence |
+| --- | --- | --- | --- |
+| Hold | 340ms, 12px minimum startup jitter | 300ms / 8px | Restore old thresholds; native observed onset includes RAF/event scheduling |
+| Opening | 220ms translated/scaled fan; 38ms per-body delay; scale .7 to 1 | 120ms opacity fade | Restore actual moving fan; multiple native RAF transforms, keyframes and easing asserted |
+| Orbit | 56/74px radius; 32-degree nominal spacing, span capped 250 degrees | 100px desktop, 40-degree spacing | Restore compact orbit; bounded edge clamping, expand crowded long labels only |
+| Pills | Content width, 20px desktop, native button font, inward 10px dots | Fixed 112x32px; dots all left | Match native Chrome/WebKit computed paint, widths within .25 CSS px text-metric tolerance |
+| Labels | Principal-angle readable rotation | Rotation wrap differed | atan2 normalization; all old/new final label rotations asserted |
+| Guides/actions | Faint dashed ring/spokes, add20/delete30, no central X | No guides; additional center X | Restore historical fan guides/action sizes; keep keyboard Escape and accessible list Close |
+| Original projects | Airer11 bodies / WorkingScreen12 bodies remain fans | >6 cutoff made both lists | Both raw originals now fans in desktop native hold recordings; graph unchanged after stationary release |
+| Retraction | CSS requests 220ms reverse, removes after230ms; actual completed Chrome animation snaps opacity0 on direction change | Removed immediately | Fresh frozen inert presentation animates reverse; no delayed document commands; this is intentional, not pixel-exact old closing behavior |
+| Crowded/narrow/coarse | Can clip or overlap and uses tiny targets | Bounded but premature list | Keep bounded/clamped orbit, adaptive long-label radius, 44px coarse targets; list if orbit cannot fit or >24 bodies |
+
+Actual Airer edge test exposed an intermediate .4 bug: clamping placed Body10 under
+an unmoved cursor and stationary release assigned the brown handle. Movement-origin
+guards now prevent body/add/delete activation without deliberate movement; full
+before/after raw-file mechanisms and a three-action domain regression assert this.
+DOM hit-testing follows actual animated controls, not only final static rectangles.
+Normal held toggles debounce within a pill and rearm after leaving, matching the fork.
+
+Chromium/WebKit desktop and portrait/512px Split View focused checks pass, with
+reduced motion, inert reverse frames, keyboard/context/tap, cancel/resize, saved
+checkbox/range values and 12-body fan coverage. Firefox desktop passes with the
+existing explicit headless native-picker boundary. Final frozen cumulative
+through-g10-L2wRKj PASS24/24, with960 domain/27 tooling and fresh-install PASS.
+Lead accepts the documented scoped comparison, not intermediate runs or physical
+iPad certification. See the linked acceptance for precise adaptation limits.
