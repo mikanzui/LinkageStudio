@@ -47,3 +47,7 @@ test('failed initialization can retry and does not print provider errors', async
 test('uninitialized sign-in is rejected rather than awaiting and losing activation', async () => {
   const f=fixture(); await assert.rejects(f.auth.signIn(),/not ready/); assert.equal(f.counts().loads,0);
 });
+test('disconnect and popup operations cannot overlap and clear newly acquired account tokens',async()=>{
+  const f=fixture();await f.auth.initialize();let resolve!:()=>void;f.fake.clearCache=()=>new Promise<void>(r=>{resolve=r;});
+  const op=f.auth.signOut('A');await assert.rejects(f.auth.signIn(),/already in progress/);resolve();await op;await f.auth.signIn();assert.equal(f.counts().popups,1);
+});

@@ -87,7 +87,6 @@ export function solve(
         const c = angleDriverConstraint(fj.position, pd, driver.targetAngle);
         phi[row] = c.residual; J[row][di] = c.dxDriven; J[row][di + 1] = c.dyDriven;
       }
-      row++;
     }
     residual = 0;
     for (let i = 0; i < numConstraints; i++) residual += phi[i] * phi[i];

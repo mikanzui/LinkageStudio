@@ -1,7 +1,10 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Current task: G10 production/PWA/offline/readiness on codex/rebuild-cloud-pwa.
+Current task: code/browser implementation accepted; live-account setup and
+user-performed authentication pending. Device/target/licensing qualifications
+remain OPEN. No deployment.
+G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.2.
 User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.
 Detailed remaining work: remaining-updates.md. G10 and final scrub follow G9.
 Codex owns verification and gate decisions; routine user sign-off is not required.
@@ -56,7 +59,7 @@ requires its own gate report plus all previously accepted tests.
 | G7 | Tracers and qualified force/sensor analysis | G6 | PASS | 5b5431f; 519 tests/type/build/lint and sixteen cumulative runs; evidence/g7/acceptance.md; explicit model and physical-device limits |
 | G8 | Complete files/recovery and independently read CAD exports | G7 | VERIFIED CHECKPOINT / TARGET OPEN | 0.16.0-rebuild.1; 663 tests, 18 cumulative runs, independent CAD reader and actual LibreCAD mm GUI check; SolidWorks execution unverified; evidence/g8/acceptance.md |
 | G9 | Optional projects/auth/cloud, autosave and conflicts | G8 implementation checkpoint | VERIFIED CHECKPOINT / TARGET OPEN | 898 domain tests/0 skips, type/lint/build and 20 cumulative suite/engine passes; 18 cloud scenarios per engine; evidence/g9/acceptance.md; live Microsoft qualification OPEN |
-| G10 | Production/PWA/offline/update; soak; release decision | G9 implementation checkpoint | ACTIVE | F21; integrate prepared toolchain/restart/portable packages, verify real worker transitions and final scrub; external qualifications remain open |
+| G10 | Production/PWA/offline/update; soak; release decision | G9 implementation checkpoint | VERIFIED CHECKPOINT / TARGET OPEN | 919 domain tests/0 skips, 27 tooling + 2 private archive checks, final CxnIL6 22/22 cumulative passes, ouoswt/ssVS7p ten-minute soaks, fresh-checkout install/build/browser and independent bounded review; evidence/g10/acceptance.md; external qualifications OPEN |
 
 The requested final whole-app functionality scrub remains planned after
 feature integration: actual controlled UI workflows plus backend regression tests,
@@ -85,6 +88,54 @@ for current document baseline. Added pre-upload action lock after recovery flush
 Beforeunload reload harness now explicitly accepts its planned navigation prompt.
 Noether resumed for disjoint G10-01 dependency experiment in
 `.rebuild.local/packages/g10-toolchain`; candidate read-only. Lead remains G9.
+
+G10 integration update: both sidecars DONE/CLOSED. Compatible Vite 8.3.8,
+React plugin 6.3.0 and PWA 2.0.0 plus scoped consumer overrides integrated.
+Lead additionally upgraded ESLint 10.15.0 / @eslint/js 10.0.1 to remove the EOL
+lint-stack warning; removed only two dead assignments and retained filesystem
+error cause for new recommended rules. 27 tooling tests and current lint pass.
+Production audit zero; four unpatched low development findings remain qualified.
+Portable config/tooling bootstrap, explicit restart recovery, PNG author icons,
+case-correct base and visual viewport code integrated. Real three-engine public
+smokes passed before the final callback-query negative was added. Fresh public
+checkout verification passed without private fixtures; final snapshot retest
+pending. Final cumulative + continuous ten-minute Chromium/WebKit runs ACTIVE.
+See evidence/g10/scrub-issues.md for failed/aborted runs and specific repairs;
+no G10 PASS or complete-rebuild claim yet.
+
+G10 timed results now PASS: Chromium F2h2Dg (601026 ms, 548 samples) and
+WebKit Rof9Rj (601056 ms, 555 samples), sustained travel in every timed block,
+finite/bounded constraints, 6000-point cap and complete design restoration.
+Independent bounded review by Chandrasekhar DONE/CLOSED, no actionable findings;
+only g10-review/README.md written, no duplicated suites. Usage/cost UNKNOWN.
+Final cumulative FBz1Mu is 20/22 passed so far; do not promote until all finish.
+Fresh public checkout 9BigGa: clean no-bypass install, peer validation, type/lint,
+918 tests (903 pass / 15 explicit private skips), tooling/build/prod-audit PASS.
+Original root full-index patch and both original/untracked fixture tests remain
+byte-equivalent to the archived inputs. See evidence/g10/release-readiness.md.
+
+FINAL G10: FBz1Mu finished 22/22 PASS with unchanged e3f691e7 source. Both
+ten-minute real-worker/continuous-motion runs PASS; final Firefox public smoke
+PASS with native-picker limit. Normal production build contains no observation
+getters or test auth bypass. Fresh public browser bootstrap also PASS from the
+temporary synthetic verification checkout, no private runtime/worktree supplied.
+All planned G9/G10 code work is DONE at 0.16.0-rebuild.2, with named external
+qualification rows OPEN under D21. This is not overall deployment certification.
+
+Idle-cost follow-up: an unbound cloud controller no longer serializes the guest
+document on each timer tick. Added a zero-capture/no-network/no-storage regression
+(projects now 31 cases). Repeating full cumulative and both ten-minute runs on
+mock fingerprint f966a249; until those finish, final reseal is ACTIVE. No new
+features or broader source changes are planned.
+
+FINAL RESEAL: CxnIL6 22/22 PASS with unchanged f966a249; both ten-minute runs
+ouoswt/ssVS7p PASS on real-SDK c0b38990. Domain 919/919, no skips; fresh public
+checkout H6Sirt 904 pass / 15 explicit private skips; actual standalone browser
+bootstrap FZKBtA PASS. User authorized only a disposable synthetic OneDrive QA
+file and confirmed registration control. Open app Projects tab is handed off for
+manual authentication; exact client ID/SPA callback confirmation pending. No
+existing cloud document has been modified. This is an external prerequisite,
+not a request for user QA or a routine gate unlock.
 
 ## G8 Work Packages
 

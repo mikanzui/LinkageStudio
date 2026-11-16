@@ -3,7 +3,9 @@
 Updated: 2026-11-16. Owner: Codex; product scope follows user direction.
 Current stage: G0-G7 accepted; G8 code/browser/DXF checkpoint verified. User resumed
 remaining updates after 0.16.0-rebuild.1; G9 code/browser checkpoint verified,
-Microsoft target OPEN; G10 ACTIVE. See remaining-updates.md and
+Microsoft target OPEN; G10 code/browser checkpoint verified, external qualifications
+OPEN. Remaining implementation backlog is complete; see evidence/g10/acceptance.md,
+evidence/g10/release-readiness.md, remaining-updates.md and
 [G0 acceptance](evidence/g0/acceptance.md), [G1 acceptance](evidence/g1/acceptance.md)
 [G2 acceptance](evidence/g2/acceptance.md), [G3 acceptance](evidence/g3/acceptance.md)
 and [G4 acceptance](evidence/g4/acceptance.md), [G5 acceptance](evidence/g5/acceptance.md).
@@ -255,11 +257,11 @@ adding these to the rebuild.
 | D01 | Start from last Huggabiz release v0.12.3 | Confirmed by user |
 | D02 | Current iPad/latest stable iPadOS; exact model/build recorded during testing | Confirmed target; device evidence pending |
 | D03 | Safari and installed Home Screen app qualification | Planned coverage |
-| D04 | Guest/local editor independent of Microsoft account | Proposed architecture based on existing guest use |
+| D04 | Guest/local editor independent of Microsoft account | Implemented and browser-qualified through G9/G10; stalled auth/library cancellation cannot trap guest editing |
 | D05 | Preserve implemented feature families; simplify UI using comparison evidence | Working scope; review individual exceptions |
-| D06 | No custom backend until justified by a concrete requirement | Proposed architecture |
-| D07 | Compatibility means old files import/move in new app; backward export needs explicit loss policy | New-app import required; export policy open |
-| D08 | No claim of engineering-grade force accuracy until analytical qualification | Required correctness gate; accuracy target open |
+| D06 | No custom backend until justified by a concrete requirement | Implemented document/physics/local/cloud layers in the static client; optional Microsoft service qualification remains separate |
+| D07 | Compatibility means old files import/move in new app; backward export needs explicit loss policy | Legacy import/motion and source-preserving new saves qualified. No promise that an older app understands newly added features; full-feature backward export is not silently claimed |
+| D08 | No claim of engineering-grade force accuracy until analytical qualification | G7 defines qualified unit-particle model loads and unavailable partial reactions under D19, not SI structural certification |
 | D09 | Preserve author credits and verify redistribution terms before release | Required release task |
 | D10 | No implementation gate complete without cumulative evidence | Delivery rule |
 | D11 | Selective multi-agent execution: one lead plus at most two focused workers | Confirmed user direction; use only where independent work exists |
@@ -267,7 +269,7 @@ adding these to the rebuild.
 | D13 | Airer primary acceptance uses the upper brown arm pulled toward upper-left | Confirmed by user 2026-11-15; G3 records the actual trajectory and independent 30-60 degree / spread >300 contracts; repeated original/reopened browser runs required |
 | D14 | Codex executes verification and accepts gates without routine user QA/sign-off | User instruction 2026-11-15; real hardware limitations remain explicit, not claimed away |
 | D15 | Progress continuously until complete or a genuine blocker; retain iPad functionality through code review and automated WebKit/touch/viewport checks | User instruction 2026-11-15; physical hardware remains unverified, not an automatic development stop or user unlock step |
-| D16 | Trim removes explicitly crossed edges within selected shapes or active bodies, preserving other edges as persisted open paths | G5 data-safety correction to fork behavior that deleted vertices/whole triangles; analytical subset tests; full browser qualification pending |
+| D16 | Trim removes explicitly crossed edges within selected shapes or active bodies, preserving other edges as persisted open paths | G5 data-safety correction to fork behavior that deleted vertices/whole triangles; analytical and cumulative browser qualification passed |
 | D17 | Mirror retains constructive same-body membership, with explicit axis/scope and actual bitmap reflection | G5 comparison to fork; this is not a promise to create an independently moving cloned mechanism; original IDs/asset world poses retained |
 | D18 | Springs retain the fork's linear motion scale, but labels do not claim SI calibration; torsion uses opposing moments and dissipative damping in the declared unit-particle model | G6 2026-11-15; fork-spring-audit documents same-sign torsion and unsupported SI labels; analytical and browser qualification mandatory |
 | D19 | Force readings are qualified unit-particle model loads, not SI-certified structural loads; accumulate all projection impulses and distinguish incomplete contact reactions | G7 2026-11-16; evidence/g7/model-contract.md; 1% known-load/force-balance tests remain mandatory, not weakened to match inherited output |

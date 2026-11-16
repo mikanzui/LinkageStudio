@@ -21,6 +21,7 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
   const runtime = useRef<Runtime | null>(null), dialog = useRef<HTMLDialogElement>(null), trigger = useRef<HTMLButtonElement>(null);
   const alive = useRef(false), authEpoch = useRef(0);
   const actionLock = useRef(false);
+  const actionEpoch = useRef(0);
   const [state, setState] = useState<CloudState | null>(null), [accounts, setAccounts] = useState<CloudAccount[]>([]);
   const [ready, setReady] = useState(false), [authBusy, setAuthBusy] = useState(false), [issue, setIssue] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
@@ -41,12 +42,17 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
     return () => { alive.current = false; clearInterval(timer); owned.dispose(); if (runtime.current === owned) runtime.current = null; };
   }, []);
   const busy = !!state?.busy || authBusy || actionBusy;
-  const run = async (work: () => Promise<unknown>) => {
+  const run = async (work: (current: () => boolean) => Promise<unknown>) => {
     if (actionLock.current) return;
+    const version=actionEpoch.current, current=()=>alive.current&&actionEpoch.current===version;
     actionLock.current = true; setActionBusy(true);
     setIssue('');
-    try { await work(); } catch { if (alive.current) setIssue('Operation did not complete. Current local design is unchanged.'); }
-    finally { actionLock.current = false; if (alive.current) setActionBusy(false); }
+    try { await work(current); } catch { if (current()) setIssue('Operation did not complete. Current local design is unchanged.'); }
+    finally { if (current()) { actionLock.current = false; setActionBusy(false); } }
+  };
+  const dismiss = () => {
+    authEpoch.current++; actionEpoch.current++; actionLock.current=false;
+    runtime.current?.cancel(); setAuthBusy(false); setActionBusy(false); dialog.current?.close();
   };
   const chooseAccount = (id: string) => {
     authEpoch.current++; setSelection(null); setPendingOpen(null); setRename(false); setDeleting(false);
@@ -56,14 +62,14 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
   const show = () => {
     cancelInteractions(); trigger.current?.focus(); setFilename(useEditorStore.getState().projectName); setSelection(null); setPendingOpen(null); setRename(false); setDeleting(false);
     dialog.current?.showModal();
-    if (ready) { if (state?.accountId) void run(() => runtime.current!.refresh()); return; }
+    if (ready) { setAccounts(cloudAuth.accounts()); if (state?.accountId) void run(() => runtime.current!.refresh()); return; }
     setAuthBusy(true); const version = ++authEpoch.current;
     void cloudAuth.initialize().then(() => {
       if (!alive.current || version !== authEpoch.current) return;
-      setReady(true); const list = cloudAuth.accounts(); setAccounts(list);
+      setReady(true); setAuthBusy(false); const list = cloudAuth.accounts(); setAccounts(list);
       if (list.length === 1) chooseAccount(list[0].id);
     }).catch(() => { if (alive.current && version === authEpoch.current) setIssue('Cloud sign-in is unavailable. Local editing and files remain available.'); })
-      .finally(() => { if (alive.current) setAuthBusy(false); });
+      .finally(() => { if (alive.current && version === authEpoch.current) setAuthBusy(false); });
   };
   const signIn = () => {
     if (busy) return;
@@ -71,8 +77,8 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
     void run(async () => {
       const account = await cloudAuth.signIn();
       if (!alive.current || version !== authEpoch.current) return;
-      setAccounts(cloudAuth.accounts()); chooseAccount(account.id);
-    }).finally(() => { if (alive.current) setAuthBusy(false); });
+      setAuthBusy(false); setAccounts(cloudAuth.accounts()); chooseAccount(account.id);
+    }).finally(() => { if (alive.current && version === authEpoch.current) setAuthBusy(false); });
   };
   const requestOpen = () => {
     if (!selection || mode !== 'create') return;
@@ -88,19 +94,19 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
   };
   const saveCloud = (copy = false) => {
     cancelInteractions();
-    void run(async () => { await flush(); await runtime.current?.save(copy, filename.trim() || undefined); });
+    void run(async current => { await flush(); if(current()) await runtime.current?.save(copy, filename.trim() || undefined); });
   };
   const selectedKey = selection ? `${selection.cached ? 'cache' : 'remote'}:${selection.item.driveId}:${selection.item.id}` : '';
   const rows = [ ...(state?.items ?? []).map(item => ({ item, cached: false, detail: 'OneDrive' })),
     ...(state?.cached ?? []).map(row => ({ item: row.item, cached: true, detail: row.hasPending ? 'Offline draft' : row.remoteDeleted ? 'Deleted remotely; cached copy' : 'Cached copy' })) ];
   return <>
     <button ref={trigger} type="button" className="top-bar-btn" title="Projects" aria-label="Projects" onClick={show}><Cloud size={16}/><span className="top-bar-label">Projects</span></button>
-    <dialog ref={dialog} className="project-dialog cloud-dialog" aria-labelledby="cloud-title" onKeyDown={containDialogTab} onCancel={e => { if (busy) e.preventDefault(); }} onClose={() => trigger.current?.focus()}>
-      <header><h2 id="cloud-title">Projects</h2><button type="button" className="dialog-icon" aria-label="Close projects" title="Close" disabled={busy} onClick={() => dialog.current?.close()}><X size={18}/></button></header>
+    <dialog ref={dialog} className="project-dialog cloud-dialog" aria-busy={busy} aria-labelledby="cloud-title" onKeyDown={containDialogTab} onCancel={e => { e.preventDefault(); dismiss(); }} onClose={() => trigger.current?.focus()}>
+      <header><h2 id="cloud-title">Projects</h2><button type="button" className="dialog-icon" aria-label="Close projects" title="Close" onClick={dismiss}><X size={18}/></button></header>
       <div className="dialog-body">
         <div className="cloud-account-row"><label className="dialog-field">Account<select aria-label="Cloud account" value={state?.accountId ?? ''} disabled={busy} onChange={e => chooseAccount(e.target.value)}><option value="">Guest</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
           <button type="button" className="dialog-icon" aria-label="Connect Microsoft account" title="Connect Microsoft account" disabled={!ready || busy} onClick={signIn}><LogIn size={18}/></button>
-          <button type="button" className="dialog-icon" aria-label="Disconnect account" title="Disconnect account locally" disabled={!state?.accountId || busy} onClick={() => { const id = state!.accountId!; chooseAccount(''); void run(async () => { await cloudAuth.signOut(id); setAccounts(cloudAuth.accounts()); }); }}><LogOut size={18}/></button>
+          <button type="button" className="dialog-icon" aria-label="Disconnect account" title="Disconnect account locally" disabled={!state?.accountId || busy} onClick={() => { const id = state!.accountId!; chooseAccount(''); void run(async current => { await cloudAuth.signOut(id); if(current()) setAccounts(cloudAuth.accounts()); }); }}><LogOut size={18}/></button>
           <button type="button" className="dialog-icon" aria-label="Refresh projects" title="Refresh projects" disabled={!state?.accountId || busy} onClick={() => { setSelection(null); void run(() => runtime.current!.refresh()); }}><RefreshCw size={18}/></button>
         </div>
         <div className="cloud-status" role={issue || state?.error ? 'alert' : 'status'}>{issue || state?.status || (authBusy ? 'Connecting...' : state?.accountId ? '' : 'Guest')}</div>

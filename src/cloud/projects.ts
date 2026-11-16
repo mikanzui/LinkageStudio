@@ -24,7 +24,7 @@ export function createCloudProjects(cache: CloudCache, doc: CloudDocument, chang
   const update = (patch: Partial<CloudState>) => { if (!disposed) { state = { ...state, ...patch }; changed(state); } };
   const current = (version: number) => !disposed && version === epoch;
   const owns = (version: number, session: string) => current(version) && doc.capture().session === session;
-  const binding = () => state.binding?.session === doc.capture().session ? state.binding : null;
+  const binding = () => state.binding && state.binding.session === doc.capture().session ? state.binding : null;
   const begin = () => {
     if (!port || state.busy || disposed) throw new CloudError('auth', 'Choose a connected account first.');
     const captured = { port, epoch, doc: doc.capture(), controller: new AbortController() };
@@ -158,6 +158,11 @@ export function createCloudProjects(cache: CloudCache, doc: CloudDocument, chang
   }
   return {
     state: () => state,
+    cancel() {
+      const wasBusy=state.busy;
+      epoch++; operation?.abort(); operation=null;
+      update({ busy:false, ...(wasBusy ? { autosave:false, error:'cancelled' as const, status:'Cloud operation cancelled. A sent write may still complete; local changes are retained.' } : {}) });
+    },
     select(next: CloudPort | null) {
       epoch++; operation?.abort(); operation = null; port = next;
       update({ accountId: next?.accountId ?? null, items: [], cached: [], binding: null, autosave: false, busy: false, status: '', error: null });

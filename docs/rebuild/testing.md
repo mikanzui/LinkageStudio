@@ -1,19 +1,20 @@
 # Testing The Rebuild Checkpoint
 
-Version 0.16.0-rebuild.1 stops at local files/recovery/exports. G9 cloud and G10
-production/PWA/offline/soak remain unimplemented or unqualified. Gate evidence and
-limitations are tracked separately; a source commit is not a production release.
+Version 0.16.0-rebuild.2 adds optional cloud and production/offline/update code.
+Gate evidence and external qualification limits are tracked separately; a source
+commit is not a production release. The earlier rebuild.1 checkpoint is retained.
 
 ## Domain Tests
 
 Use Node 24 and Python 3.13. From a standalone checkout:
 
 ```powershell
-npm ci --legacy-peer-deps
+npm ci
 python -m venv .venv-cad
 .venv-cad/Scripts/python.exe -m pip install -r scripts/rebuild/requirements-cad.txt
 $env:CAD_PYTHON = (Resolve-Path .venv-cad/Scripts/python.exe).Path
 npm test
+npm run test:tooling
 npm run lint
 npm run build
 ```
@@ -21,8 +22,10 @@ npm run build
 POSIX shells use `.venv-cad/bin/python` and
 `export CAD_PYTHON="$PWD/.venv-cad/bin/python"`. CAD tests require ezdxf 1.4.5;
 missing or incorrect parser setup fails, rather than silently skipping the checks.
-The install flag exposes the inherited Vite/PWA peer mismatch; G10 must resolve
-the release toolchain and remaining development dependency audit findings.
+The compatible pinned Vite/PWA and ESLint 10 stack installs without peer bypasses.
+Production audit is zero. Four low development-only findings remain in the
+unpatched deepmerge chain, with a regression assertion for its static-default
+consumer. Do not run `npm audit fix --force` or label the full audit clean.
 
 ## Private Legacy Fixtures
 
@@ -49,16 +52,42 @@ no fixture is downloaded, reconstructed, replaced or uploaded by test setup.
 
 ## Browser Evidence
 
-`scripts/rebuild/verify-g1-browser.mjs` through `verify-g8-browser.mjs` are the
-original audit-workspace harnesses. They use real chooser/download controls,
+`scripts/rebuild/verify-g1-browser.mjs` through `verify-g10-production.mjs` use
+chooser/download controls,
 trusted browser input, read-only observations of the mounted stores, a frozen
 build fingerprint and isolated browser storage. They do not drive a second store
 instead of the visible app. Failure injections apply at file/IndexedDB boundaries.
 
-These scripts currently require the generated private `.rebuild.local` workspace:
-isolated candidate/reference trees, runtime configs, Playwright/browser tooling,
-archived fixtures and built artifact. A standalone browser-harness bootstrap is
-still G10 work; copying the scripts does not reproduce those private inputs.
+Full browser qualification requires the two private originals, not an inherited
+workspace. With `LINKAGE_FIXTURE_DIR` set, run:
+
+```powershell
+npm run test:browser:prepare
+npm run test:browser
+node scripts/rebuild/verify-g10-production.mjs chromium --soak
+node scripts/rebuild/verify-g10-production.mjs webkit --soak
+```
+
+The bootstrap resolves the current checkout (or explicit
+`LINKAGE_CANDIDATE_DIR`), verifies both hashes, creates ignored runtime/config
+files and installs pinned Playwright tooling/browsers only with explicit install
+flags. Existing different configs/archives/tooling definitions are preserved and
+refused. Source directories are never aliased by a junction. Full cumulative runs
+require all 22 suite/engine combinations and unchanged source/config/base/mock
+fingerprints. A ten-minute soak is a separate real-time run, not accelerated
+solver time. Reports retain wall time and simulation time.
+
+Public synthetic production checks need no private files:
+
+```powershell
+node scripts/rebuild/prepare-browser.mjs --config-only --install-tooling --install-browsers
+npm run test:production
+node scripts/rebuild/verify-g10-production.mjs webkit
+```
+
+These do not replace private-file or complete cumulative qualification. The
+non-deploying GitHub workflow runs public domain/tooling/build/audit and generated
+worker smoke checks. Hosted CI execution is unverified until actually run.
 Raw traces, screenshots, mechanism contents and local tooling are not published.
 The published G0 fixture map is a redacted verification summary. Full coordinate
 and body-membership inventories remain only in the original private audit docs.
@@ -75,5 +104,9 @@ WebKit engine tests are not physical iPad Safari/Home Screen/Pencil/VoiceOver
 certification. Chrome CDP touch/pen and WebKit trusted taps are distinguished from
 WebKit mouse drag/cancellation. Physical OS picker cancellation is modeled at the
 actual input element, not a claim that automation dismissed the iOS Files app.
+Windows headless Firefox 159 emits cancel before Playwright file delivery even on
+a minimal non-app page. Its production test suppresses only the native picker
+click, then drives the actual input/FileReader/import. That is not Firefox native
+picker qualification. Chrome/WebKit use actual chooser events.
 SolidWorks execution remains unverified. CAD GUI inspection must have its own
 evidence and cannot be inferred from passing numeric/parser tests.

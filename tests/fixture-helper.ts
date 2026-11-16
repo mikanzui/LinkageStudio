@@ -34,7 +34,7 @@ function fixtureText(name: LegacyFixtureName): string | undefined {
   try { bytes = readFileSync(path); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
-    throw new Error(`Cannot read legacy fixture ${name} at ${path}: ${String(error)}`);
+    throw new Error(`Cannot read legacy fixture ${name} at ${path}: ${String(error)}`, { cause: error });
   }
   const actual = createHash('sha256').update(bytes).digest('hex');
   if (actual !== legacyFixtureHashes[name]) {

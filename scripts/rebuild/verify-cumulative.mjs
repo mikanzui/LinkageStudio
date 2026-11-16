@@ -6,13 +6,15 @@ import { candidateFingerprint } from './candidate-fingerprint.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const through = Number(process.argv[2] ?? 5);
-const url = process.argv[3] ?? 'http://127.0.0.1:5185/linkage-studio/';
+const url = process.argv[3] ?? 'http://127.0.0.1:5185/LinkageStudio/';
 const all = [
   [1, 'verify-g1-browser.mjs'], [2, 'verify-g2-browser.mjs'], [3, 'verify-g3-browser.mjs'],
   [4, 'verify-g4-input.mjs'], [4, 'verify-g4-bodies.mjs'], [5, 'verify-g5-browser.mjs'],
   [6, 'verify-g6-browser.mjs'],
   [7, 'verify-g7-browser.mjs'],
   [8, 'verify-g8-browser.mjs'],
+  [9, 'verify-g9-browser.mjs'],
+  [10, 'verify-g10-production.mjs'],
 ];
 const parent = join(root, '.rebuild.local/evidence/cumulative');
 await mkdir(parent, { recursive: true });

@@ -10,7 +10,7 @@ export function drawGeometryPreview(ctx: CanvasRenderingContext2D, state: {
   ctx.save();
   const {zoom,pan}=state.camera;
   ctx.setTransform(pixelRatio*zoom,0,0,pixelRatio*zoom,pixelRatio*pan.x,pixelRatio*pan.y);
-  let points: Vec2[]=[];
+  let points: Vec2[];
   if(state.shapeGesture){const {start,end,square}=state.shapeGesture;points=state.createTool==='rectangle'?rectanglePoints(start,end,square):state.createTool==='circle'?circlePoints(start,end):ngonPoints(start,end,state.ngonSides);}
   else points=state.trimStroke;
   if(points.length){

@@ -1,27 +1,27 @@
 # Slinker / Linkage Studio
 
-Version **0.16.0-rebuild.1**, an isolated rebuild checkpoint based on
+Version **0.16.0-rebuild.2**, an isolated rebuild candidate based on
 [Huggabiz / Hugo Wilson's Linkage Studio](https://github.com/Huggabiz/linkage-studio)
 v0.12.3 (`3dfe10512e105f863a582ce5cc4b3bb8a2006306`).
 
 Rebuilds the editor, document and simulation boundaries while restoring the fork's
-geometry, spring, tracer, sensor and export tools. This checkpoint stops after
-local files/recovery/CAD work. Microsoft/OneDrive and production/PWA qualification
-remain future stages; this is not a complete replacement for the fork's cloud app.
+geometry, spring, tracer, sensor and export tools. Adds optional account-isolated
+OneDrive projects, offline drafts and recovery-verified PWA restarts. Live Microsoft
+registration/service and physical-device qualification remain explicitly open.
 See [changes](CHANGELOG.md) and [rebuild tracker](docs/rebuild/progress-tracker.md).
 
 ## Run Locally
 
-Node 24 is used for verification (Vite requires Node 20.19+ or 22.12+).
+Use Node 24.13.1 or later in the Node 24 line.
 
 ```sh
-npm ci --legacy-peer-deps
+npm ci
 npm run dev -- --host 127.0.0.1
 ```
 
-Open the printed `/linkage-studio/` URL. The explicit install flag is currently
-needed for the inherited Vite 8 / vite-plugin-pwa 1.2 peer mismatch. Their tested
-build works, but the compatible clean-release toolchain remains a G10 task.
+Open the printed `/LinkageStudio/` URL, including its case. No peer bypass is
+needed. `VITE_BASE_PATH=/` (or another validated trailing-slash subpath) overrides
+the hosting path when set in your shell before the build.
 
 ```sh
 npm run lint
@@ -43,7 +43,7 @@ CAD_PYTHON="$PWD/.venv-cad/bin/python" npm test
 Windows uses `.venv-cad\Scripts\python.exe`; set environment variables using your
 shell's native syntax. The two user-supplied legacy mechanisms and raw browser
 evidence are deliberately not published. Fixture configuration, required-evidence
-mode and the workspace browser harness are documented in
+mode and the portable browser harness are documented in
 [testing](docs/rebuild/testing.md).
 
 ## Qualification Limits
@@ -58,7 +58,15 @@ mode and the workspace browser harness are documented in
   unverified. The export dialog states this limitation.
 - Recovery is best effort local storage, not a durable file/cloud save. Browser
   download initiation does not clear unsaved changes.
-- Production update/offline/soak and development-dependency audit work remain G10.
+- OneDrive is optional. Its Microsoft SPA registration must allow the exact
+  origin/base plus `redirect.html`; `VITE_MSAL_CLIENT_ID` selects an owned public
+  registration. No client secret belongs in this browser application. Live
+  sign-in/CORS/conditional-upload behavior is not certified by mock tests.
+- Four low development-only audit findings remain in the unpatched deepmerge
+  build-tool chain; its inspected consumer merges static defaults only. Production
+  audit has zero findings. This is a qualification, not a security patch.
+- Final G10 cumulative/soak results and any unresolved issues are maintained in
+  the rebuild tracker; installation assets are not physical Home Screen evidence.
 
 ## Provenance
 

@@ -326,3 +326,21 @@ focus/escape, 44px coarse controls, cache reload and the original handle motion
 after cloud import. Current status ACTIVE; final artifacts/screenshots and results
 will be linked after acceptance. No task-time improvement, live Microsoft service
 or physical iPad qualification is claimed from dependency-boundary mocks.
+
+## G10 Production And Tablet Comparison
+
+2026-11-16; F21, C01/C02/C10/C11/C12/C13. The inherited automatic worker update
+is replaced by a small update indicator and native restart dialog. Later does not
+reload. Restart confirms an exact recoverable current design; another dirty tab
+is not reloaded. Existing author artwork is rasterized for installation assets,
+not redesigned. The actual repository path/case is `/LinkageStudio/`.
+
+Modal bounds now track the visual viewport instead of extending below a short
+keyboard viewport; header/footer remain reachable while the body scrolls. Safe
+area padding and browser page zoom are retained alongside canvas-owned gestures.
+The inherited editor/body color language is unchanged; no task-time improvement
+or new design system is claimed. Real Chromium/WebKit production tests cover
+offline file use, update refusal/recovery, two-tab preservation and short/rotated
+viewports. Firefox uses a disclosed native-picker boundary limit. Final cumulative
+CxnIL6 passes 22/22; both ten-minute soaks ouoswt/ssVS7p pass after the idle fast path. Physical keyboard/Home Screen qualification
+cannot be inferred from resize/viewport emulation. See evidence/g10/scrub-issues.md.

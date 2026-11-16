@@ -12,7 +12,9 @@ import { computeDriverAngle } from './core/solver/driver';
 import { angleBetween } from './core/math/vec2';
 import { SIM_DT } from './utils/constants';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from './core/body-transform';
-import { isProjectDirty, markProjectSaved } from './document/project';
+import { isProjectDirty, markProjectSaved, projectText, useProjectStatus } from './document/project';
+import { consumeRestartApproval } from './document/restart';
+import { hasActiveInteractions } from './interaction/session';
 
 function App() {
   const initialAngleRef = useRef<number | null>(null);
@@ -22,6 +24,7 @@ function App() {
   useEffect(() => {
     markProjectSaved();
     const warn = (event: BeforeUnloadEvent) => {
+      if (consumeRestartApproval({ sessionId: useProjectStatus.getState().sessionId, text: projectText(), displayName: useEditorStore.getState().projectName, interacting: hasActiveInteractions() })) return;
       if (!isProjectDirty()) return;
       event.preventDefault(); event.returnValue = '';
     };

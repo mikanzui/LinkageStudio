@@ -24,12 +24,12 @@ No existing user cloud file will be modified for testing.
 
 | ID | Deliverable | Acceptance | Status |
 | --- | --- | --- | --- |
-| G10-01 | Compatible pinned toolchain and clean installation | No legacy peer override needed, production audit clean, development findings repaired/qualified, clean-checkout type/lint/build/tests | TODO |
-| G10-02 | Deployment subpath and PWA assets | Real repository path/case, nonblank cold/warm/offline navigation, correct asset scopes and usable installation icons | TODO |
-| G10-03 | Safe service-worker updates and background/resume | No automatic dirty-page replacement; recoverable update choice, old/new version transition and offline restart verified | TODO |
-| G10-04 | Portable browser tooling and CI | Explicit private fixture configuration, no uploaded mechanisms/coordinate inventories, reproducible read-only observer build and published test commands | TODO |
-| G10-05 | Final whole-app scrub and soak | All implemented UI workflows plus domain tests, full cumulative engines, tablet/Split View/cancel/rotation-code checks, 10-30 minute motion and ownership soak | TODO |
-| G10-06 | Documentation/version/rollback decision | Accurate comparisons/evidence/issues, preserved author credit and checkpoint, explicit external/device limits; no deployment or full-release claim without required evidence | TODO |
+| G10-01 | Compatible pinned toolchain and clean installation | No legacy peer override needed, production audit clean, development findings repaired/qualified, clean-checkout type/lint/build/tests | IMPLEMENTED / VERIFIED locally; 919 tests, 904 pass + 15 explicit private skips in fresh public checkout; four low dev findings disclosed |
+| G10-02 | Deployment subpath and PWA assets | Real repository path/case, nonblank cold/warm/offline navigation, correct asset scopes and usable installation icons | CODE / BROWSER VERIFIED; physical installation OPEN |
+| G10-03 | Safe service-worker updates and background/resume | No automatic dirty-page replacement; recoverable update choice, old/new version transition and offline restart verified | CODE / BROWSER VERIFIED; final cumulative ACTIVE |
+| G10-04 | Portable browser tooling and CI | Explicit private fixture configuration, no uploaded mechanisms/coordinate inventories, reproducible read-only observer build and published test commands | IMPLEMENTED; 27 tooling tests + hash-checked private tests; hosted CI UNVERIFIED |
+| G10-05 | Final whole-app scrub and soak | All implemented UI workflows plus domain tests, full cumulative engines, tablet/Split View/cancel/rotation-code checks, 10-30 minute motion and ownership soak | DONE for code/browser contract; 22/22 cumulative + both continuous ten-minute runs PASS; physical qualification OPEN |
+| G10-06 | Documentation/version/rollback decision | Accurate comparisons/evidence/issues, preserved author credit and checkpoint, explicit external/device limits; no deployment or full-release claim without required evidence | DONE for local 0.16.0-rebuild.2 checkpoint; evidence/g10/acceptance.md and release-readiness.md; no deployment/broad publication |
 
 ## External Qualifications
 

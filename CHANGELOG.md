@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.16.0-rebuild.2 - 2026-11-16
+
+### Projects And Offline Updates
+
+- Optional guest-first Microsoft/OneDrive library, immutable IDs and conditional
+  writes, bounded pagination, safe download destinations and sanitized failures.
+- Account-scoped cache/pending journal, explicit autosave, offline drafts,
+  rename/delete/reopen and separate-copy conflict recovery. Late callbacks cannot
+  change a replacement project/account. Invalid cloud data cannot replace a
+  known-good cached copy.
+- Cancellable initialization/library requests and sent-write outcome warnings;
+  guest work cannot be trapped by a pending cloud operation.
+- Recovery-verified explicit worker restart, no automatic reload of dirty tabs,
+  quota refusal, real offline local-file operation and old/new worker tests.
+- Correct case-sensitive hosting path, validated base override, rasterized
+  existing author icons and visual-viewport-aware keyboard/Split View dialogs.
+
+### Tooling And Qualification
+
+- Compatible pinned Vite/React/PWA toolchain, ESLint 10 and clean npm installation
+  without peer bypasses. Audit reduced from 30 to four low development findings;
+  production remains zero. Unpatched deepmerge risk is disclosed and its static
+  build-time consumer is regression checked.
+- Portable read-only browser harness, explicit hash-checked private fixtures,
+  clean-checkout checks and non-deploying public CI definition.
+- Retained original compatibility/physics/export tests and upstream credit.
+  Live Microsoft service, physical iPad and SolidWorks remain unqualified.
+  Final gate evidence is tracked separately; this version is not deployment approval.
+
 ## 0.16.0-rebuild.1 - 2026-11-16
 
 Versioned rebuild checkpoint, based on Huggabiz's last pre-fork v0.12.3.

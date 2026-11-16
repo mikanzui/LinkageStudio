@@ -26,7 +26,7 @@ export function createCloudAuth(load: () => Promise<Client>): CloudAuth {
     accounts: () => client?.getAllAccounts().map(a => ({ id: a.homeAccountId, label: a.username || a.name || 'Microsoft account' })) ?? [],
     async signIn() {
       const c = requireClient();
-      if (interactive) throw new CloudError('auth', 'A sign-in window is already open.');
+      if (interactive) throw new CloudError('auth', 'An account operation is already in progress.');
       interactive = true;
       try {
         // Invoked directly from a fresh button action, never from background autosave.
@@ -37,8 +37,11 @@ export function createCloudAuth(load: () => Promise<Client>): CloudAuth {
       finally { interactive = false; }
     },
     async signOut(id) {
+      if (interactive) throw new CloudError('auth', 'An account operation is already in progress.');
+      interactive=true;
       try { await requireClient().clearCache({ account: account(id) }); }
       catch { throw new CloudError('auth', 'Could not disconnect this account.'); }
+      finally { interactive=false; }
     },
     async token(id) {
       const captured = account(id);

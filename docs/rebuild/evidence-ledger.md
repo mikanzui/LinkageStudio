@@ -170,3 +170,44 @@ failed/performance runs are preserved in G7 integration notes. G8 starts automat
 - Decide dimensional/force accuracy expectations and CAD formats used in practice.
 - Review license/provenance and preserve Hugo Wilson / Huggabiz credit before any
   redistributed rebuild; no top-level license was identified in this initial scan.
+
+## 2026-11-16: G9/G10 Implementation Checkpoint
+
+The earlier groundwork items above are historical preparation notes. G0-G7 have
+accepted reports; G8/G9/G10 are verified code/browser checkpoints with named
+external target qualifications still OPEN, not overall deployment certification.
+
+- G9 checkpoint 43d440d: 898 domain tests and 20 cumulative combinations; see
+  evidence/g9/acceptance.md. Final G10 adds cancellation/idle regressions.
+- Final version 0.16.0-rebuild.2: 919 domain tests PASS, zero skips with originals;
+  27 public tooling + 2 private archive checks PASS; type/lint/normal build PASS.
+- Final pinned cumulative CxnIL6: 22/22 PASS, source f966a249 unchanged.
+  Both originals' actual handle motion/reopen and all earlier gates remain passing.
+- Real generated worker/offline/update/quota/two-tab/query-callback scenarios pass
+  in Chrome 157.0.8103.51 and automated WebKit 27.2. Firefox 159 also passes the
+  public production suite with an explicit native-picker automation boundary.
+- Continuous ten-minute soaks: Chromium ouoswt 601028 ms / 550 samples and
+  WebKit ssVS7p 600933 ms / 557 samples, real-SDK source c0b38990. Motion persists
+  in every timed block, constraints remain bounded, traces cap at 6000 and the
+  complete authored design restores. Wall and simulation clocks are distinct.
+- Fresh public checkout H6Sirt: clean no-bypass install/peers/type/lint/build/audit,
+  919 tests = 904 pass + 15 explicit missing-private skips, tooling PASS. Actual
+  standalone public browser bootstrap FZKBtA PASS, no private runtime/worktree.
+- Production audit zero; full audit retains four unpatched low dev findings with
+  a specific static-consumer qualification. ESLint 10 removes the EOL lint stack.
+- Independent bounded ownership/restart review found no actionable issue before
+  the final one-line idle fast path; lead reviewed/tested that final change.
+  Workers wrote disjoint ignored packages, then were closed. Usage/cost UNKNOWN;
+  no unmeasured time or cost savings claimed.
+- Original root full-index patch still hashes 184322a9; both user fixtures and
+  original untracked tests match the archive. G8 tag remains at 1b6f723. Private
+  geometry, traces and actual cloud credentials are not published.
+
+See evidence/g10/acceptance.md, scrub-issues.md and release-readiness.md for exact
+paths/full hashes and failures/retests. Earlier failed/aborted reports are not
+promoted. The user now authorizes one disposable synthetic OneDrive QA file and
+confirms registration control. The real app is open at port 5187, Projects ready;
+exact client-ID/SPA callback confirmation and user-performed login are pending.
+No original cloud file has been modified. Physical iPad/Home Screen/Pencil/
+VoiceOver, actual SolidWorks, upstream redistribution terms and hosted CI remain
+explicit external qualifications. No user QA/gate-unlock requirement is introduced.

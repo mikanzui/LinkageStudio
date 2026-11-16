@@ -38,6 +38,10 @@ test('guest initialization has no network or storage activity', () => {
   const f = fixture(); f.controller.select(null);
   assert.equal(f.controller.state().accountId, null); assert.equal(f.rows.size, 0); assert.equal(f.uploaded.length, 0);
 });
+test('unbound guest ticks never serialize the current document',async()=>{
+  const f=fixture();let captures=0;const capture=f.document.capture;f.document.capture=()=>{captures++;return capture();};
+  await f.controller.tick();await f.controller.tick();assert.equal(captures,0);assert.equal(f.rows.size,0);assert.deepEqual(f.uploaded,[]);
+});
 test('cloud acknowledgement marks captured content saved; newer edits remain separate', async () => {
   const f = fixture(), wait = deferred<CloudItem>(); f.port.create = async () => wait.promise;
   const op = f.controller.save(); f.edit('newer'); wait.resolve(item); await op;
@@ -132,4 +136,16 @@ for (const action of ['rename','remove'] as const) test(`${action} acknowledgeme
   const f=fixture();await f.controller.open(item);f.cache.read=async()=>{throw new Error('Storage unavailable');};
   if(action==='rename'){await f.controller.rename(item,'New.slinker');assert.equal(f.controller.state().binding?.item.name,'New.slinker');assert.match(f.controller.state().status,/renamed.*cache was not updated/);}
   else {await f.controller.remove(item);assert.equal(f.controller.state().binding,null);assert.deepEqual(f.saved,['detached']);assert.match(f.controller.state().status,/Deleted from OneDrive/);}
+});
+test('cancel aborts a slow listing and ignores its eventual response without trapping guest editing',async()=>{
+  const f=fixture(),wait=deferred<CloudItem[]>();let signal:AbortSignal|undefined;f.port.list=async s=>{signal=s;return wait.promise;};
+  const op=f.controller.refresh();await new Promise(r=>setTimeout(r,0));f.controller.cancel();assert.equal(signal?.aborted,true);assert.equal(f.controller.state().busy,false);
+  wait.resolve([item]);await op;assert.deepEqual(f.controller.state().items,[]);assert.equal(f.controller.state().error,'cancelled');
+});
+test('cancelled sent save cannot mark the local design saved on a late acknowledgement',async()=>{
+  const f=fixture(),wait=deferred<CloudItem>();f.port.create=async()=>wait.promise;const op=f.controller.save();f.controller.cancel();wait.resolve(item);await op;assert.deepEqual(f.saved,[]);assert.equal(f.controller.state().binding,null);
+});
+test('cancel during pending-journal write prevents a request which has not yet been sent',async()=>{
+  const f=fixture();await f.controller.open(item);const wait=deferred<boolean>();f.cache.write=async()=>wait.promise;
+  const op=f.controller.save();await new Promise(r=>setTimeout(r,0));f.controller.cancel();wait.resolve(true);await op;assert.deepEqual(f.uploaded,[]);assert.deepEqual(f.saved,[]);
 });

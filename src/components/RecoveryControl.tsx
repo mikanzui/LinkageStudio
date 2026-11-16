@@ -11,9 +11,10 @@ import { useSimulationStore } from '../store/simulation-store';
 import { useRecoveryStore } from '../store/recovery-store';
 import { cancelInteractions, hasActiveInteractions } from '../interaction/session';
 import { containDialogTab } from '../interaction/dialog-focus';
+import { writeRestartCheckpoint } from '../document/restart';
 import './ProjectDialog.css';
 
-export interface RecoveryActions { flush(): Promise<void>; discard(id: string): Promise<void> }
+export interface RecoveryActions { flush(): Promise<void>; discard(id: string): Promise<void>; checkpoint(): Promise<boolean> }
 type Runtime = { storage: RecoveryStorage; coordinator: RecoveryCoordinator };
 
 export function RecoveryControl({ ref }: { ref: Ref<RecoveryActions> }) {
@@ -29,6 +30,12 @@ export function RecoveryControl({ ref }: { ref: Ref<RecoveryActions> }) {
   useImperativeHandle(ref, () => ({
     async flush() { await runtime.current?.coordinator.flush(); },
     async discard(id) { await runtime.current?.coordinator.discard(id); },
+    async checkpoint() {
+      const owned = runtime.current;
+      if (!owned) return false;
+      const result = await writeRestartCheckpoint(owned.storage, () => ({ sessionId: useProjectStatus.getState().sessionId, text: projectText(), displayName: useEditorStore.getState().projectName, interacting: hasActiveInteractions() }), () => owned.coordinator.flush());
+      return result === 'ready' && runtime.current === owned;
+    },
   }), []);
 
   useEffect(() => {

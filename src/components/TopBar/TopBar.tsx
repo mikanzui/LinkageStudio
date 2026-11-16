@@ -11,6 +11,7 @@ import { RecoveryControl } from '../RecoveryControl';
 import type { RecoveryActions } from '../RecoveryControl';
 import { CadExportControl } from '../CadExportControl';
 import { CloudControl } from '../CloudControl';
+import { UpdateControl } from '../UpdateControl';
 import { cancelInteractions } from '../../interaction/session';
 import { containDialogTab } from '../../interaction/dialog-focus';
 import './TopBar.css';
@@ -231,6 +232,7 @@ export function TopBar() {
       <div className="top-bar-brand">
         <span>Slinker v{__APP_VERSION__}</span>
       </div>
+      <UpdateControl checkpoint={async () => await recovery.current?.checkpoint() ?? false} saveLocal={handleSave}/>
     </div>
     <div className={`project-feedback ${stepError ? 'alert' : severity} ${!stepError && !message ? 'empty' : ''}`} role={stepError ? 'alert' : severity}>{stepError ?? message}</div>
     <dialog ref={navigationDialog} className="project-dialog" aria-labelledby="navigation-title" onKeyDown={containDialogTab} onClose={() => { if (!document.querySelector('dialog[open]')) (navigation === 'open' ? openTrigger : clearTrigger).current?.focus(); }}>
