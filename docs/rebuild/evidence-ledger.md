@@ -348,3 +348,21 @@ No console errors or exposed observer/mock auth. Visible hosted in-app tab also
 shows both author links and no model tag. Normal artifact plus public example only;
 no private fixtures/traces published. Evidence/pages/acceptance.md owns outcome,
 prior harness readiness failure, permission attestation and residual limits.
+
+## Version 17 Projects Examples (2026-11-16)
+
+Local scoped contract PASS, publication ACTIVE. Seven models including authorized
+byte-identical supplied originals, new two-stage spring lift and standalone
+playground details. Projects library has native search/radios/download, safe
+dirty navigation, session/signature/abort ownership, offline precache and no auth
+prerequisite.980 domain/no skips,27 tooling, type/lint/build/audit PASS.
+Native Chrome bHEvxY / WebKit hjTNxp PASS48 model/protection result groups across
+six desktop/portrait/512px profiles. Real brown-handle Airer motion,1DOF,
+~41degree opening/~510spread; trusted Chromium touch on both narrow profiles.
+Exact Create restore/native Save/reopen in all42 model/profile combinations.
+Frozen cumulative through-g10-SX3NvG PASS24/24,23m08.746s, no source changes;
+48 final CAD downloads independently parsed. Real-source hash e4d131434eb61a85da2de94e4c07e5595fe04ba5d5975520b173fe97e2db077b;
+mocked source2695116642b26c1df97b84d327c0caafe4d318041cd60ffff06851adb5f59328.
+See evidence/v17/acceptance.md for retained preliminary harness/source-freeze
+failures, bounded worker/reviewer handoffs and physical/service/model limits.
+No17 hosted success is inferred before the actual deployment/live checks.

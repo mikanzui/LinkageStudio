@@ -1,0 +1,720 @@
+{
+  "joints": {
+    "A": {
+      "id": "A",
+      "position": {
+        "x": 200,
+        "y": 800
+      },
+      "type": "fixed",
+      "connectedLinkIds": [
+        "link_A_M",
+        "link_A_D",
+        "link_A_railMin",
+        "link_A_railMax"
+      ],
+      "label": "A"
+    },
+    "railMin": {
+      "id": "railMin",
+      "position": {
+        "x": 330,
+        "y": 800
+      },
+      "type": "fixed",
+      "connectedLinkIds": [
+        "link_A_railMin",
+        "link_railMax_railMin"
+      ],
+      "label": "railMin"
+    },
+    "railMax": {
+      "id": "railMax",
+      "position": {
+        "x": 560,
+        "y": 800
+      },
+      "type": "fixed",
+      "connectedLinkIds": [
+        "link_A_railMax",
+        "link_railMax_railMin"
+      ],
+      "label": "railMax"
+    },
+    "B": {
+      "id": "B",
+      "position": {
+        "x": 520,
+        "y": 800
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_B_M",
+        "link_B_C"
+      ],
+      "label": "B"
+    },
+    "C": {
+      "id": "C",
+      "position": {
+        "x": 200,
+        "y": 580
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_B_C",
+        "link_C_M",
+        "link_C_N",
+        "link_C_F"
+      ],
+      "label": "C"
+    },
+    "D": {
+      "id": "D",
+      "position": {
+        "x": 520,
+        "y": 580
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_A_D",
+        "link_D_M",
+        "link_D_N",
+        "link_D_E"
+      ],
+      "label": "D"
+    },
+    "M": {
+      "id": "M",
+      "position": {
+        "x": 360,
+        "y": 690
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_A_M",
+        "link_D_M",
+        "link_B_M",
+        "link_C_M"
+      ],
+      "label": "M"
+    },
+    "E": {
+      "id": "E",
+      "position": {
+        "x": 200,
+        "y": 360
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_D_E",
+        "link_E_N",
+        "link_E_L",
+        "link_E_R"
+      ],
+      "label": "E"
+    },
+    "F": {
+      "id": "F",
+      "position": {
+        "x": 520,
+        "y": 360
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_C_F",
+        "link_F_N"
+      ],
+      "label": "F"
+    },
+    "N": {
+      "id": "N",
+      "position": {
+        "x": 360,
+        "y": 470
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_C_N",
+        "link_F_N",
+        "link_D_N",
+        "link_E_N"
+      ],
+      "label": "N"
+    },
+    "L": {
+      "id": "L",
+      "position": {
+        "x": 160,
+        "y": 360
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_E_L",
+        "link_L_R"
+      ],
+      "label": "L"
+    },
+    "R": {
+      "id": "R",
+      "position": {
+        "x": 760,
+        "y": 360
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "link_L_R",
+        "link_E_R"
+      ],
+      "label": "R"
+    }
+  },
+  "links": {
+    "link_A_M": {
+      "id": "link_A_M",
+      "jointIds": [
+        "A",
+        "M"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_A_D": {
+      "id": "link_A_D",
+      "jointIds": [
+        "A",
+        "D"
+      ],
+      "restLength": 388.329756778952,
+      "mass": 1
+    },
+    "link_D_M": {
+      "id": "link_D_M",
+      "jointIds": [
+        "D",
+        "M"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_B_M": {
+      "id": "link_B_M",
+      "jointIds": [
+        "B",
+        "M"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_B_C": {
+      "id": "link_B_C",
+      "jointIds": [
+        "B",
+        "C"
+      ],
+      "restLength": 388.329756778952,
+      "mass": 1
+    },
+    "link_C_M": {
+      "id": "link_C_M",
+      "jointIds": [
+        "C",
+        "M"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_C_N": {
+      "id": "link_C_N",
+      "jointIds": [
+        "C",
+        "N"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_C_F": {
+      "id": "link_C_F",
+      "jointIds": [
+        "C",
+        "F"
+      ],
+      "restLength": 388.329756778952,
+      "mass": 1
+    },
+    "link_F_N": {
+      "id": "link_F_N",
+      "jointIds": [
+        "F",
+        "N"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_D_N": {
+      "id": "link_D_N",
+      "jointIds": [
+        "D",
+        "N"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_D_E": {
+      "id": "link_D_E",
+      "jointIds": [
+        "D",
+        "E"
+      ],
+      "restLength": 388.329756778952,
+      "mass": 1
+    },
+    "link_E_N": {
+      "id": "link_E_N",
+      "jointIds": [
+        "E",
+        "N"
+      ],
+      "restLength": 194.164878389476,
+      "mass": 1
+    },
+    "link_E_L": {
+      "id": "link_E_L",
+      "jointIds": [
+        "E",
+        "L"
+      ],
+      "restLength": 40,
+      "mass": 1
+    },
+    "link_L_R": {
+      "id": "link_L_R",
+      "jointIds": [
+        "L",
+        "R"
+      ],
+      "restLength": 600,
+      "mass": 1
+    },
+    "link_E_R": {
+      "id": "link_E_R",
+      "jointIds": [
+        "E",
+        "R"
+      ],
+      "restLength": 560,
+      "mass": 1
+    },
+    "link_A_railMin": {
+      "id": "link_A_railMin",
+      "jointIds": [
+        "A",
+        "railMin"
+      ],
+      "restLength": 130,
+      "mass": 1
+    },
+    "link_A_railMax": {
+      "id": "link_A_railMax",
+      "jointIds": [
+        "A",
+        "railMax"
+      ],
+      "restLength": 360,
+      "mass": 1
+    },
+    "link_railMax_railMin": {
+      "id": "link_railMax_railMin",
+      "jointIds": [
+        "railMax",
+        "railMin"
+      ],
+      "restLength": 230,
+      "mass": 1
+    }
+  },
+  "bodies": {
+    "lower-rising": {
+      "id": "lower-rising",
+      "name": "Lower rising arm",
+      "jointIds": [
+        "A",
+        "M",
+        "D"
+      ],
+      "color": "#29935b",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "A",
+          "D"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "lower-falling": {
+      "id": "lower-falling",
+      "name": "Lower crossing arm",
+      "jointIds": [
+        "B",
+        "M",
+        "C"
+      ],
+      "color": "#d48a18",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "B",
+          "C"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "upper-rising": {
+      "id": "upper-rising",
+      "name": "Upper rising arm",
+      "jointIds": [
+        "C",
+        "N",
+        "F"
+      ],
+      "color": "#347ec5",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "C",
+          "F"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "upper-falling": {
+      "id": "upper-falling",
+      "name": "Upper crossing arm",
+      "jointIds": [
+        "D",
+        "N",
+        "E"
+      ],
+      "color": "#c54b7c",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "D",
+          "E"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "platform": {
+      "id": "platform",
+      "name": "Lift platform / moving rail",
+      "jointIds": [
+        "L",
+        "E",
+        "R"
+      ],
+      "color": "#188e9a",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "L",
+          "R"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "base": {
+      "id": "base",
+      "name": "Fixed floor rail",
+      "jointIds": [
+        "A",
+        "railMin",
+        "railMax"
+      ],
+      "color": "#68706d",
+      "showLinks": false,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "A",
+          "railMax"
+        ],
+        "angleOffset": 0
+      }
+    }
+  },
+  "baseBodyId": "base",
+  "sliders": {
+    "floor-slider": {
+      "id": "floor-slider",
+      "jointIdA": "railMin",
+      "jointIdB": "B",
+      "jointIdC": "railMax",
+      "t": 0.8260869565217391
+    },
+    "platform-slider": {
+      "id": "platform-slider",
+      "jointIdA": "L",
+      "jointIdB": "F",
+      "jointIdC": "R",
+      "t": 0.6
+    }
+  },
+  "colliders": {},
+  "outlines": {
+    "lower-rising-outline": {
+      "id": "lower-rising-outline",
+      "bodyId": "lower-rising",
+      "name": "Lower rising arm",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": 9
+        },
+        {
+          "x": -204.164878389476,
+          "y": 9
+        }
+      ]
+    },
+    "lower-falling-outline": {
+      "id": "lower-falling-outline",
+      "bodyId": "lower-falling",
+      "name": "Lower crossing arm",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": 9
+        },
+        {
+          "x": -204.164878389476,
+          "y": 9
+        }
+      ]
+    },
+    "upper-rising-outline": {
+      "id": "upper-rising-outline",
+      "bodyId": "upper-rising",
+      "name": "Upper rising arm",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": 9
+        },
+        {
+          "x": -204.164878389476,
+          "y": 9
+        }
+      ]
+    },
+    "upper-falling-outline": {
+      "id": "upper-falling-outline",
+      "bodyId": "upper-falling",
+      "name": "Upper crossing arm",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": -9
+        },
+        {
+          "x": 204.164878389476,
+          "y": 9
+        },
+        {
+          "x": -204.164878389476,
+          "y": 9
+        }
+      ]
+    },
+    "platform-outline": {
+      "id": "platform-outline",
+      "bodyId": "platform",
+      "name": "Lift platform / moving rail",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -223.33333333333331,
+          "y": -12
+        },
+        {
+          "x": 396.6666666666667,
+          "y": -12
+        },
+        {
+          "x": 396.6666666666667,
+          "y": 12
+        },
+        {
+          "x": -223.33333333333331,
+          "y": 12
+        }
+      ]
+    },
+    "base-outline": {
+      "id": "base-outline",
+      "bodyId": "base",
+      "name": "Fixed floor rail",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -178.33333333333331,
+          "y": -8
+        },
+        {
+          "x": 211.66666666666669,
+          "y": -8
+        },
+        {
+          "x": 211.66666666666669,
+          "y": 8
+        },
+        {
+          "x": -178.33333333333331,
+          "y": 8
+        }
+      ]
+    }
+  },
+  "images": {},
+  "springs": {
+    "lift-assist": {
+      "id": "lift-assist",
+      "name": "Platform lift assist",
+      "kind": "linear",
+      "anchorA": {
+        "type": "world",
+        "position": {
+          "x": 760,
+          "y": 0
+        }
+      },
+      "anchorB": {
+        "type": "joint",
+        "jointId": "R"
+      },
+      "stiffness": 2500,
+      "damping": 10,
+      "restLength": 180,
+      "prestressDelta": 0
+    },
+    "lift-damper": {
+      "id": "lift-damper",
+      "name": "Lift dashpot",
+      "kind": "damper",
+      "anchorA": {
+        "type": "world",
+        "position": {
+          "x": 200,
+          "y": 0
+        }
+      },
+      "anchorB": {
+        "type": "joint",
+        "jointId": "E"
+      },
+      "stiffness": 0,
+      "damping": 400,
+      "restLength": 0,
+      "prestressDelta": 0
+    }
+  },
+  "tracers": {
+    "platform-trace": {
+      "id": "platform-trace",
+      "bodyId": "platform",
+      "name": "Platform vertical travel",
+      "enabled": true,
+      "localPosition": {
+        "x": 386.6666666666667,
+        "y": -12
+      }
+    },
+    "scissor-trace": {
+      "id": "scissor-trace",
+      "bodyId": "lower-rising",
+      "name": "Lower center arc",
+      "enabled": true,
+      "localPosition": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  "forceSensors": {
+    "arm-load": {
+      "id": "arm-load",
+      "name": "Lower arm model load",
+      "linkId": "link_A_D",
+      "enabled": true
+    }
+  },
+  "projectName": "Spring-Assisted Two-Stage Scissor Lift",
+  "simulationSettings": {
+    "gravityEnabled": false,
+    "gravityStrength": 250,
+    "damping": 0.93,
+    "dragMultiplier": 25,
+    "dragDamping": 0.25
+  },
+  "viewPreferences": {
+    "gridLevel": "normal",
+    "showLinks": true,
+    "showVectors": false,
+    "showRulers": true,
+    "showForceUnits": false,
+    "showLoads": false,
+    "showReactions": false
+  },
+  "documentFormat": "linkage-studio",
+  "schemaVersion": 1,
+  "sourceVersion": "17.0.0",
+  "version": "17.0.0",
+  "writerVersion": "17.0.0",
+  "simulationModel": "saved-links-v1",
+  "springModel": "legacy-motion-v1",
+  "forceModel": "unit-particle-v1"
+}

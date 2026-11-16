@@ -1,7 +1,7 @@
 {
   "name": "linkage-studio",
   "private": true,
-  "version": "0.16.0-rebuild.4",
+  "version": "17.0.0",
   "type": "module",
   "engines": {
     "node": ">=24.13.1 <25"
@@ -13,6 +13,7 @@
     "test:browser": "node scripts/rebuild/run-g9.mjs --cumulative --through-g10",
     "test:production": "node scripts/rebuild/verify-g10-production.mjs chromium",
     "typecheck": "tsc -b",
+    "examples:prepare": "node --import tsx scripts/examples/prepare-examples.ts",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

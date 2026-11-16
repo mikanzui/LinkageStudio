@@ -12,6 +12,7 @@ import { importProject, isProjectDirty, markProjectRecovered, markProjectSaved, 
 import { useEditorStore } from '../store/editor-store';
 import { cancelInteractions, hasActiveInteractions } from '../interaction/session';
 import { containDialogTab } from '../interaction/dialog-focus';
+import { ExampleProjects } from './ExampleProjects';
 import './ProjectDialog.css';
 import './CloudControl.css';
 
@@ -25,6 +26,7 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
   const [state, setState] = useState<CloudState | null>(null), [accounts, setAccounts] = useState<CloudAccount[]>([]);
   const [ready, setReady] = useState(false), [authBusy, setAuthBusy] = useState(false), [issue, setIssue] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
+  const [tab, setTab] = useState<'projects' | 'examples'>('projects'), [shown, setShown] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null), [pendingOpen, setPendingOpen] = useState<(Selection & { session: string }) | null>(null);
   const [filename, setFilename] = useState(''), [rename, setRename] = useState(false), [deleting, setDeleting] = useState(false);
   const mode = useEditorStore(s => s.mode);
@@ -52,16 +54,14 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
   };
   const dismiss = () => {
     authEpoch.current++; actionEpoch.current++; actionLock.current=false;
-    runtime.current?.cancel(); setAuthBusy(false); setActionBusy(false); dialog.current?.close();
+    runtime.current?.cancel(); setAuthBusy(false); setActionBusy(false); setShown(false); dialog.current?.close();
   };
   const chooseAccount = (id: string) => {
     authEpoch.current++; setSelection(null); setPendingOpen(null); setRename(false); setDeleting(false);
     runtime.current?.select(id ? createOneDriveClient({ accountId: id, token: () => cloudAuth.token(id) }) : null);
     if (id) void runtime.current!.refresh().catch(() => { if (alive.current) setIssue('Cloud refresh did not complete.'); });
   };
-  const show = () => {
-    cancelInteractions(); trigger.current?.focus(); setFilename(useEditorStore.getState().projectName); setSelection(null); setPendingOpen(null); setRename(false); setDeleting(false);
-    dialog.current?.showModal();
+  const prepareCloud = () => {
     if (ready) { setAccounts(cloudAuth.accounts()); if (state?.accountId) void run(() => runtime.current!.refresh()); return; }
     setAuthBusy(true); const version = ++authEpoch.current;
     void cloudAuth.initialize().then(() => {
@@ -70,6 +70,18 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
       if (list.length === 1) chooseAccount(list[0].id);
     }).catch(() => { if (alive.current && version === authEpoch.current) setIssue('Cloud sign-in is unavailable. Local editing and files remain available.'); })
       .finally(() => { if (alive.current && version === authEpoch.current) setAuthBusy(false); });
+  };
+  const show = () => {
+    cancelInteractions(); trigger.current?.focus(); setFilename(useEditorStore.getState().projectName); setSelection(null); setPendingOpen(null); setRename(false); setDeleting(false);
+    setShown(true); dialog.current?.showModal();
+    if (tab === 'projects') prepareCloud();
+  };
+  const selectTab = (next: typeof tab) => {
+    if (next === tab) return;
+    authEpoch.current++; actionEpoch.current++; actionLock.current = false;
+    runtime.current?.cancel(); setAuthBusy(false); setActionBusy(false); setPendingOpen(null); setIssue('');
+    setTab(next);
+    if (next === 'projects') prepareCloud();
   };
   const signIn = () => {
     if (busy) return;
@@ -101,9 +113,17 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
     ...(state?.cached ?? []).map(row => ({ item: row.item, cached: true, detail: row.hasPending ? 'Offline draft' : row.remoteDeleted ? 'Deleted remotely; cached copy' : 'Cached copy' })) ];
   return <>
     <button ref={trigger} type="button" className="top-bar-btn" title="Projects" aria-label="Projects" onClick={show}><Cloud size={16}/><span className="top-bar-label">Projects</span></button>
-    <dialog ref={dialog} className="project-dialog cloud-dialog" aria-busy={busy} aria-labelledby="cloud-title" onKeyDown={containDialogTab} onCancel={e => { e.preventDefault(); dismiss(); }} onClose={() => trigger.current?.focus()}>
+    <dialog ref={dialog} className="project-dialog cloud-dialog" aria-busy={tab === 'projects' && busy} aria-labelledby="cloud-title" onKeyDown={containDialogTab} onCancel={e => { e.preventDefault(); dismiss(); }} onClose={() => { setShown(false); trigger.current?.focus(); }}>
       <header><h2 id="cloud-title">Projects</h2><button type="button" className="dialog-icon" aria-label="Close projects" title="Close" onClick={dismiss}><X size={18}/></button></header>
-      <div className="dialog-body">
+      <nav className="project-tabs" role="tablist" aria-label="Project views" onKeyDown={e => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+        e.preventDefault();
+        const next = e.key === 'Home' ? 'projects' : e.key === 'End' ? 'examples' : tab === 'projects' ? 'examples' : 'projects';
+        selectTab(next); document.getElementById(`projects-tab-${next}`)?.focus();
+      }}>{(['projects', 'examples'] as const).map(value => <button key={value} id={`projects-tab-${value}`} type="button" role="tab" aria-selected={tab === value} aria-controls={`projects-panel-${value}`} tabIndex={tab === value ? 0 : -1} onClick={() => selectTab(value)}>{value === 'projects' ? 'My projects' : 'Examples'}</button>)}</nav>
+      {tab === 'examples' ? <div className="dialog-body" role="tabpanel" id="projects-panel-examples" aria-labelledby="projects-tab-examples">
+        {shown && <ExampleProjects saveLocal={saveLocal} beforeOpen={() => { runtime.current?.cancel(); runtime.current?.autosave(false); }} opened={() => { void runtime.current?.tick(); dismiss(); }}/>}
+      </div> : <><div className="dialog-body" role="tabpanel" id="projects-panel-projects" aria-labelledby="projects-tab-projects">
         <div className="cloud-account-row"><label className="dialog-field">Account<select aria-label="Cloud account" value={state?.accountId ?? ''} disabled={busy} onChange={e => chooseAccount(e.target.value)}><option value="">Guest</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
           <button type="button" className="dialog-icon" aria-label="Connect Microsoft account" title="Connect Microsoft account" disabled={!ready || busy} onClick={signIn}><LogIn size={18}/></button>
           <button type="button" className="dialog-icon" aria-label="Disconnect account" title="Disconnect account locally" disabled={!state?.accountId || busy} onClick={() => { const id = state!.accountId!; chooseAccount(''); void run(async current => { await cloudAuth.signOut(id); if(current()) setAccounts(cloudAuth.accounts()); }); }}><LogOut size={18}/></button>
@@ -133,6 +153,7 @@ export function CloudControl({ flush, saveLocal }: { flush(): Promise<void>; sav
       <footer><button type="button" className="dialog-command" disabled={!state?.accountId || busy || mode !== 'create' || !!pendingOpen} onClick={() => saveCloud()}><CloudUpload size={17}/>Save to OneDrive</button>
         <button type="button" className="dialog-command" disabled={!state?.accountId || !filename.trim() || busy || mode !== 'create' || !!pendingOpen} onClick={() => saveCloud(true)}>Save new copy</button>
       </footer>
+      </>}
     </dialog>
   </>;
 }

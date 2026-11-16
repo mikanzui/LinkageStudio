@@ -48,7 +48,7 @@ export default defineConfig({
         clientsClaim: false,
         navigateFallbackDenylist: [/\/redirect\.html(?:\?|$)/],
         globIgnores: ['**/redirect.html'],
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}', 'examples/*.{slinker,json}'],
         runtimeCaching: []
       }
     })

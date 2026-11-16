@@ -17,6 +17,25 @@ G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 
 ## Start Here Every Session
 
+### Version 17.0.0 And Projects Examples
+
+Active user scope: release17.0.0, put examples inside Projects, publish prior and
+user-supplied models plus one new interesting mechanism, and consolidate future
+features/patches including a tutorial. Work remains in the isolated candidate;
+the original workspace and master/main are preserved. The two supplied originals
+are explicitly authorized public example assets for this release and retain their
+exact byte hashes. Earlier private-fixture policies/reports describe earlier scope.
+
+Implementation: Projects > My projects / Examples, seven searchable downloadable
+source models, unsaved/stale-request protection, no required cloud sign-in and
+precache before publication. New example: spring-assisted two-stage scissor lift
+with fixed-floor and moving-platform rails, dashpot, traces and a model-load sensor.
+Lead owns integration, all verification and publication. One bounded worker owns
+only the new mechanism generator/data/domain tests. Track progress below and in
+`evidence/v17/acceptance.md`; [feature/patch backlog](FEATURE-BACKLOG.md) is the
+canonical consolidated follow-up list and includes tutorial lessons/acceptance.
+Do not claim current physical iPad certification or new engineering-load accuracy.
+
 ### Credits And Pages Publication
 
 2026-11-16 user authorizes credits "Coauthored by Jake Whiting and Hugo Wilson",

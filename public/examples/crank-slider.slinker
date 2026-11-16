@@ -1,0 +1,269 @@
+{
+  "joints": {
+    "crank-pivot": {
+      "id": "crank-pivot",
+      "position": {
+        "x": 160,
+        "y": 220
+      },
+      "type": "fixed",
+      "connectedLinkIds": [
+        "crank-arm"
+      ],
+      "label": "Crank"
+    },
+    "crank-pin": {
+      "id": "crank-pin",
+      "position": {
+        "x": 220,
+        "y": 140
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "crank-arm",
+        "connecting-rod"
+      ]
+    },
+    "output": {
+      "id": "output",
+      "position": {
+        "x": 440,
+        "y": 220
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "connecting-rod"
+      ],
+      "label": "Output"
+    },
+    "crank-rail-a": {
+      "id": "crank-rail-a",
+      "position": {
+        "x": 280,
+        "y": 220
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "crank-rail-c": {
+      "id": "crank-rail-c",
+      "position": {
+        "x": 580,
+        "y": 220
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    }
+  },
+  "links": {
+    "crank-arm": {
+      "id": "crank-arm",
+      "jointIds": [
+        "crank-pivot",
+        "crank-pin"
+      ],
+      "restLength": 100,
+      "mass": 1
+    },
+    "connecting-rod": {
+      "id": "connecting-rod",
+      "jointIds": [
+        "crank-pin",
+        "output"
+      ],
+      "restLength": 234.0939982143925,
+      "mass": 1
+    }
+  },
+  "bodies": {
+    "crank": {
+      "id": "crank",
+      "name": "Crank",
+      "jointIds": [
+        "crank-pivot",
+        "crank-pin"
+      ],
+      "color": "#2e9d55",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "crank-pivot",
+          "crank-pin"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "rod": {
+      "id": "rod",
+      "name": "Connecting rod",
+      "jointIds": [
+        "crank-pin",
+        "output"
+      ],
+      "color": "#d28b12",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "crank-pin",
+          "output"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "base": {
+      "id": "base",
+      "name": "Ground",
+      "jointIds": [
+        "crank-pivot",
+        "crank-rail-a",
+        "crank-rail-c"
+      ],
+      "color": "#e15a4e",
+      "showLinks": false,
+      "useOutlineCOM": false
+    }
+  },
+  "baseBodyId": "base",
+  "sliders": {
+    "crank-slider": {
+      "id": "crank-slider",
+      "jointIdA": "crank-rail-a",
+      "jointIdB": "output",
+      "jointIdC": "crank-rail-c",
+      "t": 0.5333333333333333
+    }
+  },
+  "colliders": {},
+  "outlines": {
+    "crank-shape": {
+      "id": "crank-shape",
+      "bodyId": "crank",
+      "name": "Crank",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -50,
+          "y": -9
+        },
+        {
+          "x": 50,
+          "y": -9
+        },
+        {
+          "x": 50,
+          "y": 9
+        },
+        {
+          "x": -50,
+          "y": 9
+        }
+      ]
+    },
+    "rod-shape": {
+      "id": "rod-shape",
+      "bodyId": "rod",
+      "name": "Connecting rod",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -117.04699910719626,
+          "y": -7
+        },
+        {
+          "x": 117.04699910719626,
+          "y": -7
+        },
+        {
+          "x": 117.04699910719626,
+          "y": 7
+        },
+        {
+          "x": -117.04699910719626,
+          "y": 7
+        }
+      ]
+    }
+  },
+  "images": {},
+  "springs": {
+    "crank-return": {
+      "id": "crank-return",
+      "name": "Crank return spring",
+      "kind": "linear",
+      "anchorA": {
+        "type": "world",
+        "position": {
+          "x": 160,
+          "y": 60
+        }
+      },
+      "anchorB": {
+        "type": "joint",
+        "jointId": "crank-pin"
+      },
+      "stiffness": 1200,
+      "damping": 10,
+      "restLength": 50,
+      "prestressDelta": 0
+    }
+  },
+  "tracers": {
+    "crank-trace": {
+      "id": "crank-trace",
+      "bodyId": "crank",
+      "localPosition": {
+        "x": 50,
+        "y": 0
+      },
+      "name": "Crank circle",
+      "enabled": true
+    },
+    "rod-trace": {
+      "id": "rod-trace",
+      "bodyId": "rod",
+      "localPosition": {
+        "x": 0,
+        "y": 14
+      },
+      "name": "Coupler curve",
+      "enabled": true
+    }
+  },
+  "forceSensors": {
+    "rod-load": {
+      "id": "rod-load",
+      "linkId": "connecting-rod",
+      "enabled": true,
+      "name": "Connecting rod load"
+    }
+  },
+  "projectName": "Spring-Driven Crank-Slider",
+  "simulationSettings": {
+    "gravityEnabled": false,
+    "gravityStrength": 250,
+    "damping": 0.98,
+    "dragMultiplier": 25,
+    "dragDamping": 0.25
+  },
+  "viewPreferences": {
+    "gridLevel": "normal",
+    "showLinks": true,
+    "showVectors": false,
+    "showRulers": true,
+    "showForceUnits": false,
+    "showLoads": false,
+    "showReactions": false
+  },
+  "documentFormat": "linkage-studio",
+  "schemaVersion": 1,
+  "sourceVersion": "17.0.0",
+  "version": "17.0.0",
+  "writerVersion": "17.0.0",
+  "simulationModel": "saved-links-v1",
+  "springModel": "legacy-motion-v1",
+  "forceModel": "unit-particle-v1"
+}

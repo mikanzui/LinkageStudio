@@ -1,6 +1,6 @@
 # Slinker / Linkage Studio
 
-Version **0.16.0-rebuild.4**, an isolated rebuild candidate based on
+Version **17.0.0**, an isolated rebuild based on
 [Huggabiz / Hugo Wilson's Linkage Studio](https://github.com/Huggabiz/linkage-studio)
 v0.12.3 (`3dfe10512e105f863a582ce5cc4b3bb8a2006306`).
 
@@ -9,6 +9,13 @@ geometry, spring, tracer, sensor and export tools. Adds optional account-isolate
 OneDrive projects, offline drafts and recovery-verified PWA restarts. Live Microsoft
 registration/service and physical-device qualification remain explicitly open.
 See [changes](CHANGELOG.md) and [rebuild tracker](docs/rebuild/progress-tracker.md).
+
+Open **Projects > Examples** for seven searchable, downloadable models, including
+the supplied Winged Airer and Working Screen, the new spring-assisted two-stage
+scissor lift, and the earlier playground's individual mechanisms. These are
+available offline after the first successful app installation; no sign-in needed.
+See [example guide and files](examples/README.md) and the prioritized
+[feature/patch backlog and tutorial plan](docs/rebuild/FEATURE-BACKLOG.md).
 
 Try the [Mechanism Playground](examples/README.md): a spring-driven crank-slider,
 damped carriage/end stop and torsion gripper, with tracers and load sensors.

@@ -1,0 +1,105 @@
+[
+  {
+    "id": "scissor-lift",
+    "name": "Spring-assisted scissor lift",
+    "filename": "spring-scissor-lift.slinker",
+    "description": "Two scissor stages raise a platform on a moving rail, with spring assistance and a dashpot.",
+    "source": "New in 17.0.0",
+    "tags": [
+      "Moving rail",
+      "Springs",
+      "Load sensor"
+    ],
+    "bytes": 13486,
+    "sha256": "9f5a4d529ec083e226a78b489f11105446184fa748d5419c028b3ad2bfdffb13",
+    "warnings": 0
+  },
+  {
+    "id": "winged-airer",
+    "name": "Flap - Winged Airer",
+    "filename": "airer.slinker",
+    "description": "The original folding airer with coupled wings, legs and sliders.",
+    "source": "User supplied",
+    "tags": [
+      "Folding mechanism",
+      "Legacy project"
+    ],
+    "bytes": 30332,
+    "sha256": "8e73fd936565d2c4df4d549bcc584c438c894f717da6e54ad328a8b3ffd5e0eb",
+    "warnings": 4
+  },
+  {
+    "id": "working-screen",
+    "name": "Working Screen",
+    "filename": "working-screen.json",
+    "description": "The original screen, drawer and door linkage assembly.",
+    "source": "User supplied",
+    "tags": [
+      "Coupled linkages",
+      "Legacy project"
+    ],
+    "bytes": 461390,
+    "sha256": "4f1e389186a478e7e4cd7876914b072d20a964b1130718c1f62766c57dba4c07",
+    "warnings": 9
+  },
+  {
+    "id": "playground",
+    "name": "Mechanism Playground",
+    "filename": "mechanism-playground.slinker",
+    "description": "Crank-slider, damped carriage and torsion gripper in one project.",
+    "source": "Earlier showcase",
+    "tags": [
+      "Three mechanisms",
+      "Traces",
+      "Load sensors"
+    ],
+    "bytes": 12858,
+    "sha256": "05137c40f07dcdd5adec1550b5dfbda970c361f059ffd5fd0cb6ab21e26eb454",
+    "warnings": 0
+  },
+  {
+    "id": "crank-slider",
+    "name": "Spring-driven crank-slider",
+    "filename": "crank-slider.slinker",
+    "description": "A rocking crank drives a sliding output; tracers reveal the crank and coupler paths.",
+    "source": "Playground detail",
+    "tags": [
+      "Slider",
+      "Spring",
+      "Coupler curve"
+    ],
+    "bytes": 5194,
+    "sha256": "ee4ac646dde61828ed887751b84feb434342ff765a14ffe2ac406e9edc59a571",
+    "warnings": 0
+  },
+  {
+    "id": "carriage",
+    "name": "Damped carriage and end stop",
+    "filename": "damped-carriage.slinker",
+    "description": "A spring-return carriage runs on parallel rails and meets a finite barrier.",
+    "source": "Playground detail",
+    "tags": [
+      "Damper",
+      "Contact",
+      "Parallel rails"
+    ],
+    "bytes": 5011,
+    "sha256": "4e6967d9958595bebdf5883e9c4f3bf86d149945f874e707704bde5c50354d67",
+    "warnings": 0
+  },
+  {
+    "id": "gripper",
+    "name": "Torsion-spring gripper",
+    "filename": "torsion-gripper.slinker",
+    "description": "Two jaws share a fixed hinge and settle toward the torsion spring rest angle.",
+    "source": "Playground detail",
+    "tags": [
+      "Torsion",
+      "Traces",
+      "Load sensor"
+    ],
+    "bytes": 4701,
+    "sha256": "8015d9ae1b8d4289f09ff491ab5af9e202334a7fbf90c6fb816fd13671ed3640",
+    "warnings": 0
+  }
+]

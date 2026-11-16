@@ -1,5 +1,17 @@
 # Remaining Updates
 
+## Current Follow-Up Map (17.0.0)
+
+The canonical next-feature/patch list is now [FEATURE-BACKLOG.md](FEATURE-BACKLOG.md),
+including tutorial lessons and acceptance, Azure hardening, physical iPad/service/
+CAD qualification and engineering-model accuracy. The tables below preserve the
+earlier G9/G10 delivery/qualification breakdown; their historical no-publication
+phrasing does not revoke later authorization. Hugo's publication permission and
+the production Azure callback registration are user-confirmed; neither is a new
+license grant or proof of actual hosted sign-in. The two supplied models are now
+explicitly authorized public examples in17.0.0. Current release outcome belongs
+to `evidence/v17/acceptance.md`, not an inference from a build or a push.
+
 2026-11-16. User resumed development beyond the 0.16.0-rebuild.1 checkpoint.
 Preserve tag/commit 1b6f723 and the original dirty master workspace. Work continues
 on codex/rebuild-cloud-pwa in the existing isolated candidate. Codex owns tests and

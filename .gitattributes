@@ -1,0 +1,5 @@
+# Preserve downloadable mechanism bytes and compatibility fixture hashes.
+examples/*.slinker -text
+examples/working-screen.json -text
+public/examples/*.slinker -text
+public/examples/working-screen.json -text

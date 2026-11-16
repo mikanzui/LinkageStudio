@@ -239,3 +239,24 @@ Tools: `inspect-radial-reference.mjs ENGINE KIND URL [FILE] [HANDLE_ID]`,
 `compare-radial-captures.mjs REFERENCE_REPORT CANDIDATE_REPORT` (adaptive option
 skips only absolute orbit position for documented clamping/radius adaptations),
 and the enhanced `verify-ui16-browser.mjs` integrated in `verify-cumulative.mjs`.
+
+## Version 17 Example Library Gate
+
+1. Hash-pinned supplied originals remain unchanged; all seven examples decode,
+   match their public mirrors/catalog and retain configuration through save/reopen.
+2. Open all seven through Projects > Examples using actual native UI. Measure
+   automatic motion or the original handle pull, exact Create restoration, fixed
+   anchors and finite frames. Airer must open30-60 degrees with >300 spread and
+   1DOF using its upper brown handle, including trusted Chromium touch.
+3. Search, selected radio/keyboard tabs, focus return, modal bounds, wrapped
+   nonoverlapping rows and44px coarse commands pass desktop/portrait/512px layouts
+   in Chrome/WebKit. Preserve prior cloud/recovery/input regression contracts.
+4. Dirty cancellation/discard, stale fetch and changed-session/signature negatives
+   preserve the current project. Example access never depends on sign-in.
+5. All source examples are present in the normal artifact before worker generation;
+   fetch their exact bytes and open them for the first time with network offline.
+   Safe dirty-tab update/recovery tests still pass.
+6. Full domain/tooling/type/lint/build, frozen cumulative G1-G10, new native gallery
+   profiles, hosted CI and uninstrumented live Projects checks pass before calling
+   publication complete. Physical hardware, hosted interactive auth and engineering
+   load qualifications remain separate, explicit limits.

@@ -1,0 +1,231 @@
+{
+  "joints": {
+    "gripper-pivot": {
+      "id": "gripper-pivot",
+      "position": {
+        "x": 460,
+        "y": 560
+      },
+      "type": "fixed",
+      "connectedLinkIds": [
+        "left-jaw-arm",
+        "right-jaw-arm"
+      ],
+      "label": "Gripper"
+    },
+    "jaw-left-tip": {
+      "id": "jaw-left-tip",
+      "position": {
+        "x": 370,
+        "y": 450
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "left-jaw-arm"
+      ],
+      "label": "Left jaw"
+    },
+    "jaw-right-tip": {
+      "id": "jaw-right-tip",
+      "position": {
+        "x": 550,
+        "y": 450
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "right-jaw-arm"
+      ],
+      "label": "Right jaw"
+    }
+  },
+  "links": {
+    "left-jaw-arm": {
+      "id": "left-jaw-arm",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-left-tip"
+      ],
+      "restLength": 142.12670403551897,
+      "mass": 1
+    },
+    "right-jaw-arm": {
+      "id": "right-jaw-arm",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-right-tip"
+      ],
+      "restLength": 142.12670403551897,
+      "mass": 1
+    }
+  },
+  "bodies": {
+    "left-jaw": {
+      "id": "left-jaw",
+      "name": "Left gripper jaw",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-left-tip"
+      ],
+      "color": "#be4f86",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "gripper-pivot",
+          "jaw-left-tip"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "right-jaw": {
+      "id": "right-jaw",
+      "name": "Right gripper jaw",
+      "jointIds": [
+        "gripper-pivot",
+        "jaw-right-tip"
+      ],
+      "color": "#695cba",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "gripper-pivot",
+          "jaw-right-tip"
+        ],
+        "angleOffset": 0
+      }
+    },
+    "base": {
+      "id": "base",
+      "name": "Ground",
+      "jointIds": [
+        "gripper-pivot"
+      ],
+      "color": "#e15a4e",
+      "showLinks": false,
+      "useOutlineCOM": false
+    }
+  },
+  "baseBodyId": "base",
+  "sliders": {},
+  "colliders": {},
+  "outlines": {
+    "left-jaw-shape": {
+      "id": "left-jaw-shape",
+      "bodyId": "left-jaw",
+      "name": "Left gripper jaw",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": 10
+        },
+        {
+          "x": -71.06335201775948,
+          "y": 10
+        }
+      ]
+    },
+    "right-jaw-shape": {
+      "id": "right-jaw-shape",
+      "bodyId": "right-jaw",
+      "name": "Right gripper jaw",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": -71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": -10
+        },
+        {
+          "x": 71.06335201775948,
+          "y": 10
+        },
+        {
+          "x": -71.06335201775948,
+          "y": 10
+        }
+      ]
+    }
+  },
+  "images": {},
+  "springs": {
+    "gripper-torsion": {
+      "id": "gripper-torsion",
+      "name": "Gripper torsion spring",
+      "kind": "torsional",
+      "anchorA": {
+        "type": "link",
+        "linkId": "left-jaw-arm",
+        "t": 0
+      },
+      "anchorB": {
+        "type": "link",
+        "linkId": "right-jaw-arm",
+        "t": 0
+      },
+      "stiffness": 8000,
+      "damping": 3000,
+      "restLength": 0.5,
+      "prestressDelta": 0
+    }
+  },
+  "tracers": {
+    "jaw-trace": {
+      "id": "jaw-trace",
+      "bodyId": "left-jaw",
+      "localPosition": {
+        "x": 71.06335201775948,
+        "y": 0
+      },
+      "name": "Gripper arc",
+      "enabled": true
+    }
+  },
+  "forceSensors": {
+    "jaw-load": {
+      "id": "jaw-load",
+      "linkId": "left-jaw-arm",
+      "enabled": true,
+      "name": "Left jaw load"
+    }
+  },
+  "projectName": "Torsion-Spring Gripper",
+  "simulationSettings": {
+    "gravityEnabled": false,
+    "gravityStrength": 250,
+    "damping": 0.98,
+    "dragMultiplier": 25,
+    "dragDamping": 0.25
+  },
+  "viewPreferences": {
+    "gridLevel": "normal",
+    "showLinks": true,
+    "showVectors": false,
+    "showRulers": true,
+    "showForceUnits": false,
+    "showLoads": false,
+    "showReactions": false
+  },
+  "documentFormat": "linkage-studio",
+  "schemaVersion": 1,
+  "sourceVersion": "17.0.0",
+  "version": "17.0.0",
+  "writerVersion": "17.0.0",
+  "simulationModel": "saved-links-v1",
+  "springModel": "legacy-motion-v1",
+  "forceModel": "unit-particle-v1"
+}

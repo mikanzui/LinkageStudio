@@ -99,6 +99,25 @@ try{
     const pixels=await page.locator('canvas').evaluate(canvas=>{const data=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;let ink=0;for(let i=0;i<data.length;i+=4)if(data[i+1]>data[i]+25&&data[i+1]>data[i+2]+10)ink++;return ink;});assert(pixels>50,'Mechanism produces real colored canvas pixels offline');
     await page.screenshot({path:join(output,'offline-canvas.png')});await context.setOffline(false);
   });
+  await check('all-seven-examples-precached-and-open-offline-without-cloud',async()=>{
+    const catalog=JSON.parse(await readFile(join(paths.candidate,'examples/catalog.json'),'utf8'));
+    // No gallery asset has been requested by the page: prove the worker cached
+    // the built source bytes before any opportunistic online example download.
+    await context.setOffline(true);
+    for(const example of catalog){
+      const expected=await readFile(join(paths.candidate,'examples',example.filename),'utf8');
+      const text=await page.evaluate(async filename=>{const response=await fetch(new URL('examples/'+filename,document.baseURI));if(!response.ok)throw new Error('Uncached example');return response.text();},example.filename);
+      assert.equal(text,expected,'Exact offline bytes '+example.filename);
+      await click(button('Projects'));await click(page.getByRole('tab',{name:'Examples',exact:true}));
+      await click(page.locator(`input[name="example-project"][value="${example.id}"]`));await click(button('Open example'));
+      await page.getByRole('dialog',{name:'Projects',exact:true}).waitFor({state:'hidden'});
+      assert(Object.keys((await read()).graph.bodies).length>1);
+    }
+    await page.screenshot({path:join(output,'offline-projects-example.png')});
+    // Leave the original synthetic seed and Projects' default view for the
+    // unchanged dirty-update/rotation assertions below.
+    await open();await click(button('Projects'));await click(page.getByRole('tab',{name:'My projects',exact:true}));await click(button('Close projects'));await context.setOffline(false);
+  });
   await rename('Dirty update sentinel');const original=(await read()).graph;const peer=await context.newPage();peer.on('dialog',d=>d.type()==='beforeunload'?d.accept():d.dismiss());await peer.goto(url);await peer.locator('canvas').waitFor();
   await peer.waitForTimeout(500);const peerRecovery=peer.getByRole('button',{name:'Close recovery',exact:true});if(await peerRecovery.isVisible())await(engine==='firefox'?peerRecovery.click():peerRecovery.tap());
   const peerName=peer.getByTitle('Rename project',{exact:true});await(engine==='firefox'?peerName.click():peerName.tap());await peer.getByRole('textbox',{name:'Project name',exact:true}).fill('Other tab unsaved');await peer.getByRole('textbox',{name:'Project name',exact:true}).press('Enter');

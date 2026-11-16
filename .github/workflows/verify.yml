@@ -7,7 +7,10 @@ permissions:
 jobs:
   public-checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
+    env:
+      LINKAGE_FIXTURE_DIR: ${{ github.workspace }}/examples
+      REQUIRE_LEGACY_FIXTURES: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -24,7 +27,6 @@ jobs:
       - run: npm test
         env:
           CAD_PYTHON: python
-          REQUIRE_LEGACY_FIXTURES: '0'
       - run: npm run test:tooling
       - run: npm run build
       - run: npm audit --omit=dev
@@ -32,3 +34,5 @@ jobs:
       - run: node .rebuild.local/tooling/node_modules/playwright/cli.js install --with-deps chromium webkit
       - run: node scripts/rebuild/verify-g10-production.mjs chromium --bundled-chromium
       - run: node scripts/rebuild/verify-g10-production.mjs webkit
+      - run: node scripts/rebuild/verify-examples-browser.mjs chromium --bundled-chromium
+      - run: node scripts/rebuild/verify-examples-browser.mjs webkit

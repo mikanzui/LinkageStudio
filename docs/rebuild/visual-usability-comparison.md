@@ -453,3 +453,32 @@ No solver/persistence/cloud behavior is changed. Actual hosted Chrome/WebKit and
 visible in-app tab confirm the same credits after successful deployment of9b9d52f.
 The public example moves and saves on the live site, with no test observer. Hosted
 run43951095147 PASS; see [publication evidence](evidence/pages/acceptance.md).
+
+## Version 17 Projects Examples
+
+2026-11-16, C01/C02/C05/C08/C10/C11/C12/C13; G1/G3/G4/G8/G9/G10. The original
+and earlier rebuild offered local file open; the previous Projects dialog was
+cloud/cache only. Version17 keeps My projects as its default view and adds an
+Examples tab inside that same native dialog, not a landing page or a second
+independent file manager. Cloud credentials and account selection remain unchanged.
+
+| Surface | Earlier State | Version17 Decision / Required Evidence |
+| --- | --- | --- |
+| Discovery | Example delivered as a file/link, not discoverable in app | Seven labeled examples in Projects, domain descriptions/source/tags and search; no sign-in prerequisite |
+| Ownership | Local/cloud navigation has unsaved safety | Validate before import; explicit save-first/discard/cancel; closing/tab change aborts fetch; session/signature guard rejects late responses |
+| Visual layout | Existing restrained dark native project dialog | Same header/close/focus return; underline tabs, native radio rows, icon download and clear Open command; no nested cards or decorative hero |
+| Tablet | Cloud dialog bounded to VisualViewport | Examples body scrolls; nonshrinking rows wrap text; coarse commands >=44px; portrait and512px Split View captures, keyboard/short viewport checks |
+| Mechanics | Prior playground plus legacy compatibility checks | Exact original Airer/Working Screen sources, split playground details, and new colored two-stage scissor lift. Real movement and saved reopen, not screenshots alone |
+| View | Imported source may have unrelated historical camera | Fit newly opened example to actual canvas; source file remains unchanged, personal edits happen in a project copy |
+| Offline | Previous example copied after worker generation | All canonical public models mirrored before normal build and included in worker precache; test first-time gallery open offline |
+
+New lift: green/gold lower crossing, blue/pink upper crossing, cyan platform and
+fixed gray rail. Spring and dashpot connect world anchors to opposite platform
+ends; one slider runs on the fixed floor and one on the moving platform. Two
+traces and a model-load sensor expose motion. F deliberately is not a rigid
+platform member, which would lock the lift. Distinct colors/labels are retained;
+normal model-unit and incomplete-reaction qualifications still apply.
+
+Evidence and final acceptance: `evidence/v17/acceptance.md`. Physical iPad/Pencil/
+VoiceOver remains unverified; WebKit and trusted Chromium touch do not replace it.
+Future UI/tutorial/qualification work is consolidated in `FEATURE-BACKLOG.md`.

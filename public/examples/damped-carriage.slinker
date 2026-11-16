@@ -1,0 +1,256 @@
+{
+  "joints": {
+    "cart-a": {
+      "id": "cart-a",
+      "position": {
+        "x": 1030,
+        "y": 160
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "cart-spine"
+      ],
+      "label": "Carriage"
+    },
+    "cart-b": {
+      "id": "cart-b",
+      "position": {
+        "x": 1030,
+        "y": 210
+      },
+      "type": "revolute",
+      "connectedLinkIds": [
+        "cart-spine"
+      ]
+    },
+    "cart-top-a": {
+      "id": "cart-top-a",
+      "position": {
+        "x": 760,
+        "y": 160
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "cart-top-c": {
+      "id": "cart-top-c",
+      "position": {
+        "x": 1130,
+        "y": 160
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "cart-bottom-a": {
+      "id": "cart-bottom-a",
+      "position": {
+        "x": 760,
+        "y": 210
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "cart-bottom-c": {
+      "id": "cart-bottom-c",
+      "position": {
+        "x": 1130,
+        "y": 210
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "stop-a": {
+      "id": "stop-a",
+      "position": {
+        "x": 850,
+        "y": 135
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    },
+    "stop-b": {
+      "id": "stop-b",
+      "position": {
+        "x": 850,
+        "y": 235
+      },
+      "type": "fixed",
+      "connectedLinkIds": []
+    }
+  },
+  "links": {
+    "cart-spine": {
+      "id": "cart-spine",
+      "jointIds": [
+        "cart-a",
+        "cart-b"
+      ],
+      "restLength": 50,
+      "mass": 1
+    }
+  },
+  "bodies": {
+    "cart": {
+      "id": "cart",
+      "name": "Damped carriage",
+      "jointIds": [
+        "cart-a",
+        "cart-b"
+      ],
+      "color": "#168aab",
+      "showLinks": true,
+      "useOutlineCOM": false,
+      "frame": {
+        "jointIds": [
+          "cart-a",
+          "cart-b"
+        ],
+        "angleOffset": -1.5707963267948966
+      }
+    },
+    "base": {
+      "id": "base",
+      "name": "Ground",
+      "jointIds": [
+        "cart-top-a",
+        "cart-top-c",
+        "cart-bottom-a",
+        "cart-bottom-c",
+        "stop-a",
+        "stop-b"
+      ],
+      "color": "#e15a4e",
+      "showLinks": false,
+      "useOutlineCOM": false
+    }
+  },
+  "baseBodyId": "base",
+  "sliders": {
+    "cart-top": {
+      "id": "cart-top",
+      "jointIdA": "cart-top-a",
+      "jointIdB": "cart-a",
+      "jointIdC": "cart-top-c",
+      "t": 0.7297297297297297
+    },
+    "cart-bottom": {
+      "id": "cart-bottom",
+      "jointIdA": "cart-bottom-a",
+      "jointIdB": "cart-b",
+      "jointIdC": "cart-bottom-c",
+      "t": 0.7297297297297297
+    }
+  },
+  "colliders": {
+    "carriage-stop": {
+      "id": "carriage-stop",
+      "jointIdA": "stop-a",
+      "jointIdC": "stop-b",
+      "bodyIds": [
+        "cart"
+      ]
+    }
+  },
+  "outlines": {
+    "cart-shape": {
+      "id": "cart-shape",
+      "bodyId": "cart",
+      "name": "Carriage plate",
+      "visible": true,
+      "closed": true,
+      "points": [
+        {
+          "x": 0,
+          "y": -38
+        },
+        {
+          "x": 60,
+          "y": -38
+        },
+        {
+          "x": 60,
+          "y": 38
+        },
+        {
+          "x": 0,
+          "y": 38
+        }
+      ]
+    }
+  },
+  "images": {},
+  "springs": {
+    "carriage-spring": {
+      "id": "carriage-spring",
+      "name": "Carriage return spring",
+      "kind": "linear",
+      "anchorA": {
+        "type": "joint",
+        "jointId": "cart-top-a"
+      },
+      "anchorB": {
+        "type": "joint",
+        "jointId": "cart-a"
+      },
+      "stiffness": 900,
+      "damping": 10,
+      "restLength": 150,
+      "prestressDelta": 0
+    },
+    "carriage-damper": {
+      "id": "carriage-damper",
+      "name": "Carriage dashpot",
+      "kind": "damper",
+      "anchorA": {
+        "type": "joint",
+        "jointId": "cart-bottom-a"
+      },
+      "anchorB": {
+        "type": "link",
+        "linkId": "cart-spine",
+        "t": 1
+      },
+      "stiffness": 0,
+      "damping": 40,
+      "restLength": 0,
+      "prestressDelta": 0
+    }
+  },
+  "tracers": {
+    "carriage-trace": {
+      "id": "carriage-trace",
+      "bodyId": "cart",
+      "localPosition": {
+        "x": 30,
+        "y": 0
+      },
+      "name": "Carriage travel",
+      "enabled": true
+    }
+  },
+  "forceSensors": {},
+  "projectName": "Damped Carriage And End Stop",
+  "simulationSettings": {
+    "gravityEnabled": false,
+    "gravityStrength": 250,
+    "damping": 0.98,
+    "dragMultiplier": 25,
+    "dragDamping": 0.25
+  },
+  "viewPreferences": {
+    "gridLevel": "normal",
+    "showLinks": true,
+    "showVectors": false,
+    "showRulers": true,
+    "showForceUnits": false,
+    "showLoads": false,
+    "showReactions": false
+  },
+  "documentFormat": "linkage-studio",
+  "schemaVersion": 1,
+  "sourceVersion": "17.0.0",
+  "version": "17.0.0",
+  "writerVersion": "17.0.0",
+  "simulationModel": "saved-links-v1",
+  "springModel": "legacy-motion-v1"
+}

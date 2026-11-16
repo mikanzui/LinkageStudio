@@ -15,10 +15,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       CAD_PYTHON: python
-      REQUIRE_LEGACY_FIXTURES: '0'
+      REQUIRE_LEGACY_FIXTURES: '1'
+      LINKAGE_FIXTURE_DIR: ${{ github.workspace }}/examples
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -37,15 +38,17 @@ jobs:
       - run: npm audit --omit=dev
       - name: Build normal production artifact
         run: npm run build
-      - name: Prepare synthetic browser smoke (no private fixtures)
+      - name: Prepare browser tooling and authorized public compatibility examples
         run: node scripts/rebuild/prepare-browser.mjs --config-only --install-tooling
       - run: node .rebuild.local/tooling/node_modules/playwright/cli.js install --with-deps chromium webkit
       - name: Chromium production, offline, update and credit checks
         run: node scripts/rebuild/verify-g10-production.mjs chromium --bundled-chromium
       - name: WebKit production, offline, update and credit checks
         run: node scripts/rebuild/verify-g10-production.mjs webkit
-      - name: Include the public mechanism example
-        run: node --import tsx scripts/examples/create-playground.ts dist/examples/mechanism-playground.slinker
+      - name: Chromium Projects examples, legacy handle motion and save-reopen
+        run: node scripts/rebuild/verify-examples-browser.mjs chromium --bundled-chromium
+      - name: WebKit Projects examples, tablet layout and save-reopen
+        run: node scripts/rebuild/verify-examples-browser.mjs webkit
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: dist

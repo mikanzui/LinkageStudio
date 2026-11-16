@@ -1,5 +1,41 @@
 # Rebuild Progress Tracker
 
+## Version 17.0.0 (Active)
+
+2026-11-16 user requests17.0.0, a published examples folder, supplied/prior models,
+one more interesting linkage, an actionable feature/patch backlog (including a
+tutorial guide), and examples inside Projects. Lead owns Projects/document safety,
+catalog/packaging/version/release, backlog, integration and gate acceptance. One
+bounded worker owns only a scissor-lift generator, its generated public example
+and focused domain tests; no shared source/browser/Git writes. Original workspace
+and experiment hashes stay preserved. User explicitly authorizes including the
+two supplied mechanisms as public examples; preserve their raw originals/bytes.
+Verification: unsaved/cancel/stale request safety, examples independent of cloud
+auth, real model motion/save-reopen, Chrome/WebKit/touch/viewport, full regressions,
+hosted CI, release17.0.0 and live Projects > Examples. Physical iPad remains open.
+
+| ID | Deliverable | Status / Evidence |
+| --- | --- | --- |
+| V17-01 | Seven-example catalog, supplied originals and new scissor lift | IMPLEMENTED; original hashes preserved;18 new domain tests,980 total PASS |
+| V17-02 | Projects Examples tab, search/download, dirty/cancel/stale guards and cloud independence | DONE for scoped browser contract; Chrome bHEvxY / WebKit hjTNxp,48 result groups across six profiles PASS |
+| V17-03 | Offline source assets, public compatibility CI and17.0.0 packaging | DONE locally; first-open offline28-entry precache, exact original Git blobs and nine-entry ZIP verified; hosted CI pending |
+| V17-04 | Prioritized feature/patch/tutorial backlog and visual comparison | DONE; FEATURE-BACKLOG.md, release/example guides, comparison and gate updated |
+| V17-05 | Frozen full regression, commit/tag/release/Pages and live verification | Local24/24 cumulative PASS; publication ACTIVE, no hosted17 success claimed yet |
+
+Selective worker: Bacon `01a1e61e-bac6-7ac3-a1f7-ebc52bcbe261`, base22f82c6,
+DONE/CLOSED. Exclusive candidate files: scripts/examples/create-scissor-lift.ts,
+examples/spring-scissor-lift.slinker, tests/example-scissor-lift.test.ts. Lead
+reviewed and integrated; three domain tests pass, native gallery motion being
+verified. Dispatch/handoff interval and usage UNKNOWN; no measured cost savings.
+Lead owns all shared files/browser/Git/docs and gate acceptance. Preliminary
+Chrome3oi5V0 passed all workflow assertions but fails frozen identity because a
+source whitespace edit occurred mid-run; retained, not qualifying release evidence.
+Galileo `01a1e63b-4743-75d0-92e6-d6c6bf8a9e0e`: bounded read-only ownership/safety
+review, DONE/CLOSED; no edits or browser ownership, no concrete findings. Static
+review is not runtime evidence. Duration/usage UNKNOWN. Only one worker at a time.
+WebKit preliminary QEDENe/NVzZru exposed harness auto-collapse timing and unsupported
+mobile mouse wheel; fixed waits and actual Zoom buttons, not app/solver edits.
+
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
 Latest task: coauthor credits and first rebuilt Pages publication DONE / scoped PASS.
 Local checks, hosted CI/deployment and actual live Chrome/WebKit checks PASS.
@@ -14,9 +50,10 @@ Earlier localhost/disposable OneDrive workflow PASS after projected-metadata
 repair; cumulative yF897B PASS, 22/22; see evidence/g9/live-qualification.md.
 User's Azure skill applied through azure-integration-review.md; AZ-01 CSP and
 AZ-02 token-network error classification remain explicit hardening follow-ups.
-Device/target/licensing qualifications
-remain OPEN. Publication is now explicitly authorized; outcome is tracked below.
-G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.4.
+Device/target/service qualifications remain OPEN. Hugo's publication permission
+is user-confirmed; this is not a new license grant. Earlier outcome is below.
+G9 implementation checkpoint commit:43d440d. Previous release0.16.0-rebuild.4;
+current isolated working version17.0.0, release gate ACTIVE above.
 User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.
 Detailed remaining work: remaining-updates.md; G9/G10 checkpoints and scrub are
 recorded, with explicit external qualifications and current UI-16 follow-up.
