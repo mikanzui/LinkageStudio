@@ -65,8 +65,9 @@ for (const name of ['airer.slinker', 'working-screen.json']) test(`${name}: edit
   assert.equal(parsed.sourceVersion, original.version);
   assert(importProject(saved).ok); assert.equal(projectText(), saved); assert.equal(isProjectDirty(), false);
 });
-test('unsupported persisted feature is refused explicitly, never silently lost', () => {
+test('malformed persisted spring is refused atomically, never silently lost', () => {
   const before = projectText(); const d = JSON.parse(fixture('airer.slinker')); d.springs = { x: { id: 'x' } };
-  const outcome = importProject(JSON.stringify(d)); assert.equal(outcome.ok, false); assert.match(outcome.issues[0].message, /unchanged/);
+  const outcome = importProject(JSON.stringify(d)); assert.equal(outcome.ok, false);
+  assert(outcome.issues.some(issue => issue.severity === 'error' && issue.path === 'springs.x'));
   assert.equal(projectText(), before);
 });

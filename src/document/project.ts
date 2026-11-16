@@ -17,7 +17,7 @@ export function projectText(name?: string): string {
   const outlines = e.mode === 'create' && e.lockOutlines ? resolveFrozenOutlines(m.outlines,m.bodies,joints,e.frozenOutlineWorldPoints,e.editingOutlineId) : m.outlines;
   return serializeMechanism(joints, m.links, m.bodies, m.baseBodyId, outlines, m.images, m.sliders, m.colliders, m.tracers, name ?? e.projectName,
     { showLinks: e.showLinks, showVectors: e.showVectors, showRulers: e.showRulers, showForceUnits: e.showForceUnits, gridLevel: e.gridLevel, camera: e.camera },
-    { gravityEnabled: s.gravityEnabled, gravityStrength: s.gravityStrength, damping: s.damping, dragMultiplier: s.dragMultiplier, dragDamping: s.dragDamping }, m.documentContext);
+    { gravityEnabled: s.gravityEnabled, gravityStrength: s.gravityStrength, damping: s.damping, dragMultiplier: s.dragMultiplier, dragDamping: s.dragDamping }, m.documentContext, m.springs);
 }
 
 // Camera/view changes alone do not require a destructive-navigation confirmation.
@@ -37,7 +37,7 @@ export function setProjectMessage(message: string, severity: 'status' | 'alert' 
 export function importProject(text: string): { ok: boolean; issues: DocumentIssue[] } {
   const decoded = decodeDocument(text);
   if (!decoded.ok) return decoded;
-  const unsupported = ['springs', 'forceSensors'].filter(key => {
+  const unsupported = ['forceSensors'].filter(key => {
     const value = decoded.context.source[key];
     return value && typeof value === 'object' && Object.keys(value).length > 0;
   });

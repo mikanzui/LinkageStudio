@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AppMode, ToolType, JointSubType, CreateTool, JointMode, CameraState, SimDragState, GridLevel } from '../types';
 import type { Vec2 } from '../types';
-import type { MechanismState } from '../types';
+import type { MechanismState, SpringAnchor } from '../types';
 import { DEFAULT_GRID_SIZE } from '../utils/constants';
 import { clampZoom } from '../renderer/viewport';
 import { useMechanismStore } from './mechanism-store';
@@ -23,6 +23,10 @@ function gridLevelToSize(level: GridLevel): number {
 const GRID_CYCLE: GridLevel[] = ['normal', 'fine', 'ultrafine', 'off'];
 
 interface EditorStore {
+  springPlacement: { anchorA?: SpringAnchor; pivotId?: string; linkAId?: string } | null;
+  springSnapSteps: number;
+  springReattachId: string | null;
+  springCommitted: boolean;
   mode: AppMode;
   activeTool: ToolType;
   selectMode: SelectMode;
@@ -148,6 +152,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   simDrag: null,
   savedPositions: null,
   simulationDesign: null,
+  springPlacement: null,
+  springSnapSteps: 20,
+  springReattachId: null,
+  springCommitted: false,
   activeBodyIds: new Set<string>(),
   showLinks: true,
   showVectors: true,
@@ -218,7 +226,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   clearSelection() {
     if (get().editingOutlineId) get().setCreateTool('joints');
-    set({ selectedIds: new Set() });
+    set({ selectedIds: new Set(), springPlacement: null, springReattachId: null });
   },
 
   setHovered(id) {
@@ -309,7 +317,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   setCreateTool(tool) {
-    set({ shapeGesture: null, trimStroke: [] });
+    set({ shapeGesture: null, trimStroke: [], springPlacement: null, springReattachId: null, springCommitted: false });
     const previous = get();
     if (previous.editingOutlineId) {
       const m = useMechanismStore.getState(), outline = m.outlines[previous.editingOutlineId];
@@ -399,8 +407,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 useMechanismStore.subscribe((state, previous) => {
   if (state.documentEpoch === previous.documentEpoch) return;
   const e = useEditorStore.getState();
-  const exists = (id: string) => state.joints[id] || state.links[id] || state.outlines[id] || state.images[id] || state.sliders[id] || state.colliders[id] || state.tracers[id];
+  const exists = (id: string) => state.joints[id] || state.links[id] || state.outlines[id] || state.images[id] || state.sliders[id] || state.colliders[id] || state.tracers[id] || state.springs[id];
   const editing = e.editingOutlineId && state.outlines[e.editingOutlineId] ? e.editingOutlineId : null;
-  useEditorStore.setState({ frozenOutlineWorldPoints: new Map(), selectedIds: new Set([...e.selectedIds].filter(exists)),
+  useEditorStore.setState({ frozenOutlineWorldPoints: new Map(), springPlacement: null, springReattachId: null, springCommitted: false, selectedIds: new Set([...e.selectedIds].filter(exists)),
     editingOutlineId: editing, editingVertexIndex: editing && e.editingVertexIndex !== null && e.editingVertexIndex < state.outlines[editing].points.length ? e.editingVertexIndex : null });
 });

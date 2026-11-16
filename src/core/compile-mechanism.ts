@@ -1,9 +1,10 @@
 import type { MechanismState, Joint, Link } from '../types';
 import { generateBodyLinks } from './body-links';
+import { validateSpring } from './springs/spring-model';
 
 export function snapshotMechanism(state: MechanismState): MechanismState {
   const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers } = state;
-  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers });
+  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, springs: state.springs ?? {} });
 }
 
 /** Derive invisible rigidity scaffolding without rewriting saved links or source data. */
@@ -35,6 +36,7 @@ export function compileMechanism(source: MechanismState, options: { completeVisi
     joint.connectedLinkIds = [];
   }
   for (const link of Object.values(graph.links)) for (const id of link.jointIds) graph.joints[id].connectedLinkIds.push(link.id);
+  for (const spring of Object.values(graph.springs ?? {})) validateSpring(spring, graph.joints, graph.links);
   return { ...graph, fixedIds, angleConstraints: derived.angleConstraints };
 }
 

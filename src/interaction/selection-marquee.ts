@@ -2,6 +2,7 @@ import type { Body, MechanismState, Vec2 } from '../types';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import { cross, sub } from '../core/math/vec2';
 import { getImageCorners } from '../renderer/draw-images';
+import { springPolyline } from '../core/spring-geometry';
 
 export type SelectionRegion =
   | { kind: 'box'; start: Vec2; end: Vec2 }
@@ -169,6 +170,12 @@ export function selectInRegion(
     if (!body || !tracer.enabled) continue;
     const worldPoint = localToWorld(tracer.localPosition, computeBodyTransform(body, graph.joints));
     if (contains(worldPoint, polygon)) selected.add(tracer.id);
+  }
+  for (const spring of Object.values(graph.springs ?? {})) {
+    const ids = [spring.anchorA, spring.anchorB].flatMap(anchor => anchor.type === 'joint' ? [anchor.jointId] : anchor.type === 'link' ? graph.links[anchor.linkId]?.jointIds ?? [] : []);
+    if (!eligible(bodies.filter(body => ids.some(id => body.jointIds.includes(id))))) continue;
+    const points = springPolyline(spring, graph.joints, graph.links, 1);
+    if (points.slice(1).some((p, i) => segmentOverlaps(points[i], p, polygon))) selected.add(spring.id);
   }
   return selected;
 }

@@ -4,6 +4,8 @@ import { projectSlider } from './slider-projection';
 import { sweptBarrierCrossing } from './barrier-crossing';
 import { createMatrix, solveLU } from '../math/linalg';
 import { SOLVER_MAX_ITERATIONS, SOLVER_TOLERANCE, SOLVER_DAMPING } from '../../utils/constants';
+import type { MechanismSpring } from '../../types';
+import { evaluateSpringForces, torsionGeometry } from '../springs/spring-model';
 
 interface DriverInfo {
   fixedJointId: string;
@@ -143,6 +145,7 @@ export function solveWithForce(
   bodiesRef?: Record<string, { jointIds: string[] }>,
   comBodyJointSets?: Set<string>[],
   ownedVelocities: Map<string, Vec2> = velocities,
+  springs: Record<string, MechanismSpring> = {},
 ): SolverResult {
   const freeJoints: Joint[] = [];
   const jointIndex = new Map<string, number>();
@@ -217,7 +220,23 @@ export function solveWithForce(
 
   // --- Damping factor per substep (time-based) ---
   const coupled = (sliders && Object.keys(sliders).length > 0) || (colliders && Object.keys(colliders).length > 0);
-  const substeps = coupled ? Math.max(24, Math.ceil(dt * 1440)) : NUM_SUBSTEPS;
+  let stiffnessBound = 0, dampingBound = 0;
+  for (const spring of Object.values(springs)) {
+    let gradientBound = 2, kScale = .006, cScale = .006;
+    if (spring.kind === 'torsional') {
+      const geometry = torsionGeometry(spring, joints, links);
+      if (!geometry) throw new Error(`Spring ${spring.id}: invalid torsion legs.`);
+      const a = 1 / Math.hypot(geometry.a.x - geometry.pivot.x, geometry.a.y - geometry.pivot.y);
+      const b = 1 / Math.hypot(geometry.b.x - geometry.pivot.x, geometry.b.y - geometry.pivot.y);
+      gradientBound = a * a + b * b + (a + b) ** 2; kScale = 10; cScale = 5;
+    }
+    stiffnessBound += (spring.kind === 'damper' ? 0 : spring.stiffness) * kScale * gradientBound;
+    dampingBound += spring.damping * cScale * gradientBound;
+  }
+  const springSteps = Object.keys(springs).length
+    ? Math.ceil(dt * Math.max(3000, Math.sqrt(stiffnessBound) * 20, dampingBound * 10)) : 0;
+  if (!Number.isFinite(springSteps) || springSteps > 2048) throw new Error('Spring settings exceed the supported time-step stability budget. Reduce stiffness, damping or simulation speed.');
+  const substeps = Math.max(coupled ? Math.max(24, Math.ceil(dt * 1440)) : NUM_SUBSTEPS, springSteps);
   const subDt = dt / substeps;
   const retentionPerSecond = damping < 0.001 ? 0.001 : damping;
   const dampPerSubstep = Math.pow(retentionPerSecond, subDt);
@@ -225,10 +244,18 @@ export function solveWithForce(
 
   // --- Substep loop ---
   for (let sub = 0; sub < substeps; sub++) {
+    const springForces = Object.keys(springs).length ? evaluateSpringForces(springs, links, id => {
+      const joint = joints[id]; if (!joint) return undefined;
+      const index = jointIndex.get(id);
+      return index === undefined ? { position: joint.position, velocity: { x: 0, y: 0 } }
+        : { position: { x: q[index], y: q[index + 1] }, velocity: { x: v[index], y: v[index + 1] } };
+    }) : null;
     // 1. Compute per-substep acceleration: constant gravity + position-dependent drag
     for (let i = 0; i < freeJoints.length; i++) {
       let axi = gravAccX[i];
       let ayi = gravAccY[i];
+      const springForce = springForces?.get(freeJoints[i].id);
+      if (springForce) { axi += springForce.x; ayi += springForce.y; }
 
       // Critically damped spring drag: F = k * displacement - c * velocity
       // c = 2 * sqrt(k) * dampingRatio gives critical damping at ratio=1

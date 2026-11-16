@@ -5,12 +5,14 @@ import { Pencil, Check, Trash2 } from 'lucide-react';
 import { computeBodyTransform, localToWorld, worldToLocal } from '../../core/body-transform';
 import { exitOutlineEditMode } from '../../interaction/tool-manager';
 import { deleteSelectedEntities } from '../../utils/delete-selection';
+import { SpringProperties } from '../SpringTools';
 
 export function PropertyPanel() {
   const editor = useEditorStore();
   const m = useMechanismStore();
   if (!editor.selectedIds.size || editor.mode !== 'create') return null;
   const id = [...editor.selectedIds][0], joint = m.joints[id], outline = m.outlines[id], image = m.images[id];
+  if (m.springs[id]) return <SpringProperties spring={m.springs[id]}/>;
   const bodyOptions = Object.values(m.bodies).map(body => <option key={body.id} value={body.id}>{body.name}</option>);
   const remove = <button className="tool-btn" type="button" aria-label={image ? 'Delete image' : 'Delete shape'} title={image ? 'Delete image' : 'Delete shape'} onClick={()=>{if(outline){m.removeOutline(id);editor.setEditingOutline(null);}else deleteSelectedEntities();}}><Trash2 size={16}/></button>;
   if (joint) return <div className="panel-content">

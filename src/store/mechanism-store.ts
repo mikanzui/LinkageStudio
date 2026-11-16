@@ -10,8 +10,12 @@ import { cancelInteractions } from '../interaction/session';
 import { mirrorGeometry } from '../core/mirror-geometry';
 import { compileMechanism, snapshotMechanism } from '../core/compile-mechanism';
 import { resolveFrozenOutlines } from '../core/frozen-outlines';
+import type { MechanismSpring } from '../types';
+import { remapSpringAnchors } from '../core/spring-anchors';
+import { validateSpring, resolveSpringAnchor, torsionGeometry } from '../core/springs/spring-model';
 
 interface HistorySnapshot {
+  springs: Record<string, MechanismSpring>;
   documentContext?: DocumentContext;
   angleConstraints: AngleConstraint[];
   joints: Record<string, Joint>;
@@ -32,6 +36,10 @@ function createBaseBody(): Body {
 }
 
 interface MechanismStore {
+  springs: Record<string, MechanismSpring>;
+  addSpring(spring: Omit<MechanismSpring, 'id'>): string;
+  editSpring(id: string, updates: Partial<Omit<MechanismSpring, 'id'>>): void;
+  removeSpring(id: string): void;
   documentEpoch: number;
   documentContext?: DocumentContext;
   joints: Record<string, Joint>;
@@ -103,13 +111,25 @@ interface MechanismStore {
   reprojectOutlinesFromWorld(frozenWorldPoints: Map<string, Vec2[]>): void;
 
   clearAll(): void;
-  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; documentContext?: DocumentContext }): void;
+  loadState(state: { joints: Record<string, Joint>; links: Record<string, Link>; bodies: Record<string, Body>; baseBodyId: string; outlines: Record<string, Outline>; images?: Record<string, CanvasImage>; sliders?: Record<string, SliderConstraint>; colliders?: Record<string, ColliderConstraint>; tracers?: Record<string, Tracer>; springs?: Record<string, MechanismSpring>; documentContext?: DocumentContext }): void;
   pushHistory(): void;
   undo(): void;
   redo(): void;
 }
 
-export const useMechanismStore = create<MechanismStore>((set, get) => ({
+export const useMechanismStore = create<MechanismStore>((publish, get) => {
+  // Topology changes and dependent attachment remaps publish in one undoable state.
+  const set = (update: Partial<MechanismStore> | ((state: MechanismStore) => Partial<MechanismStore>)) => publish(previous => {
+    const patch = typeof update === 'function' ? update(previous) : update;
+    if (patch === previous) return previous;
+    if ((patch.links || patch.joints) && patch.springs === undefined) {
+      const next = { ...previous, ...patch };
+      return { ...patch, springs: remapSpringAnchors(previous.springs, previous.links, next.links, next.joints) };
+    }
+    return patch;
+  });
+  return ({
+  springs: {},
   documentEpoch: 0,
   joints: {},
   links: {},
@@ -128,6 +148,37 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
   angleConstraints: [],
   past: [],
   future: [],
+
+  addSpring(input) {
+    const id = createId(), spring = { ...structuredClone(input), id };
+    validateSpring(spring, get().joints, get().links);
+    get().pushHistory(); set({ springs: { ...get().springs, [id]: spring } });
+    return id;
+  },
+  editSpring(id, updates) {
+    const previous = get().springs[id]; if (!previous) return;
+    const next = { ...previous, ...structuredClone(updates), id };
+    if (updates.anchorA || updates.anchorB) {
+      if (next.kind === 'torsional') {
+        const geometry = torsionGeometry(next, get().joints, get().links);
+        if (!geometry) throw new Error('Torsion attachments must share a pivot on two distinct links.');
+        const a = { x: geometry.a.x - geometry.pivot.x, y: geometry.a.y - geometry.pivot.y };
+        const b = { x: geometry.b.x - geometry.pivot.x, y: geometry.b.y - geometry.pivot.y };
+        next.restLength = Math.atan2(a.x * b.y - a.y * b.x, a.x * b.x + a.y * b.y);
+      } else {
+        const a = resolveSpringAnchor(next.anchorA, get().joints, get().links), b = resolveSpringAnchor(next.anchorB, get().joints, get().links);
+        if (!a || !b) throw new Error('Missing spring attachment.');
+        next.restLength = Math.hypot(b.x - a.x, b.y - a.y);
+      }
+    }
+    validateSpring(next, get().joints, get().links);
+    if (JSON.stringify(next) === JSON.stringify(previous)) return;
+    get().pushHistory(); set({ springs: { ...get().springs, [id]: next } });
+  },
+  removeSpring(id) {
+    if (!get().springs[id]) return;
+    get().pushHistory(); const springs = { ...get().springs }; delete springs[id]; set({ springs });
+  },
 
   addImage(bodyId, src, naturalWidth, naturalHeight, position) {
     const id = createId();
@@ -412,6 +463,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     set({
       documentEpoch: get().documentEpoch + 1,
       documentContext: undefined,
+      springs: {},
       joints: {},
       links: {},
       bodies: {
@@ -439,6 +491,7 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
     set({
       documentEpoch: get().documentEpoch + 1,
       documentContext: state.documentContext,
+      springs: state.springs ?? {},
       joints: state.joints,
       links: state.links,
       bodies: state.bodies,
@@ -850,13 +903,14 @@ export const useMechanismStore = create<MechanismStore>((set, get) => ({
       return { outlines: { ...s.outlines, [outlineId]: { ...outline, points: newPoints } } };
     });
   },
-}));
+  });
+});
 
 // --- Helpers ---
 
 function captureHistory(state: MechanismStore): HistorySnapshot {
   const { joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext } = state;
-  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext });
+  return structuredClone({ joints, links, bodies, baseBodyId, outlines, images, sliders, colliders, tracers, angleConstraints, documentContext, springs: state.springs });
 }
 
 function buildLinksRecord(links: Link[]): Record<string, Link> {

@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { ViewportTools } from './Canvas/ViewportTools';
 import { PanelResizeHandle } from './PanelResizeHandle';
 import { GeometryTools, GeometryOptions } from './GeometryTools';
+import { SpringTools, SpringOptions, SpringList } from './SpringTools';
 
 /* ---- Shared chevron icon ---- */
 const ChevronIcon = ({ direction }: { direction: 'left' | 'right' }) => (
@@ -252,6 +253,7 @@ export function Layout() {
     <div className="app-layout">
       <TopBar />
       <GeometryOptions />
+      <SpringOptions />
       <div className="app-main">
 
         {/* ---- LEFT TOOLBAR ---- */}
@@ -314,6 +316,7 @@ export function Layout() {
                   <IconOutlineSmall />
                 </button>
                 <GeometryTools compact />
+                <SpringTools compact />
                 <button
                   className={`collapsed-tool-btn ${drawing && createTool === 'image' ? 'active' : ''}`}
                   onClick={() => {
@@ -385,6 +388,7 @@ export function Layout() {
               <PanelResizeHandle side="right" />
             </div>
             <BodyPanel />
+            <SpringList />
             <PropertyPanel />
             <SimulationPanel />
           </div>

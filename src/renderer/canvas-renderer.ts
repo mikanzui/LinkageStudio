@@ -7,8 +7,12 @@ import { drawGrid, drawRulers, drawPathTraces, drawForceVectors, drawDragInterac
 import { lerp } from '../core/math/vec2';
 import { computeBodyTransform, localToWorld, polygonCentroid, polygonArea } from '../core/body-transform';
 import { getArcCirclePositions, getArcAddButtonPosition } from '../interaction/tool-manager';
+import type { MechanismSpring } from '../types';
+import { drawSprings } from './draw-springs';
 
 export interface RenderState {
+  springs: Record<string, MechanismSpring>;
+  springAnchor?: Vec2 | null;
   joints: Record<string, Joint>;
   links: Record<string, Link>;
   bodies: Record<string, Body>;
@@ -72,6 +76,7 @@ export function render(
     frozenPts.delete(state.editingOutlineId);
   }
   drawMechanism(ctx, state.joints, state.links, state.bodies, state.outlines, state.sliders, state.colliders, state.selectedIds, state.hoveredId, state.camera.zoom, state.showLinks, state.baseBodyId, frozenPts);
+  drawSprings(ctx, state.springs, state.joints, state.links, state.camera.zoom, state.selectedIds, state.springAnchor, state.cursorWorld);
 
   drawPathTraces(ctx, state.pathTraces, state.camera.zoom);
 

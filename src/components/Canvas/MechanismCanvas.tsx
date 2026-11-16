@@ -16,6 +16,8 @@ import { snapshotMechanism } from '../../core/compile-mechanism';
 import { registerInteractionCancellation } from '../../interaction/session';
 import { projectImages } from '../../core/image-transform';
 import { drawGeometryPreview } from '../../renderer/draw-geometry-preview';
+import { resolveSpringAnchor } from '../../core/springs/spring-model';
+import { hitTestSpring } from '../../core/spring-geometry';
 
 const PAN_THRESHOLD = 8; // px movement before a touch becomes a pan drag
 
@@ -24,7 +26,7 @@ function interactionCheckpoint() {
   return {
     mechanism: { ...snapshotMechanism(m), angleConstraints: structuredClone(m.angleConstraints), past: m.past, future: m.future },
     editor: structuredClone({ selectedIds: e.selectedIds, outlinePoints: e.outlinePoints, frozenOutlineWorldPoints: e.frozenOutlineWorldPoints, arcSelector: e.arcSelector,
-      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture, shapeGesture: e.shapeGesture, trimStroke: e.trimStroke }),
+      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture, shapeGesture: e.shapeGesture, trimStroke: e.trimStroke, springPlacement: e.springPlacement, springReattachId: e.springReattachId, springCommitted: e.springCommitted }),
   };
 }
 
@@ -43,12 +45,14 @@ export function MechanismCanvas() {
     handleMouseUp(event, canvas); checkpoint.current = null;
   }, []);
   const cancelTool = useCallback(() => {
+    const active = checkpoint.current !== null;
     handleMouseUp();
     if (checkpoint.current && useEditorStore.getState().mode === 'create') {
       useMechanismStore.setState(checkpoint.current.mechanism);
       useEditorStore.setState(checkpoint.current.editor);
     }
     checkpoint.current = null;
+    if (active) useEditorStore.setState({ springPlacement: null, springReattachId: null, springCommitted: false });
   }, []);
 
   const renderLoop = useCallback(function drawFrame() {
@@ -72,6 +76,8 @@ export function MechanismCanvas() {
 
     try {
       render(ctx, canvas, {
+        springs: mechanism.springs,
+        springAnchor: editor.springPlacement?.anchorA ? resolveSpringAnchor(editor.springPlacement.anchorA, mechanism.joints, mechanism.links) : mechanism.joints[editor.springPlacement?.pivotId ?? '']?.position,
         joints: mechanism.joints,
         links: mechanism.links,
         bodies: mechanism.bodies,
@@ -264,7 +270,7 @@ export function MechanismCanvas() {
   useEffect(() => registerInteractionCancellation(cancelGesture), [cancelGesture]);
 
   useEffect(() => {
-    const blur = () => { cancelGesture(); if (useEditorStore.getState().mode === 'simulate') useSimulationStore.getState().pause(); };
+    const blur = () => { cancelGesture(); useEditorStore.setState({ springPlacement: null, springReattachId: null }); if (useEditorStore.getState().mode === 'simulate') useSimulationStore.getState().pause(); };
     const hidden = () => { if (document.hidden) blur(); };
     const palm = (event: PointerEvent) => {
       if (gesture.current.penId !== null && event.pointerType === 'touch') { event.preventDefault(); event.stopPropagation(); }
@@ -383,7 +389,7 @@ export function MechanismCanvas() {
           }
         }
 
-        if (componentHit || editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single') || (editor.activeTool === 'joint' && ['rectangle','circle','ngon','trim','mirror'].includes(editor.createTool))) {
+        if (componentHit || hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom) || editor.activeTool === 'pan' || (editor.activeTool === 'select' && editor.selectMode !== 'single') || (editor.activeTool === 'joint' && ['rectangle','circle','ngon','trim','mirror','spring','damper','torsion'].includes(editor.createTool))) {
           // Finger landed on a component → forward to tool-manager immediately for drag interaction
           gesture.current.mode = 'interact';
           gesture.current.touchStartPointerId = e.pointerId;

@@ -11,6 +11,9 @@ import { selectInRegion } from './selection-marquee';
 import type { SelectionGesture } from '../types/editor';
 import { deleteSelectedEntities } from '../utils/delete-selection';
 import { beginGeometry, moveGeometry, finishGeometry, commitOutline } from './geometry-tools';
+import { placeSpring } from './spring-tools';
+import { hitTestSpring } from '../core/spring-geometry';
+import { setProjectMessage } from '../document/project';
 
 /** Start the long-press arc selector timer for a given joint. No-op for touch input. */
 function startArcTimer(jointId: string, screenX: number, screenY: number) {
@@ -432,6 +435,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
 
   // --- CREATE MODE ---
   if (e.button !== 0) return;
+  if (editor.activeTool === 'joint' && placeSpring(worldPos)) return;
 
   if (editor.activeTool === 'select') {
     if (editor.selectMode !== 'single') {
@@ -451,6 +455,8 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       }
       return;
     }
+    const spring = hitTestSpring(worldPos, mechanism.springs, mechanism.joints, mechanism.links, editor.camera.zoom);
+    if (spring) { editor.select(spring); return; }
     const outline = hitTestOutline(worldPos, mechanism.outlines, mechanism.bodies, mechanism.joints, editor.camera.zoom);
     if (outline) { editor.select(outline.id); return; }
     for (const image of Object.values(mechanism.images).reverse()) {
@@ -1117,6 +1123,10 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
 
 export function handleMouseUp(_e?: PointerEvent | MouseEvent, _canvas?: HTMLCanvasElement) {
   const editor = useEditorStore.getState();
+  // Clear old input errors only after a committed placement has released capture.
+  if (_e && editor.springCommitted) {
+    useEditorStore.setState({ springCommitted: false }); setProjectMessage('');
+  }
   const rect = _canvas?.getBoundingClientRect();
   finishGeometry(!!_e, _e && rect ? screenToWorld({x:_e.clientX-rect.left,y:_e.clientY-rect.top},editor.camera) : undefined);
   if (marquee) {
@@ -1224,7 +1234,9 @@ export function handleKeyDown(e: KeyboardEvent) {
     switch (e.key) {
       case 'g': editor.cycleGrid(); return;
       case 'Escape':
-        if (editor.editingOutlineId) {
+        if (editor.springPlacement) {
+          useEditorStore.setState({ springPlacement: null });
+        } else if (editor.editingOutlineId) {
           exitOutlineEditMode();
         } else if (editor.sliderPointA) {
           editor.setCreateTool('joints');

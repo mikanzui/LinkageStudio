@@ -101,6 +101,22 @@ export interface Tracer {
   enabled: boolean;
 }
 
+export type SpringAnchor = { type: 'joint'; jointId: string }
+  | { type: 'link'; linkId: string; t: number }
+  | { type: 'world'; position: Vec2 };
+
+export interface MechanismSpring {
+  readonly id: string;
+  kind: 'linear' | 'damper' | 'torsional';
+  anchorA: SpringAnchor;
+  anchorB: SpringAnchor;
+  stiffness: number;
+  damping: number;
+  restLength: number;
+  prestressDelta: number;
+  name?: string;
+}
+
 export interface MechanismState {
   joints: Record<string, Joint>;
   links: Record<string, Link>;
@@ -111,4 +127,5 @@ export interface MechanismState {
   sliders: Record<string, SliderConstraint>;
   colliders: Record<string, ColliderConstraint>;
   tracers: Record<string, Tracer>;
+  springs?: Record<string, MechanismSpring>;
 }

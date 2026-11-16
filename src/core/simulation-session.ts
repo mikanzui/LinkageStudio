@@ -1,6 +1,7 @@
 import type { MechanismState, Vec2, SolverResult } from '../types';
 import { maximumLinkError } from './compile-mechanism';
 import { solveWithForce } from './solver/newton-raphson';
+import { validateSpring } from './springs/spring-model';
 
 export interface FrameOptions {
   dt: number;
@@ -34,10 +35,11 @@ export class SimulationSession {
     const trialVelocities = new Map([...this.velocities].map(([id, v]) => [id, { ...v }]));
     const sides = this.sides ? new Map(this.sides) : initialColliderSides(graph);
     try {
+      for (const spring of Object.values(graph.springs ?? {})) validateSpring(spring, graph.joints, graph.links);
       const fixedIds = new Set(this.fixed.keys());
       const result = solveWithForce(graph.joints, graph.links, { enabled: options.gravityEnabled, strength: options.gravityStrength },
         options.pull, options.damping, options.dragMultiplier, options.dragDamping, options.dt,
-        fixedIds, options.gravityWeights, graph.sliders, [], graph.colliders, sides, graph.bodies, options.comBodyJointSets, trialVelocities);
+        fixedIds, options.gravityWeights, graph.sliders, [], graph.colliders, sides, graph.bodies, options.comBodyJointSets, trialVelocities, graph.springs);
       const joints = { ...graph.joints };
       for (const [id, position] of result.positions) {
         if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) throw new Error(`Joint ${id}: non-finite solver position.`);

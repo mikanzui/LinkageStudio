@@ -233,6 +233,11 @@
 .geometry-options input[type=number] { width: 88px; min-width: 0; padding: 4px; font-size: 13px; }
 .geometry-options .tool-btn { color: #333; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; }
 .geometry-actions { display: flex; gap: 6px; margin: 6px 0; }
+.spring-anchor-fields { border: 0; border-top: 1px solid #444; margin: 4px 0; padding: 4px 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.spring-anchor-fields legend { color: #aaa; font-size: 11px; }
+.spring-anchor-fields label { flex-wrap: wrap; }
+.spring-anchor-fields select { min-width: 0; max-width: 100%; flex: 1; }
+.panel-content .tool-name { overflow-wrap: anywhere; min-width: 0; }
 .toolbar-collapsed { overflow-y: auto; }
 @media (pointer: coarse) { .geometry-options label, .geometry-options input[type=number], .geometry-options .tool-btn { min-height: 44px; } .geometry-options input[type=number] { font-size: 16px; } .geometry-options .tool-btn { min-width: 44px; } }
 @media (max-width: 1099px) {

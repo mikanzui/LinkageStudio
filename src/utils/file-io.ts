@@ -1,6 +1,7 @@
 import type { Joint, Link, Body, Outline, CanvasImage, SliderConstraint, ColliderConstraint, Tracer, Vec2 } from '../types';
 import { decodeDocument, encodeDocument } from '../document/codec';
 import type { DocumentContext, DocumentIssue, JsonObject } from '../document/codec';
+import type { MechanismSpring } from '../types';
 
 declare const __APP_VERSION__: string;
 
@@ -25,6 +26,7 @@ interface SimulationSettings {
 
 /** Serializable format for a linkage file (.slinker) */
 interface SlinkerFile {
+  springs?: Record<string, MechanismSpring>;
   version: string;
   joints: Record<string, { id: string; type: string; position: Vec2; connectedLinkIds: string[] }>;
   links: Record<string, { id: string; jointIds: [string, string]; restLength: number; mass: number }>;
@@ -54,9 +56,11 @@ export function serializeMechanism(
   viewPreferences?: ViewPreferences,
   simulationSettings?: SimulationSettings,
   documentContext?: DocumentContext,
+  springs: Record<string, MechanismSpring> = {},
 ): string {
   const data: SlinkerFile = {
     version: __APP_VERSION__,
+    springs: structuredClone(springs),
     joints: {},
     links: {},
     bodies: {},
@@ -125,6 +129,7 @@ export function serializeMechanism(
 }
 
 export function deserializeMechanism(json: string): {
+  springs: Record<string, MechanismSpring>;
   joints: Record<string, Joint>;
   links: Record<string, Link>;
   bodies: Record<string, Body>;
@@ -227,7 +232,7 @@ export function deserializeMechanism(json: string): {
     }
 
     return {
-      joints, links, bodies, baseBodyId: data.baseBodyId, outlines, images, sliders, colliders, tracers,
+      joints, links, bodies, baseBodyId: data.baseBodyId, outlines, images, sliders, colliders, tracers, springs: structuredClone(data.springs ?? {}),
       projectName: data.projectName,
       viewPreferences: data.viewPreferences,
       simulationSettings: data.simulationSettings,

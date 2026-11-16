@@ -1,6 +1,7 @@
 import type { MechanismState, Vec2, CameraState } from '../types';
 import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import { getImageCorners } from './draw-images';
+import { springPolyline } from '../core/spring-geometry';
 export const MIN_ZOOM = .01;
 export const MAX_ZOOM = 10;
 export const clampZoom = (zoom: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
@@ -14,6 +15,7 @@ export function fitMechanism(graph: MechanismState, width: number, height: numbe
     if (o.visible && body) points.push(...o.points.map(p => localToWorld(p, computeBodyTransform(body, graph.joints))));
   }
   for (const image of Object.values(graph.images)) if (image.visible) points.push(...getImageCorners(image));
+  for (const spring of Object.values(graph.springs ?? {})) points.push(...springPolyline(spring, graph.joints, graph.links, 1));
   const finite = points.filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
   if (!finite.length) return { pan: { x: width / 2, y: height / 2 }, zoom: 1 };
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;

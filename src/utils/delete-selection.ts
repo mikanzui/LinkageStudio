@@ -13,7 +13,7 @@ export function deleteSelectedEntities(): void {
     }
     return;
   }
-  const collections = ['joints', 'links', 'sliders', 'colliders', 'outlines', 'images', 'tracers'] as const;
+  const collections = ['joints', 'links', 'sliders', 'colliders', 'outlines', 'images', 'tracers', 'springs'] as const;
   const ids = [...editor.selectedIds].filter(id => collections.some(key => before[key][id]));
   if (!ids.length) return;
   before.pushHistory();
@@ -28,6 +28,7 @@ export function deleteSelectedEntities(): void {
       else if (m.outlines[id]) m.removeOutline(id);
       else if (m.images[id]) m.removeImage(id);
       else if (m.tracers[id]) m.removeTracer(id);
+      else if (m.springs[id]) m.removeSpring(id);
     }
     store.setState({ past: history, future: [] });
     editor.clearSelection();

@@ -6,6 +6,7 @@ import type { AppMode } from '../../types';
 import { switchMode } from '../../utils/mode-switch';
 import './Toolbar.css';
 import { GeometryTools } from '../GeometryTools';
+import { SpringTools } from '../SpringTools';
 
 /* Inline SVG tool icons (16×16 viewBox) */
 const IconPivot = () => (
@@ -147,6 +148,8 @@ export function Toolbar() {
               <span className="tool-name">Outline</span>
             </button>
             <GeometryTools />
+            <div className="toolbar-group-label">Springs</div>
+            <SpringTools />
 
             <button
               className={`tool-btn ${drawing && createTool === 'image' ? 'active' : ''}`}

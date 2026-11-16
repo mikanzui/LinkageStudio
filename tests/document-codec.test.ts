@@ -47,11 +47,11 @@ test('missing link endpoint is fatal; stale optional barrier is retained with wa
 });
 test('unknown root/entity data is preserved, while deleted core entities stay deleted', () => {
   const d = valid(); const id = Object.keys(d.joints)[0];
-  d.springs = { future: { anchor: { x: 1, y: 2 } } }; d.joints[id].custom = { label: 'kept' };
+  d.futureSprings = { future: { anchor: { x: 1, y: 2 } } }; d.joints[id].custom = { label: 'kept' };
   const result = decodeDocument(JSON.stringify(d)); assert(result.ok);
-  const current = structuredClone(d); delete current.springs; delete current.joints[id].custom;
+  const current = structuredClone(d); delete current.futureSprings; delete current.joints[id].custom;
   const next = JSON.parse(encodeDocument(current, 'new', result.context));
-  assert.deepEqual(next.springs, d.springs); assert.deepEqual(next.joints[id].custom, d.joints[id].custom);
+  assert.deepEqual(next.futureSprings, d.futureSprings); assert.deepEqual(next.joints[id].custom, d.joints[id].custom);
   current.outlines = {};
   assert.deepEqual(JSON.parse(encodeDocument(current, 'new', result.context)).outlines, {});
 });

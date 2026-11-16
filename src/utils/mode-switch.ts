@@ -6,6 +6,7 @@ import { computeBodyTransform, localToWorld } from '../core/body-transform';
 import { exitOutlineEditMode } from '../interaction/tool-manager';
 import { compileMechanism, snapshotMechanism } from '../core/compile-mechanism';
 import { cancelInteractions } from '../interaction/session';
+import { setProjectMessage } from '../document/project';
 
 /**
  * Shared mode switch logic used by both the expanded Toolbar and the
@@ -33,6 +34,9 @@ export function switchMode(newMode: AppMode): void {
   const editorFresh = useEditorStore.getState();
 
   if (newMode === 'simulate') {
+    let compiled;
+    try { compiled = compileMechanism(useMechanismStore.getState()); }
+    catch (error) { setProjectMessage(error instanceof Error ? error.message : 'Cannot start this mechanism.', 'alert'); return; }
     const design = snapshotMechanism(useMechanismStore.getState());
     // If lockOutlines is on but frozen points are empty, populate them now
     if (editorFresh.lockOutlines && editorFresh.frozenOutlineWorldPoints.size === 0) {
@@ -63,7 +67,6 @@ export function switchMode(newMode: AppMode): void {
       positions[id] = { ...joint.position };
     }
     editorFresh.setSavedPositions(positions);
-    const compiled = compileMechanism(useMechanismStore.getState());
     useEditorStore.setState({ simulationDesign: design });
     useMechanismStore.setState({ joints: compiled.joints, links: compiled.links, angleConstraints: compiled.angleConstraints });
     useSimulationStore.getState().reset();

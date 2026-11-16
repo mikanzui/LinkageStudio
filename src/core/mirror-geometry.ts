@@ -1,10 +1,12 @@
 import type { CanvasImage, MechanismState } from '../types/mechanism';
 import type { Vec2 } from '../types/geometry';
 import { computeBodyTransform, localToWorld, worldToLocal } from './body-transform';
+import type { SpringAnchor } from '../types';
+import { validateSpring } from './springs/spring-model';
 
 type ReflectableImage = CanvasImage & { flipX?: boolean };
 const AXIS_EPSILON = 0.001;
-const ENTITY_MAPS = ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers'] as const;
+const ENTITY_MAPS = ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers', 'springs'] as const;
 
 function fail(message: string): never {
   throw new Error(`Mirror: ${message}`);
@@ -29,7 +31,7 @@ function validate(graph: MechanismState): Set<string> {
   if (!record(graph)) fail('graph must be an object.');
   const used = new Set<string>();
   for (const kind of ENTITY_MAPS) {
-    const entities = graph[kind];
+    const entities = kind === 'springs' ? graph.springs ?? {} : graph[kind];
     if (!record(entities)) fail(`${kind} must be an entity map.`);
     for (const [id, entity] of Object.entries(entities)) {
       if (!record(entity) || !id.trim() || entity.id !== id) fail(`${kind}.${id} has an invalid ID.`);
@@ -87,6 +89,7 @@ function validate(graph: MechanismState): Set<string> {
     hasBody(tracer.bodyId);
     point(tracer.localPosition, `tracer ${tracer.id} position`);
   }
+  for (const spring of Object.values(graph.springs ?? {})) validateSpring(spring, graph.joints, graph.links);
 
   // Reserve extension-entity IDs too (for example future springs/force sensors).
   const seen = new WeakSet<object>();
@@ -148,14 +151,20 @@ export function mirrorGeometry(
   const onAxis = (p: Vec2) => Math.abs((axis === 'vertical' ? p.x : p.y) - axisValue) <= AXIS_EPSILON;
   const targets = {
     joints: new Set<string>(), links: new Set<string>(), outlines: new Set<string>(),
-    images: new Set<string>(), sliders: new Set<string>(), colliders: new Set<string>(), tracers: new Set<string>(),
+    images: new Set<string>(), sliders: new Set<string>(), colliders: new Set<string>(), tracers: new Set<string>(), springs: new Set<string>(),
   };
   for (const kind of Object.keys(targets) as (keyof typeof targets)[]) {
-    for (const [id, entity] of Object.entries(graph[kind])) {
+    for (const [id, entity] of Object.entries(graph[kind] ?? {})) {
       const wanted = scope === 'all' ? visible(entity) : selected.has(id);
       if (!wanted || ('hidden' in entity && entity.hidden === true)) continue;
       if (kind === 'tracers' && scope === 'all' && !graph.tracers[id].enabled) continue;
       targets[kind].add(id);
+    }
+  }
+  for (const id of targets.springs) {
+    for (const anchor of [graph.springs![id].anchorA, graph.springs![id].anchorB]) {
+      if (anchor.type === 'joint') targets.joints.add(anchor.jointId);
+      if (anchor.type === 'link') targets.links.add(anchor.linkId);
     }
   }
   const expand = (kind: 'links' | 'sliders' | 'colliders', id: string, jointIds: readonly string[]) => {
@@ -215,12 +224,23 @@ export function mirrorGeometry(
     result.tracers[tracer.id].localPosition = toLocal(tracer.bodyId, toWorld(tracer.bodyId, tracer.localPosition), tracer.localPosition);
   }
 
+  const linkMap = new Map<string, string>();
   for (const id of targets.links) {
     const link = result.links[id];
     const jointIds = link.jointIds.map(jid => jointMap.get(jid)!) as [string, string];
-    if (jointIds.every((jid, i) => jid === link.jointIds[i])) continue;
+    if (jointIds.every((jid, i) => jid === link.jointIds[i])) { linkMap.set(id, id); continue; }
     const mirroredId = allocate();
     result.links[mirroredId] = { ...structuredClone(link), id: mirroredId, jointIds };
+    linkMap.set(id, mirroredId);
+  }
+  for (const id of targets.springs) {
+    const spring = graph.springs![id], mirroredId = allocate();
+    const anchor = (value: SpringAnchor): SpringAnchor => value.type === 'world' ? { ...structuredClone(value), position: reflect(value.position) }
+      : value.type === 'joint' ? { ...value, jointId: jointMap.get(value.jointId)! } : { ...value, linkId: linkMap.get(value.linkId)! };
+    result.springs ??= {};
+    result.springs[mirroredId] = { ...structuredClone(spring), id: mirroredId, anchorA: anchor(spring.anchorA), anchorB: anchor(spring.anchorB),
+      restLength: spring.kind === 'torsional' ? -spring.restLength : spring.restLength,
+      prestressDelta: spring.kind === 'torsional' ? -spring.prestressDelta : spring.prestressDelta };
   }
   for (const id of targets.sliders) {
     const slider = result.sliders[id];

@@ -1,3 +1,6 @@
+import { validateSpring } from '../core/springs/spring-model';
+import type { Joint, Link, MechanismSpring } from '../types';
+
 export type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
 export interface JsonObject { [key: string]: JsonValue }
 
@@ -45,6 +48,7 @@ export function decodeDocument(text: string): DecodeResult {
   if (source.documentFormat !== undefined && source.documentFormat !== 'linkage-studio') issue('documentFormat', 'Unsupported document format.');
   if (source.schemaVersion !== undefined && source.schemaVersion !== 1) issue('schemaVersion', `Unsupported schema version ${source.schemaVersion}. This file was not modified.`);
   if (source.simulationModel !== undefined && source.simulationModel !== 'saved-links-v1') issue('simulationModel', 'Unsupported simulation model.');
+  if (source.springModel !== undefined && source.springModel !== 'legacy-motion-v1') issue('springModel', 'Unsupported spring motion model.');
   if (source.version !== undefined && typeof source.version !== 'string') issue('version', 'Version must be text.');
   if (source.sourceVersion !== undefined && typeof source.sourceVersion !== 'string') issue('sourceVersion', 'Source version must be text.');
   const map = (name: string, required = false): JsonObject => {
@@ -128,6 +132,11 @@ export function decodeDocument(text: string): DecodeResult {
     if (!point(v.localPosition)) issue(`${path}.localPosition`, 'Expected finite local coordinates.');
     optionalBoolean(v, 'enabled', path);
   });
+  each('springs', map('springs'), (v, path) => {
+    if (v.name !== undefined && typeof v.name !== 'string') issue(`${path}.name`, 'Expected text.');
+    try { validateSpring(v as unknown as MechanismSpring, joints as unknown as Record<string, Joint>, links as unknown as Record<string, Link>); }
+    catch (error) { issue(path, error instanceof Error ? error.message : 'Invalid spring.'); }
+  });
   if (source.projectName !== undefined && typeof source.projectName !== 'string') issue('projectName', 'Expected text.');
   const view = source.viewPreferences;
   if (view !== undefined) {
@@ -156,7 +165,7 @@ export function decodeDocument(text: string): DecodeResult {
 /** Keep future fields, but never resurrect deleted entities from the source file. */
 export function encodeDocument(current: JsonObject, writerVersion: string, context?: DocumentContext): string {
   const result: JsonObject = { ...structuredClone(context?.source ?? {}), ...structuredClone(current) };
-  for (const name of ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers']) {
+  for (const name of ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers', 'springs']) {
     const source = context?.source[name];
     const active = current[name];
     if (!record(active)) continue;
@@ -170,6 +179,7 @@ export function encodeDocument(current: JsonObject, writerVersion: string, conte
   result.version = result.sourceVersion;
   result.writerVersion = writerVersion;
   result.simulationModel = context?.simulationModel ?? 'saved-links-v1';
+  if (record(result.springs) && Object.keys(result.springs).length) result.springModel = 'legacy-motion-v1';
   const text = JSON.stringify(result, null, 2);
   const check = decodeDocument(text);
   if (!check.ok) throw new Error(check.issues.map(x => `${x.path}: ${x.message}`).join('\n'));

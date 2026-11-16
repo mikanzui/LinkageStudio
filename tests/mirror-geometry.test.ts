@@ -371,7 +371,8 @@ test('IDs are globally fresh, include every created entity, and do not silently 
     assert.throws(() => mirrorGeometry(source, 'vertical', 0, 'selection', new Set(['a']), () => collision), /collision/);
   }
   assert.throws(() => mirrorGeometry(source, 'vertical', 0, 'selection', new Set(['a', 'b']), () => 'repeat'), /collision/);
-  const extension = Object.assign(source, { springs: { spring: { id: 'spring', stiffness: 12 } } });
+  const extension = Object.assign(source, { springs: { spring: { id: 'spring', kind: 'linear', stiffness: 12, damping: 0, restLength: 1, prestressDelta: 0,
+    anchorA: { type: 'world', position: { x: 0, y: 0 } }, anchorB: { type: 'world', position: { x: 1, y: 0 } } } } });
   assert.throws(() => mirrorGeometry(extension, 'vertical', 0, 'selection', new Set(['a']), () => 'spring'), /collision/);
 });
 
