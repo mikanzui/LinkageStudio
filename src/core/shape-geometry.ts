@@ -142,3 +142,49 @@ export function trimOutlineEdges(points: Vec2[], closed: boolean, stroke: Vec2[]
   if (run.length > 1) runs.push(run);
   return runs;
 }
+
+/** Circle tools historically saved only 48 vertices. Explicit polygon identity
+ * prevents new 48-sided N-gons from being mistaken for those legacy circles.
+ */
+function circleFrame(points: Vec2[], closed: boolean, primitive?: string) {
+  if (!closed || (primitive !== undefined && primitive !== 'circle')
+    || (primitive === undefined && points.length !== 48)
+    || points.length < 8 || points.length > 256 || !validPath(points, 8)) return null;
+  const origin = points[0];
+  const scale = Math.max(...points.map(p => Math.hypot(p.x - origin.x, p.y - origin.y)));
+  if (!Number.isFinite(scale) || scale === 0) return null;
+  const normalized = points.map(p => ({ x: (p.x - origin.x) / scale, y: (p.y - origin.y) / scale }));
+  const center = normalized.reduce((sum, p) => ({ x: sum.x + p.x / points.length, y: sum.y + p.y / points.length }), { x: 0, y: 0 });
+  const first = { x: -center.x, y: -center.y }, second = normalized[1];
+  const radius = Math.hypot(first.x, first.y);
+  const winding = Math.sign(first.x * (second.y - center.y) - first.y * (second.x - center.x));
+  if (radius === 0 || winding === 0) return null;
+  for (let i = 0; i < normalized.length; i++) {
+    const angle = winding * i * 2 * Math.PI / points.length, c = Math.cos(angle), s = Math.sin(angle);
+    if (Math.hypot(normalized[i].x - center.x - first.x * c + first.y * s,
+      normalized[i].y - center.y - first.x * s - first.y * c) > 1e-8) return null;
+  }
+  return { origin, scale, center, radius };
+}
+
+/** Circles are single trim objects; other outlines retain edge/run trimming. */
+export function trimShapeOutline(points: Vec2[], closed: boolean, stroke: Vec2[], primitive?: string): Vec2[][] | null {
+  const circle = circleFrame(points, closed, primitive);
+  if (!circle) return trimOutlineEdges(points, closed, stroke);
+  if (!validPath(stroke, 2)) return null;
+  const { origin, scale, center, radius } = circle;
+  const samples = stroke.map(p => ({ x: (p.x - origin.x) / scale - center.x, y: (p.y - origin.y) / scale - center.y }));
+  if (!samples.every(finitePoint)) return null;
+  const tolerance = 64 * Number.EPSILON;
+  if (!samples.some(p => Math.hypot(p.x, p.y) > radius + tolerance)) return null;
+  for (let i = 1; i < samples.length; i++) {
+    const a = samples[i - 1], b = samples[i], dx = b.x - a.x, dy = b.y - a.y;
+    const length = Math.hypot(dx, dy);
+    if (!Number.isFinite(length) || length === 0) continue;
+    const ux = dx / length, uy = dy / length;
+    const along = Math.max(0, Math.min(length, -(a.x * ux + a.y * uy)));
+    const closest = Math.hypot(a.x + along * ux, a.y + along * uy);
+    if (closest < radius - tolerance) return [];
+  }
+  return null;
+}

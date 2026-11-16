@@ -1,5 +1,24 @@
 # Changelog
 
+## 17.0.0 Follow-Up - 2026-11-16
+
+- Restored the compact Draw sidebar entry and floating Outline/Rectangle/Circle/
+  N-gon/Trim palette from the pre-rebuild UI, with the historical toolbar glyphs.
+- Retained accessible names, keyboard control, pressed states, cancellation and
+  44px tablet targets; Mirror remains directly reachable.
+- Circle trim now removes the whole circle, including saved legacy circles.
+  Other polygons/open paths retain segment trimming. Primitive identity prevents
+  new 48-sided N-gons being confused with circles; an untagged legacy regular
+  48-gon remains geometrically indistinguishable from a historical circle.
+- Added complete-removal, scope, cancellation, undo/redo and real download/reopen
+  regressions. Verified990 domain tests,27 tooling tests,24 cumulative browser
+  runs and48 independently parsed CAD downloads; physical iPad is unverified.
+- Consolidated the validated rebuild and legacy fork history onto master;
+  Pages now deploys from master. Original local experiments remain untouched.
+- User confirms Microsoft sign-in worked on the previous hosted build.
+  Authentication and callback configuration are unchanged by this follow-up.
+- Existing v17.0.0 tag/release remains pinned to its original release commit.
+
 ## 0.16.0-rebuild.4 - 2026-11-16
 
 - Corrected the incomplete .3 hold-menu restoration: translated/scaled 220ms

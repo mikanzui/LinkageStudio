@@ -112,6 +112,10 @@ try {
     const button = name => page.getByRole('button', { name, exact: true });
     const field = name => page.getByLabel(name, { exact: true });
     const activate = locator => profile.touch ? locator.tap() : locator.click();
+    const selectGeometry = async name => {
+      if (name !== 'Mirror' && !await button(name).isVisible()) await activate(button('Draw'));
+      await activate(button(name));
+    };
     const acceptDirtyOpen = async () => {
       const unsaved = page.getByRole('dialog', { name: 'Unsaved Changes', exact: true });
       if (await unsaved.isVisible()) await activate(unsaved.getByRole('button', { name: 'Discard and open', exact: true }));
@@ -309,13 +313,86 @@ try {
       assert.equal(initialPixels.coarse, profile.touch);
       mark('collapsed rails and DPR-matched backing pixels before coordinate capture', initialPixels);
 
+      await run('v16-draw-palette-and-icons', async () => {
+        await openFixture();
+        const before = graphOnly(await graph());
+        const palette = page.getByRole('toolbar', { name: 'Draw overlay tools', exact: true });
+        assert.equal(await palette.count(), 0, 'Negative control: no drawing palette in joint mode');
+        for (const expanded of [false, true]) {
+          if (expanded) await activate(page.getByTitle('Expand toolbar', { exact: true }));
+          const sidebar = page.locator(expanded ? '.toolbar' : '.toolbar-collapsed');
+          for (const name of ['Outline', 'Rectangle', 'Circle', 'N-gon', 'Trim']) {
+            assert.equal(await sidebar.getByRole('button', { name, exact: true }).count(), 0, name + ' must not clutter sidebar');
+          }
+          await activate(button('Draw'));
+          assert.equal(await palette.getByRole('button').count(), 5);
+          assert.equal(await button('Draw').getAttribute('aria-pressed'), 'true');
+          assert.equal(await button('Draw').locator('polygon').getAttribute('points'), '8,1 14,5 12,13 4,13 2,5');
+          assert.equal(await button('Outline').locator('line').getAttribute('x1'), '2.5');
+          assert.equal(await button('Rectangle').locator('rect').getAttribute('width'), '12');
+          assert.equal(await button('Circle').locator('circle').getAttribute('r'), '6');
+          assert.equal(await button('N-gon').locator('polygon').getAttribute('points'), '8,1.5 14,5 13,12 3,12 2,5');
+          assert.equal(await button('Trim').locator('circle').count(), 2);
+          assert.equal(await button('Linear spring').locator('path').getAttribute('d'), 'M2 8c0-1 1-1.5 2-1.5s2 1 2 2 1 2 2 2 2-1 2-2 1-2 2-2 2 0.5 2 1.5');
+          assert.equal(await button('Damper').locator('rect').getAttribute('width'), '7');
+          assert.equal(await button('Torsion spring').locator('path').getAttribute('d'), 'M 9.8 5.2 A 2.2 2.2 0 0 1 6.2 5.2');
+          assert.equal(await button('Force sensor').locator('polyline').getAttribute('points'), '3,12 5,8 7,10 9,4 11,9 13,6');
+          const hit = await button('Draw').boundingBox();
+          if (profile.touch) assert(hit.width >= 44 && hit.height >= 44, 'Draw coarse hit target');
+          await capture(expanded ? 'v16-draw-expanded' : 'v16-draw-collapsed');
+        }
+        await collapsePanels();
+        await activate(button('Draw'));
+        await button('Outline').focus();
+        await page.keyboard.press('Tab');
+        assert.equal(await page.locator(':focus').getAttribute('aria-label'), 'Rectangle');
+        await page.keyboard.press('Enter');
+        assert.equal((await editor()).createTool, 'rectangle');
+        assert.equal(await button('Rectangle').getAttribute('aria-pressed'), 'true');
+        await selectGeometry('Outline');
+        await tapWorld({ x: 280, y: 300 }); await tapWorld({ x: 380, y: 300 });
+        assert(await button('Finish outline').isDisabled());
+        await selectGeometry('Circle');
+        await selectGeometry('Outline');
+        assert(await button('Finish outline').isDisabled(), 'Switching modes clears incomplete outline');
+        for (const name of ['Select', 'Pan']) {
+          await activate(button(name));
+          assert.equal(await palette.count(), 0, name + ' hides palette');
+          assert.equal(await button('Draw').getAttribute('aria-pressed'), 'false');
+          await activate(button('Draw'));
+          assert(await button('Finish outline').isDisabled());
+        }
+        for (const viewport of [{ width: 512, height: 440 }, { width: 1024, height: 600 }]) {
+          await page.setViewportSize(viewport);
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          const boxes = await palette.getByRole('button').evaluateAll(buttons => buttons.map(el => {
+            const r = el.getBoundingClientRect(), parent = el.closest('.canvas-container').getBoundingClientRect();
+            const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+            return { label: el.getAttribute('aria-label'), width: r.width, height: r.height,
+              contained: r.left >= parent.left && r.right <= parent.right && r.top >= parent.top && r.bottom <= parent.bottom,
+              reachable: hit === el || el.contains(hit) };
+          }));
+          assert(boxes.every(b => b.contained && b.reachable), JSON.stringify(boxes));
+          if (profile.touch) assert(boxes.every(b => b.width >= 44 && b.height >= 44), 'Palette coarse targets');
+          await capture('v16-palette-' + viewport.width + 'x' + viewport.height);
+        }
+        await page.setViewportSize({ width: profile.width, height: profile.height }); await waitPixels();
+        await activate(page.getByTitle('Simulate mode', { exact: true }));
+        assert.equal(await palette.count(), 0, 'Simulation hides drawing palette');
+        await activate(page.getByTitle('Create mode', { exact: true }));
+        assert.equal(await palette.count(), 0, 'Returning to create starts in joint mode');
+        assert.deepEqual(graphOnly(await graph()), before, 'Palette navigation never commits a draft');
+        mark('historical glyphs, simplified rails, contextual palette, keyboard, draft cancellation and split-view hit targets');
+      });
+
       await run('geometry-controls', async () => {
         await openFixture();
         const before = graphOnly(await graph());
         for (const expanded of [false, true]) {
           if (expanded) await activate(page.getByTitle('Expand toolbar', { exact: true }));
+          await activate(button('Draw'));
           for (const [name, tool] of [['Rectangle', 'rectangle'], ['Circle', 'circle'], ['N-gon', 'ngon'], ['Trim', 'trim'], ['Mirror', 'mirror']]) {
-            await activate(button(name));
+            await selectGeometry(name);
             assert.equal((await editor()).createTool, tool);
             assert.equal(await button(name).getAttribute('aria-pressed'), 'true');
             const r = await button(name).boundingBox();
@@ -331,12 +408,12 @@ try {
           await waitPixels();
         }
         await collapsePanels();
-        await activate(button('N-gon'));
+        await selectGeometry('N-gon');
         await field('Polygon sides').fill('7'); await field('Polygon sides').press('Enter');
         assert.equal(await field('Polygon sides').inputValue(), '7');
         await field('Polygon sides').fill('9'); await field('Polygon sides').press('Escape');
         assert.equal(await field('Polygon sides').inputValue(), '7');
-        await activate(button('Trim'));
+        await selectGeometry('Trim');
         for (const name of ['Active Bodies', 'Selected Shapes']) {
           await activate(page.getByRole('radio', { name, exact: true }));
           assert(await page.getByRole('radio', { name, exact: true }).isChecked());
@@ -364,7 +441,7 @@ try {
 
       await run('primitives-world-geometry', async () => {
         await openFixture();
-        await activate(button('Rectangle')); await activate(page.getByTitle('Body 1', { exact: true }));
+        await selectGeometry('Rectangle'); await activate(page.getByTitle('Body 1', { exact: true }));
         assert.equal(await field('Shape positions locked').isChecked(), true);
         const beforeCancel = graphOnly(await graph());
         await dragWorld([rectangle[0], rectangle[2]], 'Escape');
@@ -381,14 +458,14 @@ try {
         await redo(); pointsNear(worldPoints(await graph(), (await graph()).outlines[rectangleId]), rectangle, 'rectangle redo');
         mark('actual rectangle drag, body-local/world corners, Escape/touchCancel, atomic creation undo/redo');
 
-        await activate(button('Circle')); await dragWorld([{ x: 560, y: 300 }, { x: 600, y: 300 }]);
+        await selectGeometry('Circle'); await dragWorld([{ x: 560, y: 300 }, { x: 600, y: 300 }]);
         g = await graph(); circleId = Object.keys(g.outlines).find(id => id !== rectangleId);
         const circle = worldPoints(g, g.outlines[circleId]); assert.equal(circle.length, 48);
         for (const p of circle) near(Math.hypot(p.x - 560, p.y - 300), 40, 'circle radius');
         for (const [key, value] of Object.entries({ minX: 520, maxX: 600, minY: 260, maxY: 340 })) near(bounds(circle)[key], value, `circle ${key}`);
         mark('actual circle drag: 48 vertices, world center/radius and bounds');
 
-        await activate(button('N-gon')); await field('Polygon sides').fill('7'); await field('Polygon sides').press('Enter');
+        await selectGeometry('N-gon'); await field('Polygon sides').fill('7'); await field('Polygon sides').press('Enter');
         await dragWorld([{ x: 540, y: 470 }, { x: 590, y: 470 }]);
         g = await graph(); ngonId = Object.keys(g.outlines).find(id => ![rectangleId, circleId].includes(id));
         const expected = Array.from({ length: 7 }, (_, i) => ({ x: 540 + 50 * Math.cos(i * Math.PI * 2 / 7), y: 470 + 50 * Math.sin(i * Math.PI * 2 / 7) }));
@@ -399,16 +476,56 @@ try {
         geometryGraph = g;
       });
 
+      await run('circle-trim-whole-object', async () => {
+        assert(circleId && geometryGraph, 'Circle drawing setup required');
+        const original = await graph();
+        const saved = await save('circle-before-trim');
+        assert.equal(saved.outlines[circleId].primitive, 'circle', 'Circle identity survives actual download');
+        await openFixture(saved, 'circle-before-trim.slinker');
+        const trimCircle = async (x, cancel) => {
+          await shapeProperties(circleId); await collapsePanels();
+          await selectGeometry('Trim');
+          await activate(page.getByRole('radio', { name: 'Selected Shapes', exact: true }));
+          await dragWorld([{ x, y: 240 }, { x, y: 360 }], cancel);
+        };
+        const before = await graph();
+        await trimCircle(570, 'Escape');
+        assert.deepEqual(graphOnly(await graph()), graphOnly(before), 'Cancelled circle trim changes nothing');
+        await trimCircle(570);
+        const after = await graph();
+        assert.equal(after.outlines[circleId], undefined, 'Whole circle removed, not surviving arc runs');
+        assert.equal(Object.keys(after.outlines).length, Object.keys(before.outlines).length - 1);
+        for (const id of Object.keys(before.outlines).filter(id => id !== circleId)) assert.deepEqual(after.outlines[id], before.outlines[id]);
+        assert.deepEqual(after.joints, before.joints); assert.deepEqual(after.links, before.links);
+        assert(!(await editor()).selectedIds.includes(circleId), 'Deleted circle cannot remain selected');
+        await capture('circle-trim-whole');
+        await undo(); assert.deepEqual(graphOnly(await graph()), graphOnly(before), 'One undo restores entire circle');
+        await redo(); assert.deepEqual(graphOnly(await graph()), graphOnly(after));
+        const deleted = await save('circle-after-trim');
+        await openFixture(deleted, 'circle-after-trim.slinker');
+        assert.equal((await graph()).outlines[circleId], undefined, 'Save/reopen cannot resurrect deleted circle');
+        const legacy = { ...fixture, ...graphOnly(original) };
+        delete legacy.outlines[circleId].primitive;
+        await openFixture(legacy, 'legacy-circle.slinker');
+        const legacyBefore = await graph();
+        await trimCircle(560); // Diameter crosses sampled circle vertices, not edge interiors.
+        assert.equal((await graph()).outlines[circleId], undefined, 'Legacy 48-point circle removed as one object');
+        await undo(); assert.deepEqual(graphOnly(await graph()), graphOnly(legacyBefore));
+        await openFixture({ ...fixture, ...graphOnly(saved) }, 'circle-restored-for-regressions.slinker');
+        geometryGraph = await graph();
+        mark('real native circle trim: complete removal, cancel, scope, one undo/redo, download/reopen and legacy diameter crossing');
+      });
+
       await run('manual-outline-finish-cancel', async () => {
         const savedGeometry = await graph();
         await openFixture();
         const points = [{x:260,y:650},{x:400,y:650},{x:350,y:780}];
-        await activate(page.getByTitle('Outline',{exact:true}));
+        await selectGeometry('Outline');
         await activate(page.getByTitle('Body 1',{exact:true}));
         await tapWorld(points[0]);await tapWorld(points[1]);
         assert(await button('Finish outline').isDisabled());
         await activate(button('Cancel outline'));assert.equal(Object.keys((await graph()).outlines).length,0);
-        await activate(page.getByTitle('Outline',{exact:true}));
+        await selectGeometry('Outline');
         for(const point of points)await tapWorld(point);
         await activate(button('Finish outline'));
         let g=await graph(),id=Object.keys(g.outlines)[0];pointsNear(worldPoints(g,g.outlines[id]),points,'finished manual outline');
@@ -453,7 +570,7 @@ try {
       await run('trim-selection-and-undo', async () => {
         assert(rectangleId && geometryGraph, 'Primitive setup required');
         await shapeProperties(rectangleId); await collapsePanels();
-        await activate(button('Trim')); await activate(page.getByRole('radio', { name: 'Selected Shapes', exact: true }));
+        await selectGeometry('Trim'); await activate(page.getByRole('radio', { name: 'Selected Shapes', exact: true }));
         const before = await graph();
         await dragWorld([{ x: 320, y: 280 }, { x: 320, y: 320 }]);
         const after = await graph(), trimmed = after.outlines[rectangleId];
@@ -509,7 +626,7 @@ try {
         });
         const bitmap = Buffer.from(dataURL.split(',')[1], 'base64');
         await writeFile(join(dir, 'asymmetric-test-only.png'), bitmap);
-        await activate(button('Rectangle')); await activate(page.getByTitle('Body 1', { exact: true }));
+        await selectGeometry('Rectangle'); await activate(page.getByTitle('Body 1', { exact: true }));
         const chooser = page.waitForEvent('filechooser'); await activate(page.getByTitle('Image', { exact: true }));
         await (await chooser).setFiles({ name: 'g5-asymmetric-test-only.png', mimeType: 'image/png', buffer: bitmap });
         await page.waitForFunction(() => Object.keys(globalThis.__LINKAGE_G0_READ__.mechanism().images).length === 1);
@@ -559,7 +676,7 @@ try {
         assert(imageId, 'Image setup required');
         await collapsePanels();
         // Switching to another tool before Image avoids opening its import chooser again.
-        await activate(button('Rectangle')); await activate(page.getByTitle('Image', { exact: true }));
+        await selectGeometry('Rectangle'); await activate(page.getByTitle('Image', { exact: true }));
         const before = await graph(), p = before.images[imageId].position;
         await dragWorld([p, { x: p.x + 70, y: p.y + 40 }]);
         const moved = await graph(); pointNear(moved.images[imageId].position, { x: p.x + 70, y: p.y + 40 }, 'image canvas move');

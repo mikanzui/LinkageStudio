@@ -30,6 +30,51 @@
   min-width: 0;
 }
 
+.shape-draw-palette {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: flex;
+  gap: 2px;
+  max-width: calc(100% - 24px);
+  padding: 4px 6px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(22, 22, 26, 0.94);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.shape-draw-palette-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: #e6e6eb;
+  background: transparent;
+  cursor: pointer;
+}
+
+.shape-draw-palette-btn:hover { background: #ffffff12; }
+.shape-draw-palette-btn.active {
+  color: #b8d9ff;
+  background: #4a9eff38;
+  box-shadow: inset 0 0 0 1px #4a9eff59;
+}
+.shape-draw-palette-btn:focus-visible { outline: 2px solid #8acaed; outline-offset: -2px; }
+.shape-draw-palette-btn svg { display: block; flex-shrink: 0; }
+@media (pointer: coarse) {
+  .shape-draw-palette-btn { flex-basis: 44px; min-width: 44px; width: 44px; height: 44px; }
+}
+
 .panel-content {
   padding: 8px 10px;
   border-bottom: 1px solid #333;

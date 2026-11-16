@@ -13,7 +13,7 @@ import './Layout.css';
 import { useEffect } from 'react';
 import { ViewportTools } from './Canvas/ViewportTools';
 import { PanelResizeHandle } from './PanelResizeHandle';
-import { GeometryTools, GeometryOptions } from './GeometryTools';
+import { DrawToolButton, DrawPalette, MirrorToolButton, GeometryOptions } from './GeometryTools';
 import { SpringTools, SpringOptions, SpringList } from './SpringTools';
 import { SensorList, RuntimeObjects, SensorToolButton } from './ObjectTools';
 import './ControlTheme.css';
@@ -66,12 +66,6 @@ const IconSliderSmall = () => (
     <circle cx="3" cy="8" r="1.8" fill="none" stroke="currentColor" strokeWidth="1" />
     <circle cx="13" cy="8" r="1.8" fill="none" stroke="currentColor" strokeWidth="1" />
     <rect x="6.5" y="5.5" width="3" height="5" rx="0.8" fill="currentColor" opacity="0.5" />
-  </svg>
-);
-
-const IconOutlineSmall = () => (
-  <svg width="18" height="18" viewBox="0 0 16 16">
-    <polygon points="8,1.5 13.5,5 11.5,12.5 4.5,12.5 2.5,5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
   </svg>
 );
 
@@ -310,14 +304,8 @@ export function Layout() {
 
                 <div className="collapsed-divider" />
                 <div className="collapsed-group-label">Shapes</div>
-                <button
-                  className={`collapsed-tool-btn ${drawing && createTool === 'outline' ? 'active' : ''}`}
-                  onClick={() => setCreateTool('outline')}
-                  title="Outline"
-                >
-                  <IconOutlineSmall />
-                </button>
-                <GeometryTools compact />
+                <DrawToolButton compact />
+                <MirrorToolButton compact />
                 <SpringTools compact />
                 <button
                   className={`collapsed-tool-btn ${drawing && createTool === 'image' ? 'active' : ''}`}
@@ -371,6 +359,7 @@ export function Layout() {
         {/* ---- CANVAS ---- */}
         <div className="canvas-container">
           <MechanismCanvas />
+          <DrawPalette />
           <ViewportTools />
         </div>
 

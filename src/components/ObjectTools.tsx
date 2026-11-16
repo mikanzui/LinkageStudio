@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Activity, CircleDot, FlipHorizontal2, Trash2, X } from 'lucide-react';
+import { CircleDot, FlipHorizontal2, Trash2, X } from 'lucide-react';
+import { ForceSensorIcon } from './Toolbar/ToolIcons';
 import { useEditorStore } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
 import { useSimulationStore } from '../store/simulation-store';
@@ -24,7 +25,7 @@ function Readout({ label, value }: { label: string; value: string }) {
 export function SensorToolButton({ compact = false }: { compact?: boolean }) {
   const e = useEditorStore(), active = e.activeTool === 'joint' && e.createTool === 'force-sensor';
   return <button type="button" aria-label="Force sensor" title="Force sensor" aria-pressed={active} className={(compact ? 'collapsed-tool-btn' : 'tool-btn') + (active ? ' active' : '')}
-    onClick={() => e.setCreateTool('force-sensor')}><Activity size={17}/>{!compact && <span className="tool-name">Force sensor</span>}</button>;
+    onClick={() => e.setCreateTool('force-sensor')}><ForceSensorIcon size={17}/>{!compact && <span className="tool-name">Force sensor</span>}</button>;
 }
 
 export function BodyNodes({ bodyId }: { bodyId: string }) {
@@ -61,7 +62,7 @@ export function SensorList() {
     {Object.values(m.forceSensors).map(sensor => <button key={sensor.id} type="button" className="object-pick"
       title={`${sensor.name || `Sensor ${short(sensor.id)}`} properties`} aria-label={`${sensor.name || `Sensor ${short(sensor.id)}`} properties`}
       aria-pressed={e.selectedIds.has(sensor.id)} onClick={() => e.select(sensor.id)}>
-      <Activity size={16}/><span>{sensor.name || `Sensor ${short(sensor.id)}`}</span>
+      <ForceSensorIcon size={16}/><span>{sensor.name || `Sensor ${short(sensor.id)}`}</span>
     </button>)}
   </div>;
 }
@@ -182,7 +183,7 @@ export function ObjectProperties({ id }: { id: string }) {
     </>}
     {link && <><Readout label="Link ID" value={link.id}/><Readout label="Axial force (model units)" value={number(analysis?.linkForces.get(id)?.axialForce)}/>
       {create && <button type="button" className="tool-btn" aria-label="Add force sensor" title="Add force sensor"
-        onClick={() => report(() => e.select(m.addForceSensor(id)))}><Activity size={16}/></button>}</>}
+        onClick={() => report(() => e.select(m.addForceSensor(id)))}><ForceSensorIcon size={16}/></button>}</>}
     {tracer && <TracerFields tracer={tracer} create={create}/>}
     {sensor && <SensorFields sensor={sensor} create={create}/>}
     {!create && analysis && <><Readout label="Force analysis" value={analysis.complete ? 'Complete (model units)' : 'Incomplete (model units)'}/>

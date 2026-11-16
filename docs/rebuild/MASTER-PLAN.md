@@ -17,6 +17,13 @@ G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 
 ## Start Here Every Session
 
+### V16 Drawing Toolbar
+
+Scoped reintegration ACCEPTED: simplified Draw entry, secondary canvas palette,
+historical glyphs and whole-circle trim. Cumulative24/24,990 domain /27 tooling
+tests PASS. User requests commit and default-master cleanup; publication pending.
+See [drawing-toolbar-restoration.md](drawing-toolbar-restoration.md).
+
 ### Version 17.0.0 And Projects Examples
 
 PUBLISHED / scoped PASS: source ef70ed6, hosted run43966910340/deployment7837974306,
@@ -351,4 +358,16 @@ adding these to the rebuild.
 | D23 | Resume G9/G10 and final scrub after the published checkpoint, with Codex-owned progression | User direction 2026-11-16 supersedes D22's stop. remaining-updates.md maps deliverables; codex/rebuild-cloud-pwa continues from 1b6f723 without changing its tag or original master. External qualifications remain explicit under D15/D21. |
 
 When changing a decision, add date, evidence and affected tasks/comparison rows.
+
+D24 (2026-11-16): user requires whole-circle trim, overriding D16 only for circle
+outlines. Retain polygon/open-path segment trimming, undo and persistence. C09;
+ten new domain cases and native Chrome/WebKit workflow evidence in the scoped report.
+
+D25 (2026-11-16): user requests committing the validated update and bringing
+outdated GitHub master current. Supersedes the earlier prohibition on updating
+remote master, not protection of the dirty original worktree or historical
+commits. Explicit non-code history merge; no force-push, reset or tag movement.
+
+D26 (2026-11-16): user reports Microsoft sign-in worked on the previous hosted
+build. Record that as user-confirmed evidence, not a fresh automated login pass.
 Do not replace this record with assumptions buried in code or chat.

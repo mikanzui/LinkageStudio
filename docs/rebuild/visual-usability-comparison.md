@@ -1,5 +1,20 @@
 # Visual And Usability Reference
 
+## V16 Draw Palette Restoration
+
+C09 follow-up: Trim now treats circle outlines as whole objects, not surviving
+arc runs. Native scoped deletion, cancellation, one undo/redo and saved/reopened
+legacy circles are checked. Rectangle/N-gon/open-path segment trimming remains.
+New primitive identity distinguishes48-sided N-gons; legacy untagged regular
+48-gons remain indistinguishable from old circles. See the linked comparison.
+
+C03/C05/C08/C10/C12/C13 now have a scoped comparison and native feature evidence
+in [drawing-toolbar-restoration.md](drawing-toolbar-restoration.md). Restore
+the one-command Draw sidebar and contextual palette, with historical mechanical
+glyphs, while preserving rebuilt options and cancellation. Chrome/WebKit
+desktop/touch feature checks and frozen cumulative24/24 PASS. Physical iPad,
+Pencil and VoiceOver remain UNVERIFIED. This does not change hosted auth status.
+
 Updated: 2026-11-16. Read before each frontend change; update after each gate.
 Status: initial desktop screenshots and real import/drag/error measurements captured
 in [G0 Session 01](evidence/g0/session-01.md). Full screen/device matrix remains open.

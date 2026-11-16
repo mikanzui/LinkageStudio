@@ -7,8 +7,18 @@ v0.12.3 (`3dfe10512e105f863a582ce5cc4b3bb8a2006306`).
 Rebuilds the editor, document and simulation boundaries while restoring the fork's
 geometry, spring, tracer, sensor and export tools. Adds optional account-isolated
 OneDrive projects, offline drafts and recovery-verified PWA restarts. Live Microsoft
-registration/service and physical-device qualification remain explicitly open.
+service edge cases and physical-device qualification remain explicitly open.
+Microsoft sign-in on the previous hosted build is user-confirmed working;
+this follow-up does not change authentication or callback configuration.
 See [changes](CHANGELOG.md) and [rebuild tracker](docs/rebuild/progress-tracker.md).
+
+The simplified **Draw** sidebar entry opens the restored five-tool canvas
+palette. Historical mechanical icons are retained. Trimming a circle removes the
+entire circle; one Undo restores it. Other polygons retain segment trimming.
+See [comparison and validation](docs/rebuild/drawing-toolbar-restoration.md).
+
+`master` is the canonical release source and GitHub Pages deployment branch.
+The rebuild and historical fork histories are retained; no force-push is needed.
 
 Open **Projects > Examples** for seven searchable, downloadable models, including
 the supplied Winged Airer and Working Screen, the new spring-assisted two-stage
@@ -51,8 +61,9 @@ CAD_PYTHON="$PWD/.venv-cad/bin/python" npm test
 ```
 
 Windows uses `.venv-cad\Scripts\python.exe`; set environment variables using your
-shell's native syntax. The two user-supplied legacy mechanisms and raw browser
-evidence are deliberately not published. Fixture configuration, required-evidence
+shell's native syntax. Authorized copies of the two supplied legacy mechanisms
+are included in examples/. Raw browser traces and private coordinate inventories
+are not published. Fixture configuration, required-evidence
 mode and the portable browser harness are documented in
 [testing](docs/rebuild/testing.md).
 

@@ -80,7 +80,7 @@ interface MechanismStore {
   removeJointFromBody(jointId: string, bodyId: string): void;
   regenerateLinks(): void;
 
-  addOutline(bodyId: string, localPoints: Vec2[]): string;
+  addOutline(bodyId: string, localPoints: Vec2[], primitive?: Outline['primitive']): string;
   removeOutline(id: string): void;
   renameOutline(id: string, name: string): void;
   toggleOutlineCOM(bodyId: string): void;
@@ -859,13 +859,13 @@ export const useMechanismStore = create<MechanismStore>((publish, get) => {
     set({ joints: newJoints, links: newLinks, angleConstraints });
   },
 
-  addOutline(bodyId, localPoints) {
+  addOutline(bodyId, localPoints, primitive) {
     const id = createId();
     get().pushHistory();
     const existingNames = new Set(Object.values(get().outlines).map((o) => o.name));
     let num = 1;
     while (existingNames.has(`Shape ${num}`)) num++;
-    const outline: Outline = { id, bodyId, name: `Shape ${num}`, visible: true, points: localPoints };
+    const outline: Outline = { id, bodyId, name: `Shape ${num}`, visible: true, points: localPoints, ...(primitive ? { primitive } : {}) };
     set((s) => ({ outlines: { ...s.outlines, [id]: outline } }));
     return id;
   },

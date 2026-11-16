@@ -1,4 +1,5 @@
-import { Cable, MoveVertical, RotateCcw, X, RefreshCw, Trash2 } from 'lucide-react';
+import { X, RefreshCw, Trash2 } from 'lucide-react';
+import { SpringIcon, DamperIcon, TorsionIcon } from './Toolbar/ToolIcons';
 import type { MechanismSpring, SpringAnchor } from '../types';
 import { useEditorStore } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
@@ -7,9 +8,9 @@ import { setProjectMessage } from '../document/project';
 import { CommitInput } from './CommitInput';
 
 const tools = [
-  { id: 'spring', name: 'Linear spring', Icon: Cable },
-  { id: 'damper', name: 'Damper', Icon: MoveVertical },
-  { id: 'torsion', name: 'Torsion spring', Icon: RotateCcw },
+  { id: 'spring', name: 'Linear spring', Icon: SpringIcon },
+  { id: 'damper', name: 'Damper', Icon: DamperIcon },
+  { id: 'torsion', name: 'Torsion spring', Icon: TorsionIcon },
 ] as const;
 
 export function SpringTools({ compact = false }: { compact?: boolean }) {
@@ -38,7 +39,7 @@ export function SpringList() {
     {Object.values(m.springs).map(spring => <button type="button" className="tool-btn" key={spring.id}
       aria-label={`Properties for ${spring.name ?? spring.id}`} disabled={e.mode !== 'create'}
       aria-pressed={e.selectedIds.has(spring.id)} onClick={() => e.select(spring.id)}>
-      {spring.kind === 'torsional' ? <RotateCcw size={16}/> : spring.kind === 'damper' ? <MoveVertical size={16}/> : <Cable size={16}/>}
+      {spring.kind === 'torsional' ? <TorsionIcon size={16}/> : spring.kind === 'damper' ? <DamperIcon size={16}/> : <SpringIcon size={16}/>}
       <span className="tool-name">{spring.name ?? spring.id}</span></button>)}
   </div>;
 }

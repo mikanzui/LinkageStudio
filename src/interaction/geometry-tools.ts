@@ -1,7 +1,7 @@
 import type { Vec2 } from '../types';
 import { useEditorStore } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
-import { rectanglePoints, circlePoints, ngonPoints, trimOutlineEdges } from '../core/shape-geometry';
+import { rectanglePoints, circlePoints, ngonPoints, trimShapeOutline } from '../core/shape-geometry';
 import { computeBodyTransform, localToWorld, worldToLocal } from '../core/body-transform';
 import { resolveFrozenOutlines } from '../core/frozen-outlines';
 import { snapToGrid } from '../core/math/vec2';
@@ -57,7 +57,8 @@ export function finishGeometry(commit: boolean, point?: Vec2): void {
     const {start,end,square}=state.shapeGesture;
     const points=state.createTool==='rectangle'?rectanglePoints(start,end,square):state.createTool==='circle'?circlePoints(start,end):ngonPoints(start,end,state.ngonSides);
     const bodyId=[...state.activeBodyIds].find(id=>m.bodies[id])??Object.keys(m.bodies).find(id=>id!==m.baseBodyId);
-    if(points.length && bodyId){const frame=computeBodyTransform(m.bodies[bodyId],m.joints),id=m.addOutline(bodyId,points.map(p=>worldToLocal(p,frame)));if(state.lockOutlines)state.updateFrozenOutline(id,points);state.select(id);}
+    const kind = state.createTool === 'rectangle' ? 'rectangle' : state.createTool === 'circle' ? 'circle' : 'ngon';
+    if(points.length && bodyId){const frame=computeBodyTransform(m.bodies[bodyId],m.joints),id=m.addOutline(bodyId,points.map(p=>worldToLocal(p,frame)),kind);if(state.lockOutlines)state.updateFrozenOutline(id,points);state.select(id);}
   }
   if(commit && state.trimStroke.length>1){
     if(overflow)setProjectMessage('Trim stroke is too long. No shapes changed.','alert');
@@ -66,12 +67,12 @@ export function finishGeometry(commit: boolean, point?: Vec2): void {
       const frozen=new Map(state.frozenOutlineWorldPoints);let changed=false;
       for(const id of trimTargets){
         const o=outlines[id],body=o&&m.bodies[o.bodyId];if(!o||!body)continue;
-        const frame=computeBodyTransform(body,m.joints),world=o.points.map(p=>localToWorld(p,frame)),runs=trimOutlineEdges(world,o.closed!==false,state.trimStroke);
+        const frame=computeBodyTransform(body,m.joints),world=o.points.map(p=>localToWorld(p,frame)),runs=trimShapeOutline(world,o.closed!==false,state.trimStroke,o.primitive);
         if(runs===null)continue;
         changed=true;delete outlines[id];frozen.delete(id);
         runs.forEach((run,index)=>{const target=index?createId():id;outlines[target]={...o,id:target,name:index?o.name+' '+(index+1):o.name,closed:false,points:run.map(p=>worldToLocal(p,frame))};if(state.lockOutlines)frozen.set(target,run);});
       }
-      if(changed){m.pushHistory();useMechanismStore.setState({outlines});useEditorStore.setState({frozenOutlineWorldPoints:frozen});}
+      if(changed){m.pushHistory();useMechanismStore.setState({outlines});useEditorStore.setState({frozenOutlineWorldPoints:frozen,selectedIds:new Set([...state.selectedIds].filter(id=>!trimTargets.includes(id)||!!outlines[id]))});}
     }
   }
   trimTargets=[];overflow=false;useEditorStore.setState({shapeGesture:null,trimStroke:[]});

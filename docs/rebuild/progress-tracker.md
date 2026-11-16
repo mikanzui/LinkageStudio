@@ -1,5 +1,31 @@
 # Rebuild Progress Tracker
 
+## Drawing Toolbar And Circle Trim (Accepted)
+
+Final combined source PASS: through-g10-IIAGMK24/24, frozen
+0acc34983bec4902e1bffc870ff215d3311f47093b8f4f4f53866178cd81fb28.
+990 domain /27 tooling tests, lint/typecheck/build and normal production checks
+PASS. All48 CAD downloads independently parsed. Physical iPad remains UNVERIFIED.
+User now requests commit and GitHub master consolidation; implementation is
+accepted, Git publication/deployment is pending. Preserve dirty original root.
+User also confirms Microsoft sign-in on the last build; no auth source changed.
+
+Scope addition: user requests Trim to remove whole circles rather than arc
+segments. Implemented circle-aware trimming, optional persisted primitive identity,
+legacy48-point inference and selection/cache cleanup. Ten added regressions;
+990/990 domain tests PASS. Chrome native desktop/touch and WebKit-profile
+whole-circle checks PASS; final combined cumulative verification PASS. Toolbar-only cumulative
+through-g10-HNEVBW was stopped at18/24 PASS for this new scope, not accepted.
+
+2026-11-16: restored Draw in both sidebar sizes, contextual five-tool canvas
+palette and historical mechanical glyphs from 9954fca. Lead owns this coupled
+change; no workers used. Candidate base29dd006. C03/C05/C08/C10/C12/C13:
+Chrome/WebKit desktop/touch feature checks PASS, including real geometry,
+undo, image pixels, save/reopen, draft cancellation and 44px coarse targets.
+Final990 domain /27 tooling tests, typecheck and lint PASS. Frozen cumulative
+24/24 accepted; physical iPad remains UNVERIFIED. Original experiments untouched.
+See [drawing-toolbar-restoration.md](drawing-toolbar-restoration.md).
+
 ## Version 17.0.0 (Published)
 
 2026-11-16 user requests17.0.0, a published examples folder, supplied/prior models,

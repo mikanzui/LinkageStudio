@@ -1,20 +1,42 @@
-import { Square, Circle, Pentagon, Scissors, FlipHorizontal2, Check, X } from 'lucide-react';
+import { FlipHorizontal2, Check, X } from 'lucide-react';
+import { DrawIcon, OutlineIcon, RectangleIcon, CircleIcon, NgonIcon, TrimIcon } from './Toolbar/ToolIcons';
 import { useEditorStore } from '../store/editor-store';
 import { useMechanismStore } from '../store/mechanism-store';
 import { applyMirror, commitOutline } from '../interaction/geometry-tools';
 import { CommitInput } from './CommitInput';
 
-const tools = [
-  { id: 'rectangle', label: 'Rectangle', Icon: Square },
-  { id: 'circle', label: 'Circle', Icon: Circle },
-  { id: 'ngon', label: 'N-gon', Icon: Pentagon },
-  { id: 'trim', label: 'Trim', Icon: Scissors },
-  { id: 'mirror', label: 'Mirror', Icon: FlipHorizontal2 },
+const drawTools = [
+  { id: 'outline', label: 'Outline', Icon: OutlineIcon },
+  { id: 'rectangle', label: 'Rectangle', Icon: RectangleIcon },
+  { id: 'circle', label: 'Circle', Icon: CircleIcon },
+  { id: 'ngon', label: 'N-gon', Icon: NgonIcon },
+  { id: 'trim', label: 'Trim', Icon: TrimIcon },
 ] as const;
 
-export function GeometryTools({ compact=false }: { compact?: boolean }) {
+export function DrawToolButton({ compact = false }: { compact?: boolean }) {
+  const tool = useEditorStore(s => s.createTool), drawing = useEditorStore(s => s.activeTool === 'joint');
+  const active = drawing && drawTools.some(({ id }) => id === tool);
+  return <button type="button" className={(compact ? 'collapsed-tool-btn' : 'tool-btn') + (active ? ' active' : '')}
+    title="Draw" aria-label="Draw" aria-pressed={active} onClick={() => useEditorStore.getState().setCreateTool('outline')}>
+    <DrawIcon />{!compact && <span className="tool-name">Draw</span>}
+  </button>;
+}
+
+export function DrawPalette() {
+  const mode = useEditorStore(s => s.mode), tool = useEditorStore(s => s.createTool);
+  const drawing = useEditorStore(s => s.activeTool === 'joint');
+  if (mode !== 'create' || !drawing || !drawTools.some(({ id }) => id === tool)) return null;
+  return <div className="shape-draw-palette" role="toolbar" aria-label="Draw overlay tools">
+    {drawTools.map(({ id, label, Icon }) => <button type="button" key={id}
+      className={'shape-draw-palette-btn' + (tool === id ? ' active' : '')}
+      title={label} aria-label={label} aria-pressed={tool === id}
+      onClick={() => useEditorStore.getState().setCreateTool(id)}><Icon /></button>)}
+  </div>;
+}
+
+export function MirrorToolButton({ compact=false }: { compact?: boolean }) {
   const tool=useEditorStore(s=>s.createTool),drawing=useEditorStore(s=>s.activeTool==='joint');
-  return <>{tools.map(({id,label,Icon})=><button type="button" key={id} className={(compact?'collapsed-tool-btn':'tool-btn')+(drawing&&tool===id?' active':'')} title={label} aria-label={label} aria-pressed={drawing&&tool===id} onClick={()=>useEditorStore.getState().setCreateTool(id)}><Icon size={17}/>{!compact&&<span className="tool-name">{label}</span>}</button>)}</>;
+  return <button type="button" className={(compact?'collapsed-tool-btn':'tool-btn')+(drawing&&tool==='mirror'?' active':'')} title="Mirror" aria-label="Mirror" aria-pressed={drawing&&tool==='mirror'} onClick={()=>useEditorStore.getState().setCreateTool('mirror')}><FlipHorizontal2 size={17}/>{!compact&&<span className="tool-name">Mirror</span>}</button>;
 }
 
 export function GeometryOptions() {

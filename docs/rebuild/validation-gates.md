@@ -3,6 +3,12 @@
 Status: G0 baseline accepted; feature gates qualify the rebuild incrementally.
 Starting code: pinned Huggabiz v0.12.3; see [README.md](README.md).
 
+Accepted scoped reintegration: [V16 Draw toolbar](drawing-toolbar-restoration.md),
+covering G4/G5/G6/G7 presentation plus G5 whole-circle trim and persisted primitive
+provenance. Native toolbar/circle checks and final frozen cumulative24/24 PASS.
+GitHub publication is now requested and pending. Existing accepted gate requirements remain in
+force. No physical iPad or hosted Microsoft-auth qualification is implied.
+
 Execution order and scope are in [MASTER-PLAN.md](MASTER-PLAN.md); update
 [progress-tracker.md](progress-tracker.md) and relevant
 [visual/usability comparison rows](visual-usability-comparison.md) at each gate.

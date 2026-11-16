@@ -5,7 +5,7 @@ import { useMechanismStore } from '../../store/mechanism-store';
 import type { AppMode } from '../../types';
 import { switchMode } from '../../utils/mode-switch';
 import './Toolbar.css';
-import { GeometryTools } from '../GeometryTools';
+import { DrawToolButton, MirrorToolButton } from '../GeometryTools';
 import { SpringTools } from '../SpringTools';
 import { SensorToolButton } from '../ObjectTools';
 
@@ -42,12 +42,6 @@ const IconTracer = () => (
     <line x1="1" y1="8" x2="5" y2="8" stroke="currentColor" strokeWidth="1.2" />
     <line x1="11" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.2" />
     <circle cx="8" cy="8" r="1" fill="currentColor" />
-  </svg>
-);
-
-const IconOutline = () => (
-  <svg className="tool-icon-svg" viewBox="0 0 16 16" width="16" height="16">
-    <polygon points="8,1 14,5 12,13 4,13 2,5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
   </svg>
 );
 
@@ -141,14 +135,8 @@ export function Toolbar() {
             {/* Shapes group */}
             <div className="toolbar-group-label">Shapes</div>
 
-            <button
-              className={`tool-btn ${drawing && createTool === 'outline' ? 'active' : ''}`}
-              onClick={() => setCreateTool('outline')}
-            >
-              <IconOutline />
-              <span className="tool-name">Outline</span>
-            </button>
-            <GeometryTools />
+            <DrawToolButton />
+            <MirrorToolButton />
             <div className="toolbar-group-label">Springs</div>
             <SpringTools />
 

@@ -39,6 +39,7 @@ export interface Outline {
   visible: boolean;
   points: Vec2[];  // local coordinates relative to body reference frame
   closed?: boolean; // legacy outlines are closed; trimmed paths explicitly opt out
+  primitive?: 'rectangle' | 'circle' | 'ngon';
 }
 
 export interface CanvasImage {
