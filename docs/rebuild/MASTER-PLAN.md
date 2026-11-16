@@ -4,7 +4,9 @@ Updated: 2026-11-16. Owner: Codex; product scope follows user direction.
 Current stage: G0-G7 accepted; G8 code/browser/DXF checkpoint verified. User resumed
 remaining updates after 0.16.0-rebuild.1; G9 code/browser checkpoint verified,
 Microsoft target OPEN; G10 code/browser checkpoint verified, external qualifications
-OPEN. Remaining implementation backlog is complete; see evidence/g10/acceptance.md,
+OPEN. Original feature backlog is implemented; supplied Azure-skill audit adds
+explicit AZ-01/AZ-02 hardening follow-ups. See azure-integration-review.md,
+evidence/g9/live-qualification.md, evidence/g10/acceptance.md,
 evidence/g10/release-readiness.md, remaining-updates.md and
 [G0 acceptance](evidence/g0/acceptance.md), [G1 acceptance](evidence/g1/acceptance.md)
 [G2 acceptance](evidence/g2/acceptance.md), [G3 acceptance](evidence/g3/acceptance.md)
@@ -40,6 +42,8 @@ complete. Build/test success alone cannot close a functional or usability task.
 | [Source audit](README.md) | Historical comparison, feature provenance, architecture and known risks R01-R17 |
 | [Verification gates](validation-gates.md) | Behavioral/numerical acceptance contracts and device requirements |
 | [Evidence ledger](evidence-ledger.md) | Actual runs, artifact locations, limitations and gate results |
+| [Azure skill review](azure-integration-review.md) | Required supplied-skill checklist, MSAL v5 adaptations and explicit hardening gaps |
+| [Live OneDrive qualification](evidence/g9/live-qualification.md) | Actual disposable-file provider checks, failure reproduction, repair and remaining limits |
 | [Session handoff template](templates/session-handoff.md) | Repeatable record for each implementation session |
 | [Gate report template](templates/gate-report.md) | Evidence required to promote a stage |
 

@@ -47,7 +47,12 @@ function boundary() {
       }
       const match=path.match(/^\/v1.0\/drives\/drive-1\/items\/([^/]+)(\/content)?$/),f=match&&data.files.get(account+':'+match[1]);
       if(!f){await reply(404,{});return;}
-      if(method==='GET'){await reply(200,dto(f));return;}
+      if(method==='GET'){
+        const metadata=dto(f);
+        // Reproduce the real business-drive omission that broke cloud reopen.
+        if(u.searchParams.has('$select'))delete metadata['@microsoft.graph.downloadUrl'];
+        await reply(200,metadata);return;
+      }
       assert.equal(headers['if-match'],f.eTag,'Every overwrite/rename/delete is conditional');
       if(method==='DELETE'){data.files.delete(account+':'+f.id);await reply(204);return;}
       if(method==='PUT')f.text=req.postData();else if(method==='PATCH')f.name=JSON.parse(req.postData()).name;else assert.fail(method);

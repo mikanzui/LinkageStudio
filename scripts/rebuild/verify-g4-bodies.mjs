@@ -49,6 +49,9 @@ try {
       await page.goto((process.argv[3] ?? process.env.LINKAGE_CANDIDATE_URL ?? 'http://127.0.0.1:5183/linkage-studio/'));
       await assertCandidateBuild(page, sourceStart);
       await page.waitForFunction(() => !!globalThis.__LINKAGE_G0_READ__?.mechanism);
+      // Tablet mount collapses panels in an effect; await that before opening one.
+      await page.waitForFunction(() => !matchMedia('(max-width: 1099px)').matches
+        || (globalThis.__LINKAGE_G0_READ__.editor().leftCollapsed && globalThis.__LINKAGE_G0_READ__.editor().rightCollapsed));
       await page.screenshot({ path: join(output, `${profile.id}-initial.png`) });
       if (await page.getByTitle('Expand panel', { exact: true }).count()) await activate(page.getByTitle('Expand panel', { exact: true }));
       const initial = await state();

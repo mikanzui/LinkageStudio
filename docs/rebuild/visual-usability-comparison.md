@@ -329,6 +329,16 @@ or physical iPad qualification is claimed from dependency-boundary mocks.
 
 ## G10 Production And Tablet Comparison
 
+Live-auth follow-up, C01/C02/C12 (2026-11-16): the registration screenshot uses
+localhost, while the QA launch used 127.0.0.1. Reopened the candidate on localhost
+without changing Azure security settings or clearing the old origin's storage.
+Guest-first behavior is unchanged. Actual sign-in and disposable work-account
+create/open/save/rename/autosave/conflict/delete now pass; see
+evidence/g9/live-qualification.md. Live reopen exposed missing download metadata
+that mocks had always provided; full metadata requests repair it. Static stage
+diagnostics improve failures without exposing provider URLs or tokens. This does
+not establish physical iPad or a complete live failure/account matrix.
+
 2026-11-16; F21, C01/C02/C10/C11/C12/C13. The inherited automatic worker update
 is replaced by a small update indicator and native restart dialog. Later does not
 reload. Restart confirms an exact recoverable current design; another dirty tab

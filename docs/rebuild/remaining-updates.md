@@ -33,6 +33,15 @@ No existing user cloud file will be modified for testing.
 
 ## External Qualifications
 
+Supplied Azure-skill review (2026-11-16): read azure-integration-review.md for
+version-specific adaptations. AZ-01 (deployment CSP with real download-host,
+popup/renewal/PWA/image and blocked-destination tests) and AZ-02 (retain sanitized
+non-interaction token/network failure classification without background popups)
+are OPEN hardening follow-ups. Do not claim full skill/security-checklist compliance.
+Bounded live work-account file workflow now passes after full-metadata download
+repair; see evidence/g9/live-qualification.md. Live expiry/account-switch/quota/
+offline-reconnect, personal account and production callback remain unqualified.
+
 - Physical current iPad/Safari/Home Screen/Pencil/VoiceOver remain unverified until
   real hardware is available. Code/WebKit/touch regressions continue under D15.
 - SolidWorks execution remains unverified; LibreCAD mm DXF smoke and independent

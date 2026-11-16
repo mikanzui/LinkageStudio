@@ -330,27 +330,41 @@ export function createOneDriveClient(options: { accountId: string; token: () => 
       return result;
     },
     async load(source: CloudItem, signal?: AbortSignal) {
-      const captured = item(source);
-      const path = itemPath(captured);
-      const raw = await graph(`${path}?$select=id,name,eTag,parentReference,lastModifiedDateTime,size,file,folder,remoteItem,deleted,@microsoft.graph.downloadUrl`, {}, signal, [200]);
-      const before = graphItem(raw, 'file', captured);
-      if (before.eTag !== captured.eTag) throw fail('conflict');
-      if (before.size > MAX_BYTES) throw fail('invalid');
-      const url = downloadUrl(record(raw)['@microsoft.graph.downloadUrl']);
-      const content = await boundedRequest(signal, async context => {
-        const response = await fetchResponse(url, {
-          method: 'GET', signal: context.signal, credentials: 'omit', redirect: 'error', cache: 'no-store', mode: 'cors',
-        }, context);
-        if (response.status !== 200) {
-          void response.body?.cancel().catch(() => undefined);
-          throw statusError(response.status);
-        }
-        return readText(response, context, MAX_BYTES, MAX_CHARS);
-      });
-      const after = graphItem(await graph(path, {}, signal, [200]), 'file', captured);
-      if (before.eTag !== after.eTag || before.size !== after.size) throw fail('conflict');
-      if (content.bytes !== before.size) throw fail('invalid');
-      return { item: after, text: content.text };
+      let stage = 'source metadata';
+      try {
+        const captured = item(source);
+        const path = itemPath(captured);
+        stage = 'remote metadata';
+        // Some business drives omit the download annotation from projected metadata.
+        const raw = await graph(path, {}, signal, [200]);
+        stage = 'remote metadata validation';
+        const before = graphItem(raw, 'file', captured);
+        if (before.eTag !== captured.eTag) throw fail('conflict');
+        if (before.size > MAX_BYTES) throw fail('invalid');
+        stage = record(raw)['@microsoft.graph.downloadUrl'] === undefined ? 'missing download address' : 'download address';
+        const url = downloadUrl(record(raw)['@microsoft.graph.downloadUrl']);
+        stage = 'download response';
+        const content = await boundedRequest(signal, async context => {
+          const response = await fetchResponse(url, {
+            method: 'GET', signal: context.signal, credentials: 'omit', redirect: 'error', cache: 'no-store', mode: 'cors',
+          }, context);
+          if (response.status !== 200) {
+            void response.body?.cancel().catch(() => undefined);
+            throw statusError(response.status);
+          }
+          return readText(response, context, MAX_BYTES, MAX_CHARS);
+        });
+        stage = 'revision verification';
+        const after = graphItem(await graph(path, {}, signal, [200]), 'file', captured);
+        if (before.eTag !== after.eTag || before.size !== after.size) throw fail('conflict');
+        stage = 'file size verification';
+        if (content.bytes !== before.size) throw fail('invalid');
+        return { item: after, text: content.text };
+      } catch (error) {
+        if (!(error instanceof CloudError)) throw error;
+        // Only static stages/statuses are exposed, never provider bodies or URLs.
+        throw new CloudError(error.code, `${messages[error.code]} (${stage}${error.status === undefined ? '' : `, HTTP ${error.status}`})`, error.status);
+      }
     },
     async create(name: string, text: string, signal?: AbortSignal) {
       const capturedName = fileName(name);

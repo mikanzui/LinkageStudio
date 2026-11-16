@@ -12,6 +12,9 @@
   known-good cached copy.
 - Cancellable initialization/library requests and sent-write outcome warnings;
   guest work cannot be trapped by a pending cloud operation.
+- Live work-account QA exposed projected metadata omitting the download address;
+  full metadata requests repair remote reopen while retaining identity/revision
+  and bounded-download checks. Added sanitized failure stages and regressions.
 - Recovery-verified explicit worker restart, no automatic reload of dirty tabs,
   quota refusal, real offline local-file operation and old/new worker tests.
 - Correct case-sensitive hosting path, validated base override, rasterized
@@ -26,7 +29,9 @@
 - Portable read-only browser harness, explicit hash-checked private fixtures,
   clean-checkout checks and non-deploying public CI definition.
 - Retained original compatibility/physics/export tests and upstream credit.
-  Live Microsoft service, physical iPad and SolidWorks remain unqualified.
+  Bounded live OneDrive create/open/save/rename/autosave/stale-write/delete verified;
+  broader live failure/account matrix, physical iPad and SolidWorks unqualified.
+  Supplied Azure-skill audit and explicit CSP/error-classification gaps recorded.
   Final gate evidence is tracked separately; this version is not deployment approval.
 
 ## 0.16.0-rebuild.1 - 2026-11-16

@@ -70,6 +70,10 @@ to accept this code/browser checkpoint. No deployment or replacement of the
 preserved original application is authorized or performed. Local versioned
 checkpoint is accepted separately from the live-account work. User has now
 authorized a disposable synthetic OneDrive file and confirmed registration
-control; exact callback/client-ID confirmation and user-performed authentication
-are pending in the open Projects panel. These external qualifications cannot be
-manufactured from source tests or emulation.
+control. Follow-up actual localhost authentication and bounded work-account file
+workflow now pass after the projected-metadata repair; see
+../g9/live-qualification.md. Post-repair cumulative evidence is recorded there
+separately from this original checkpoint. Live expiry/account-switch/quota/offline
+reconnect and production callback remain unqualified. The supplied skill audit in
+../../azure-integration-review.md records AZ-01/AZ-02 hardening gaps. External
+qualifications cannot be manufactured from source tests or emulation.

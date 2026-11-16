@@ -7,7 +7,7 @@ const origin = 'https://graph.microsoft.com/v1.0';
 const folderPath = origin + '/me/drive/root:/Documents/LinkageStudio';
 const childrenPath = origin + '/drives/drive-1/items/folder-1/children';
 const metadataPath = origin + '/drives/drive-1/items/file-1';
-const firstMetadataPath = metadataPath + '?$select=id,name,eTag,parentReference,lastModifiedDateTime,size,file,folder,remoteItem,deleted,@microsoft.graph.downloadUrl';
+const firstMetadataPath = metadataPath;
 const source: CloudItem = {
   driveId: 'drive-1', id: 'file-1', name: 'Mechanism.slinker', eTag: '"base,1"',
   lastModifiedDateTime: '2026-11-16T07:00:00Z', size: 3,
@@ -279,7 +279,7 @@ test('create conflict cannot overwrite or silently rename the existing document'
   h.done();
 });
 
-test('load uses selected metadata, no bearer or cookies on download, and rechecks ETag', async () => {
+test('load uses full metadata, no bearer or cookies on download, and rechecks ETag', async () => {
   const preauthenticated = 'https://files.example/project?download-secret';
   const h = harness([json(remote({ '@microsoft.graph.downloadUrl': preauthenticated })), new Response('abc'), json(remote())]);
   const frozen = Object.freeze({ ...source });
@@ -298,6 +298,37 @@ test('load uses selected metadata, no bearer or cookies on download, and recheck
   assert.deepEqual(frozen, source);
   result.item.name = 'Changed.slinker';
   assert.equal(frozen.name, 'Mechanism.slinker');
+  h.done();
+});
+
+test('load works when the business drive omits download annotations from projections', async () => {
+  const h = harness([
+    call => json(remote(new URL(call.url).searchParams.has('$select') ? {} : { '@microsoft.graph.downloadUrl': 'https://files.example/?download-secret' })),
+    new Response('abc'), json(remote()),
+  ]);
+  assert.equal((await h.client.load(source)).text, 'abc');
+  h.done();
+});
+
+test('load exposes only a static stage and HTTP status for provider failure', async () => {
+  const h = harness([json({ error: { message: 'provider-secret secret-token download-secret' } }, 400)]);
+  const error = await rejects(h.client.load(source), 'invalid', 400);
+  assert.match(error.message, /\(remote metadata, HTTP 400\)$/);
+  h.done();
+});
+
+test('load distinguishes missing download address without exposing metadata', async () => {
+  const h = harness([json(remote({ extra: 'provider-secret' }))]);
+  const error = await rejects(h.client.load(source), 'invalid');
+  assert.match(error.message, /\(missing download address\)$/);
+  assert.equal(h.calls.length, 1);
+  h.done();
+});
+
+test('load identifies download failure without exposing the preauthenticated URL', async () => {
+  const h = harness([json(remote({ '@microsoft.graph.downloadUrl': 'https://files.example/?download-secret' })), json({ error: 'provider-secret' }, 403)]);
+  const error = await rejects(h.client.load(source), 'auth', 403);
+  assert.match(error.message, /\(download response, HTTP 403\)$/);
   h.done();
 });
 

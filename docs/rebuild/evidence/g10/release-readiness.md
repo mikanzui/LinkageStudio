@@ -20,8 +20,9 @@ cumulative decision; this document owns residual qualifications and rollback.
 
 | Item | State / Concrete Next Step |
 | --- | --- |
-| Microsoft registration | OPEN: user confirmed control and authorized a disposable QA file. Exact public client ID/callback confirmation and manual sign-in are pending. Required local SPA redirect: http://127.0.0.1:5187/LinkageStudio/redirect.html. No browser client secret |
-| Live OneDrive behavior | AUTHORIZED / NOT YET RUN: user performs authentication; Codex tests only the synthetic disposable project, including stale ETag refusal, CORS/download, expiry/reconnect and rename/delete. Never use original cloud files as destructive tests |
+| Microsoft registration | LOCAL SIGN-IN VERIFIED 2026-11-16: saved SPA callback uses localhost, not 127.0.0.1. Candidate on localhost:5187 authenticated successfully using documented localhost port-insensitive matching. No Azure settings changed. Production dedicated redirect.html registration still needs resolution before deployment; no browser client secret |
+| Live OneDrive behavior | VERIFIED bounded work-account run: actual create/duplicate refusal/download/reopen/edit/save/rename/autosave/provider stale-write refusal/delete/local retention. QA file removed and absence checked in OneDrive web. Live expiry/account-switch/quota/offline-reconnect not induced; see ../g9/live-qualification.md |
+| Supplied Azure skill | APPLIED / NOT FULLY COMPLIANT: azure-integration-review.md records MSAL v5 adaptations and open AZ-01 CSP / AZ-02 token-network error classification. No security certification or deployment claim |
 | Physical iPad | OPEN: record actual current model/iPadOS/Pencil; qualify Safari/Home Screen/Files/VoiceOver/keyboard and background resume. Automated code/WebKit/touch/viewport evidence is not a hardware claim and did not block implementation |
 | SolidWorks macro execution | OPEN: actual licensed target app required. Independent parser and LibreCAD DXF evidence are retained but are not substitutes |
 | Redistribution terms | OPEN: no top-level license identified in the pinned upstream snapshot; preserve author/provenance and resolve terms before external release |

@@ -1,8 +1,12 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Current task: code/browser implementation accepted; live-account setup and
-user-performed authentication pending. Device/target/licensing qualifications
+Current task: actual localhost authentication and disposable OneDrive workflow
+PASS after repairing a live projected-metadata download failure. Post-repair
+cumulative yF897B PASS, 22/22; see evidence/g9/live-qualification.md.
+User's Azure skill applied through azure-integration-review.md; AZ-01 CSP and
+AZ-02 token-network error classification remain explicit hardening follow-ups.
+Device/target/licensing qualifications
 remain OPEN. No deployment.
 G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.2.
 User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.

@@ -211,3 +211,59 @@ exact client-ID/SPA callback confirmation and user-performed login are pending.
 No original cloud file has been modified. Physical iPad/Home Screen/Pencil/
 VoiceOver, actual SolidWorks, upstream redistribution terms and hosted CI remain
 explicit external qualifications. No user QA/gate-unlock requirement is introduced.
+
+## Live Microsoft Registration Blocker (2026-11-16)
+
+The user confirmed the client ID and callback, then reported the actual sign-in
+error AADSTS50011 for http://127.0.0.1:5187/LinkageStudio/redirect.html and client
+a69f1ac8-5335-430c-a55f-808c85ced4fa. Source inspection confirms that the app derives
+this callback from its current origin and base path. Registration confirmation is
+not successful provider verification: live OneDrive qualification remains BLOCKED,
+and no synthetic or existing cloud file has been changed in this run.
+
+Microsoft's [redirect restrictions](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url)
+document case-sensitive paths and a portal-text-box limitation for HTTP 127.0.0.1
+callbacks. Its [AADSTS50011 resolution](https://learn.microsoft.com/en-us/troubleshoot/entra/entra-id/app-integration/error-code-aadsts50011-redirect-uri-mismatch)
+requires checking the application registration's saved redirects and allowing
+three to five minutes after saving before retrying. Next: inspect only the saved
+SPA redirect list for this client ID; reconcile registration and same-origin app
+hosting without guessing, weakening OAuth checks, or requesting any secret.
+### Registration Screenshot And Same-Origin Retry
+
+2026-11-16: user-supplied Authentication screenshot shows the SPA callback
+http://localhost:5173/LinkageStudio/redirect.html plus localhost and production
+editor-root entries. It does not show a 127.0.0.1 callback. The previous launch
+hostname was therefore inconsistent with the saved registration. Microsoft's
+localhost exception ignores ports for redirect matching, but does not equate
+localhost with 127.0.0.1. Reopened the unchanged candidate at
+http://localhost:5187/LinkageStudio/ in a separate tab; callback HTTP 200 and
+mounted version 0.16.0-rebuild.2 verified. Retried Connect Microsoft account.
+Authentication and live OneDrive assertions remain pending. No Azure change,
+cross-origin callback override, site-data clearing or original-project mutation.
+Existing 127.0.0.1 recovery/cache storage remains untouched and separate.
+
+Follow-up: actual authentication and disposable OneDrive create/duplicate refusal/
+download/reopen/edit/save/rename/autosave/server stale-write refusal/delete all
+observed through UI. Independent OneDrive web rename caused the stale revision;
+remote contents survived the refused write, and cleanup absence was checked in
+the provider web UI. Actual reopen first failed because projected metadata omitted
+the download annotation. Standard full-metadata GET repairs it without weakening
+identity, revision or bounded-download validation. Domain regressions now model
+the omission; old 0810710 module fails the in-memory negative control, repaired
+module passes. See evidence/g9/live-qualification.md for scope and limitations.
+
+Supplied Azure skill was read in full and applied through
+azure-integration-review.md; AGENTS now requires that review for future Azure work.
+MSAL v5 bridge/lazy guest initialization and revision-owned IndexedDB are explicit
+adaptations, not blindly replaced by older examples. CSP and token/network error
+classification remain AZ-01/AZ-02 OPEN. Post-repair 923 domain tests/0 skips,
+27 tooling tests, type/lint/normal build PASS. Original root full-index diff still
+hashes 184322a9. Cumulative piCBR2 failed G4 tablet harness mount timing; screenshots
+inspected, startup wait repaired, cumulative rerun ACTIVE. No partial run promoted.
+
+Final post-repair acceptance: through-g10-yF897B PASS 22/22, zero failures, source
+start=end 0d05fadc (full value and pinned artifact/harness hashes in
+evidence/g9/live-qualification.md). G9 browser suites cvfMNk/mnCR2j each pass 21
+scenarios. G4 body retests uJ41mb/dwbREg pass. The failed piCBR2 remains retained,
+not promoted. Normal SDK build is observer/fake-auth free. Both original fixture
+hashes rechecked unchanged; public G0 fixture map untouched. No push or deployment.

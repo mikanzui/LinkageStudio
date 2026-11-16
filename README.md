@@ -61,7 +61,13 @@ mode and the portable browser harness are documented in
 - OneDrive is optional. Its Microsoft SPA registration must allow the exact
   origin/base plus `redirect.html`; `VITE_MSAL_CLIENT_ID` selects an owned public
   registration. No client secret belongs in this browser application. Live
-  sign-in/CORS/conditional-upload behavior is not certified by mock tests.
+  sign-in/CORS/conditional-upload behavior is not certified by mock tests. A bounded
+  actual work-account QA run is recorded in docs/rebuild/evidence/g9/live-qualification.md.
+  Local cloud QA uses http://localhost:5187/LinkageStudio/ because the owned SPA
+  callback is registered under localhost, not 127.0.0.1. Keep callbacks same-origin;
+  do not override just the redirect hostname while leaving the editor on another.
+  Apply the supplied Azure skill via docs/rebuild/azure-integration-review.md;
+  its CSP and token/network classification follow-ups remain explicitly OPEN.
 - Four low development-only audit findings remain in the unpatched deepmerge
   build-tool chain; its inspected consumer merges static defaults only. Production
   audit has zero findings. This is a qualification, not a security patch.

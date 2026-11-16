@@ -4,6 +4,12 @@
 IMPLEMENTATION CHECKPOINT / MICROSOFT SERVICE QUALIFICATION OPEN. This is not
 full live-cloud target acceptance or deployment approval.
 
+Follow-up 2026-11-16: bounded actual work-account file workflow now verified after
+repairing projected metadata/download compatibility. See live-qualification.md
+for actual failures/retests and remaining live/device limits; this report's
+original G9 artifact/test counts remain historical. Supplied Azure skill and open
+hardening checks are mapped in ../../azure-integration-review.md.
+
 ## Implemented
 
 Optional guest-first Projects dialog; lazy MSAL 5.29.1 with explicit account

@@ -32,3 +32,9 @@ integration, the progress tracker and gate acceptance. Give workers disjoint fil
 ownership and bounded briefs; default to one agent for tightly coupled work. Do not
 spawn workers merely to update planning documents. Record actual time/usage when
 available; mark unavailable usage unknown and never claim unmeasured cost savings.
+
+For Azure, MSAL, Entra ID, Graph or OneDrive work, also read
+`docs/rebuild/azure-integration-review.md`. Apply the user's supplied Azure
+integration skill through that checklist and its version-specific adaptations.
+Do not copy older redirect-flow or CSP examples over the verified MSAL v5 popup
+bridge; record unimplemented security checks as OPEN, not compliant.
