@@ -200,10 +200,7 @@ export function Toolbar() {
 
       <div style={{ marginTop: 'auto', padding: '8px', borderTop: '1px solid #333' }}>
         <div style={{ fontSize: 10, color: '#999', lineHeight: 1.4 }}>
-          VibeCoded by <a href="https://github.com/Huggabiz/linkage-studio" target="_blank" rel="noreferrer" style={{ color: '#a3cce8' }}>Hugo Wilson</a>
-        </div>
-        <div style={{ fontSize: 9, color: '#555', lineHeight: 1.4 }}>
-          Claude Opus 4.6
+          Coauthored by <a href="https://github.com/mikanzui" target="_blank" rel="noreferrer" style={{ color: '#a3cce8' }}>Jake Whiting</a> and <a href="https://github.com/Huggabiz/linkage-studio" target="_blank" rel="noreferrer" style={{ color: '#a3cce8' }}>Hugo Wilson</a>
         </div>
       </div>
     </div>

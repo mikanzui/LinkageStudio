@@ -17,6 +17,16 @@ G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 
 ## Start Here Every Session
 
+### Credits And Pages Publication
+
+2026-11-16 user authorizes credits "Coauthored by Jake Whiting and Hugo Wilson",
+removing the model tag, commit and publication to the existing GitHub Pages site.
+Hugo's publication permission and the exact production Azure SPA callback are
+confirmed by the user. Publish the isolated rebuild branch; preserve original
+master/main/dirty experiments, no forced ref changes. Hosted verification and
+live-site outcome are recorded in `evidence/pages/acceptance.md`. Existing physical
+device, model-accuracy and Azure hardening qualifications remain explicit.
+
 ### UI-16 Follow-Up
 
 The user requested reintegration of the earlier fork's upgraded hold-click UI and

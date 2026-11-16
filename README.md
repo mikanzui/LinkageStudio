@@ -79,7 +79,10 @@ mode and the portable browser harness are documented in
 
 ## Provenance
 
-Original author credit and GitHub link remain in the editor. This branch retains
+The editor credits "Coauthored by Jake Whiting and Hugo Wilson", with links to
+Jake's GitHub profile and Hugo's original repository. This branch retains
 the upstream commit ancestry and incremental rebuild commits. No top-level upstream
-license was identified during the audit; redistribution terms require review before
-external release. A source checkpoint is not a deployment or release certification.
+license was identified during the audit. On 2026-11-16 Jake confirmed that Hugo
+authorized publication of this rebuilt version; no new upstream license is implied.
+Publication evidence and remaining qualifications are recorded in
+[Pages acceptance](docs/rebuild/evidence/pages/acceptance.md).

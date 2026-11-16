@@ -1,8 +1,9 @@
 # Rebuild Progress Tracker
 
 Updated: 2026-11-16. G0-G7 PASS; G8 verified implementation checkpoint, target limits OPEN.
-Latest task: Mechanism Playground example DONE;962 domain tests and six native
-Chrome/WebKit example profiles PASS. Application remains0.16.0-rebuild.4 unchanged.
+Latest task: coauthor credits and first rebuilt Pages publication ACTIVE.
+Credits/local production checks PASS; remote build/deployment pending.
+Mechanism Playground example DONE;962 domain tests and six native profiles PASS.
 UI16-05 historical hold-menu correction is DONE / scoped code-browser contract PASS.
 Previous .3 functional evidence is retained, but its historical appearance claim
 is rejected. Final-source native old/new comparisons now pass in Chromium/WebKit;
@@ -14,13 +15,31 @@ repair; cumulative yF897B PASS, 22/22; see evidence/g9/live-qualification.md.
 User's Azure skill applied through azure-integration-review.md; AZ-01 CSP and
 AZ-02 token-network error classification remain explicit hardening follow-ups.
 Device/target/licensing qualifications
-remain OPEN. No deployment.
+remain OPEN. Publication is now explicitly authorized; outcome is tracked below.
 G9 implementation checkpoint commit: 43d440d. Current working version: 0.16.0-rebuild.4.
 User resumed remaining updates after 0.16.0-rebuild.1; its tag/commit remain intact.
 Detailed remaining work: remaining-updates.md; G9/G10 checkpoints and scrub are
 recorded, with explicit external qualifications and current UI-16 follow-up.
 Codex owns verification and gate decisions; routine user sign-off is not required.
 Execution mode: one lead with zero to two focused workers; first measured pilot at G0.
+
+## Credits And Publication (Active)
+
+2026-11-16 user explicitly authorizes coauthor credits, removing the model tag,
+commit and publication to the existing GitHub Pages site. Candidate-only edits;
+original dirty workspace remains preserved. Lead owns release/CI/native checks.
+Existing Pages uses Actions, no environment branch restrictions; authenticated
+accountmikanzui has repository admin/push. Remote master/main remain9954fca and
+are not ancestors of this upstream-based rebuild. Publish from the isolated
+candidate branch without force-updating or replacing the preserved original.
+User confirms Hugo authorized publication and the exact hosted redirect.html is
+registered as an Azure SPA callback. This resolves those publication prerequisites
+by user attestation, not a new license grant or a live hosted sign-in test.
+Coauthor caption/links replace VibeCoded/model tag. Local962 domain/27 tooling,
+lint/type/normal build and six production scenarios per Chrome/WebKit PASS.
+Pages workflow is gated by public tests/audit/both production browsers and deploys
+only the normal artifact; private originals/diagnostics are not uploaded. Remote
+execution/deployment verification pending; evidence/pages/acceptance.md.
 
 ## Example Playground
 

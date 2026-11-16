@@ -79,6 +79,18 @@ try{
     const wrong=await context.request.get(url.replace('/LinkageStudio/','/linkage-studio/'));assert.equal(wrong.status(),404);
     const bridge=await context.request.get(url+'redirect.html');assert.equal(bridge.status(),200);assert.equal(bridge.headers()['cross-origin-opener-policy'],undefined);assert(!/src\/main|assets\/main-/.test(await bridge.text()),'Auth bridge does not load the editor');
   });
+  await check('coauthor-credit-links-layout-and-no-model-tag',async()=>{
+    await page.locator('.panel-collapsed').first().waitFor();
+    const expand=button('Expand toolbar'),compact=await expand.isVisible();if(compact)await click(expand);
+    const credit=page.getByText('Coauthored by',{exact:false});await credit.waitFor();await credit.scrollIntoViewIfNeeded();
+    assert.equal((await credit.innerText()).replace(/\\s+/g,' ').trim(),'Coauthored by Jake Whiting and Hugo Wilson');
+    assert.equal(await page.getByRole('link',{name:'Jake Whiting',exact:true}).getAttribute('href'),'https://github.com/mikanzui');
+    assert.equal(await page.getByRole('link',{name:'Hugo Wilson',exact:true}).getAttribute('href'),'https://github.com/Huggabiz/linkage-studio');
+    assert(!/Claude Opus|VibeCoded by/.test(await page.locator('body').innerText()));
+    assert(await credit.evaluate(el=>el.scrollWidth<=el.clientWidth),'Credit wraps within the toolbar');
+    await page.screenshot({path:join(output,'coauthor-credits.png')});
+    if(compact)await click(button('Collapse toolbar'));
+  });
   await check('offline-reload-local-open-save-and-canvas',async()=>{
     await context.setOffline(true);await page.reload();await page.locator('canvas').waitFor();await open();
     const callback=await context.newPage();const response=await callback.goto(url+'redirect.html?probe=1').catch(()=>null);assert(response===null||response.status()>=400,'An offline auth callback with a query must not receive the SPA index fallback');await callback.close();await page.bringToFront();

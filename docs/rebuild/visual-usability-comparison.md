@@ -438,3 +438,15 @@ joint targets. Final native sensor selection/history-canvas ink checks PASS in
 all six profiles; ChromeeneUyt/WebKitcbN9dM. Model values
 remain explicitly non-SI, and physical iPad remains unverified. See
 [example acceptance](evidence/examples/acceptance.md) and `examples/README.md`.
+
+## Coauthor Credits And Publication
+
+2026-11-16, C14/C10/C13. User-selected caption is "Coauthored by Jake Whiting and
+Hugo Wilson". Jake links to github.com/mikanzui; Hugo retains the original
+github.com/Huggabiz/linkage-studio link. Remove the separate Claude Opus tag and
+VibeCoded wording, not upstream provenance/history. Existing10px restrained footer
+paint is retained and wraps inside the narrow expanded toolbar. Native production
+Chrome/WebKit tests assert exact caption, both link targets, absence of old labels
+and no horizontal text overflow; captures named coauthor-credits.png. The toolbar
+remains collapsible, so credits are accessible by expanding it on narrow layouts.
+No solver/persistence/cloud behavior is changed. See [publication evidence](evidence/pages/acceptance.md).
