@@ -126,7 +126,7 @@ export function serializeMechanism(
     }
   }
 
-  if (projectName) data.projectName = projectName;
+  if (projectName !== undefined) data.projectName = projectName;
   if (viewPreferences) data.viewPreferences = viewPreferences;
   if (simulationSettings) data.simulationSettings = simulationSettings;
 
@@ -197,7 +197,7 @@ export function deserializeMechanism(json: string): {
         ...structuredClone(o),
         id: o.id,
         bodyId: o.bodyId,
-        name: o.name || `Shape ${Object.keys(outlines).length + 1}`,
+        name: o.name ?? `Shape ${Object.keys(outlines).length + 1}`,
         visible: o.visible ?? true,
         points: structuredClone(o.points),
       };
@@ -211,7 +211,7 @@ export function deserializeMechanism(json: string): {
           id: img.id, bodyId: img.bodyId, src: img.src,
           position: { x: img.position.x, y: img.position.y },
           scale: img.scale, rotation: img.rotation, opacity: img.opacity,
-          visible: img.visible, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight,
+          visible: img.visible ?? true, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight,
         };
       }
     }
@@ -257,6 +257,10 @@ export function downloadFile(content: string, filename: string, mimeType = 'appl
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.hidden = true;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Safari may start consuming the blob after the click dispatch returns.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

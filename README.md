@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# Slinker / Linkage Studio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Version **0.16.0-rebuild.1**, an isolated rebuild checkpoint based on
+[Huggabiz / Hugo Wilson's Linkage Studio](https://github.com/Huggabiz/linkage-studio)
+v0.12.3 (`3dfe10512e105f863a582ce5cc4b3bb8a2006306`).
 
-Currently, two official plugins are available:
+Rebuilds the editor, document and simulation boundaries while restoring the fork's
+geometry, spring, tracer, sensor and export tools. This checkpoint stops after
+local files/recovery/CAD work. Microsoft/OneDrive and production/PWA qualification
+remain future stages; this is not a complete replacement for the fork's cloud app.
+See [changes](CHANGELOG.md) and [rebuild tracker](docs/rebuild/progress-tracker.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run Locally
 
-## React Compiler
+Node 24 is used for verification (Vite requires Node 20.19+ or 22.12+).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm ci --legacy-peer-deps
+npm run dev -- --host 127.0.0.1
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open the printed `/linkage-studio/` URL. The explicit install flag is currently
+needed for the inherited Vite 8 / vite-plugin-pwa 1.2 peer mismatch. Their tested
+build works, but the compatible clean-release toolchain remains a G10 task.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm run lint
+npm run build
+npm run preview -- --host 127.0.0.1
 ```
+
+## Tests
+
+The domain suite includes an independent DXF reader. Prepare Python 3.13 with the
+pinned CAD dependencies and point `CAD_PYTHON` to that interpreter:
+
+```sh
+python -m venv .venv-cad
+.venv-cad/bin/python -m pip install -r scripts/rebuild/requirements-cad.txt
+CAD_PYTHON="$PWD/.venv-cad/bin/python" npm test
+```
+
+Windows uses `.venv-cad\Scripts\python.exe`; set environment variables using your
+shell's native syntax. The two user-supplied legacy mechanisms and raw browser
+evidence are deliberately not published. Fixture configuration, required-evidence
+mode and the workspace browser harness are documented in
+[testing](docs/rebuild/testing.md).
+
+## Qualification Limits
+
+- Chrome/WebKit, mouse/touch and narrow/tablet tests are automated. No claim of
+  physical iPad, Pencil, VoiceOver or installed Home Screen certification.
+- Forces are qualified **unit-particle model loads**, not SI-certified structural
+  forces. Partial contact/slider/grab reactions are explicitly unavailable.
+- DXF R12 coordinates use the chosen units; the CAD import unit must match.
+  Unsupported images, springs, tracers and sensors are listed as omissions.
+- SolidWorks `.swb` generation is tested numerically but target-app execution is
+  unverified. The export dialog states this limitation.
+- Recovery is best effort local storage, not a durable file/cloud save. Browser
+  download initiation does not clear unsaved changes.
+- Production update/offline/soak and development-dependency audit work remain G10.
+
+## Provenance
+
+Original author credit and GitHub link remain in the editor. This branch retains
+the upstream commit ancestry and incremental rebuild commits. No top-level upstream
+license was identified during the audit; redistribution terms require review before
+external release. A source checkpoint is not a deployment or release certification.

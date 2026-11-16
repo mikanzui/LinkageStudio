@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { legacyFixtureOptions, readLegacyFixture } from './fixture-helper';
 import type { Body, Joint, MechanismState, Vec2 } from '../src/types';
 import { computeBodyTransform, stabilizeBodyFrame, localToWorld, worldToLocal, polygonArea, polygonCentroid } from '../src/core/body-transform';
 import { projectImages } from '../src/core/image-transform';
@@ -44,8 +44,8 @@ test('polygon area and centroid are invariant under large translations and rever
   near(polygonCentroid([{x:1,y:2},{x:3,y:2}]),{x:2,y:2});assert.equal(polygonArea([]),0);
 });
 
-for(const fixture of ['airer.slinker','working-screen.json'])test(fixture+': body-frame initialization preserves every legacy local/world asset pose',()=>{
-  const g=JSON.parse(readFileSync(new URL('../../../baselines/2026-11-15T18-45-10-493Z-CMbWTX/fixtures/'+fixture,import.meta.url),'utf8')) as MechanismState;
+for(const fixture of ['airer.slinker','working-screen.json'] as const)test(fixture+': body-frame initialization preserves every legacy local/world asset pose',legacyFixtureOptions(fixture),()=>{
+  const g=JSON.parse(readLegacyFixture(fixture)) as MechanismState;
   store.getState().loadState(g);const actual=store.getState();
   for(const o of Object.values(g.outlines??{}))o.points.forEach((p,i)=>near(localToWorld(p,computeBodyTransform(g.bodies[o.bodyId],g.joints)),localToWorld(actual.outlines[o.id].points[i],computeBodyTransform(actual.bodies[o.bodyId],actual.joints))));
   for(const t of Object.values(g.tracers??{}))near(localToWorld(t.localPosition,computeBodyTransform(g.bodies[t.bodyId],g.joints)),localToWorld(actual.tracers[t.id].localPosition,computeBodyTransform(actual.bodies[t.bodyId],actual.joints)));

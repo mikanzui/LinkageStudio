@@ -1179,8 +1179,9 @@ export function handleWheel(e: WheelEvent, canvas: HTMLCanvasElement) {
 }
 
 export function handleKeyDown(e: KeyboardEvent) {
+  if (document.querySelector('dialog[open]')) return;
   const target = e.target;
-  if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+  if (target instanceof HTMLElement && target.closest('input, textarea, select, dialog, [contenteditable="true"], [role="dialog"]')) return;
   const editor = useEditorStore.getState();
   const mechanism = useMechanismStore.getState();
 

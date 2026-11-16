@@ -1,0 +1,5 @@
+export const MAX_DOCUMENT_CHARACTERS = 32 * 1024 * 1024;
+export const MAX_DOCUMENT_DEPTH = 128;
+export const MAX_DOCUMENT_VALUES = 500_000;
+export const MAX_DOCUMENT_ISSUES = 100;
+export const MAX_ENTITY_ID_LENGTH = 256;

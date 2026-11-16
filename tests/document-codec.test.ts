@@ -1,11 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { legacyFixtureOptions, readLegacyFixture as fixture, syntheticDocument } from './fixture-helper';
 import { decodeDocument, encodeDocument } from '../src/document/codec';
 
-const fixture = (name: string) => readFileSync(new URL(`../../../baselines/2026-11-15T18-45-10-493Z-CMbWTX/fixtures/${name}`, import.meta.url), 'utf8');
-for (const name of ['airer.slinker', 'working-screen.json']) {
-  test(`${name}: complete legacy payload round-trips with explicit stable model`, () => {
+for (const name of ['airer.slinker', 'working-screen.json'] as const) {
+  test(`${name}: complete legacy payload round-trips with explicit stable model`, legacyFixtureOptions(name), () => {
     const original = JSON.parse(fixture(name));
     const decoded = decodeDocument(JSON.stringify(original));
     assert.equal(decoded.ok, true);
@@ -21,7 +20,7 @@ for (const name of ['airer.slinker', 'working-screen.json']) {
     assert.deepEqual(decoded.context.source, original);
   });
 }
-const valid = () => JSON.parse(fixture('airer.slinker'));
+const valid = () => JSON.parse(JSON.stringify(syntheticDocument()));
 test('legitimate zero rest length is valid and unchanged', () => {
   const d = valid();
   assert(Object.values(d.links).some(x => (x as { restLength: number }).restLength === 0));
@@ -41,7 +40,7 @@ for (const [key, value] of [['schemaVersion', 99], ['simulationModel', 'unknown-
 test('missing link endpoint is fatal; stale optional barrier is retained with warning', () => {
   const d = valid(); const id = Object.keys(d.links)[0]; d.links[id].jointIds[0] = 'missing';
   assert.equal(decodeDocument(JSON.stringify(d)).ok, false);
-  const original = decodeDocument(fixture('airer.slinker'));
+  const original = decodeDocument(JSON.stringify(valid()));
   assert.equal(original.ok, true);
   assert(original.issues.some(x => x.path.startsWith('colliders.') && x.severity === 'warning'));
 });

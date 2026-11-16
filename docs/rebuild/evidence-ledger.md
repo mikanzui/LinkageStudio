@@ -1,0 +1,172 @@
+# Groundwork Evidence Ledger
+
+Updated 2026-11-16. G0-G7 accepted; G8 verified implementation checkpoint with
+external qualification limits. Stopping at 0.16.0-rebuild.1 before G9 as requested.
+Earlier baseline rows remain historical.
+
+| Check | Result | Evidence / Limit |
+| --- | --- | --- |
+| Upstream identity | VERIFIED | GitHub master resolves to `3dfe10512e105f863a582ce5cc4b3bb8a2006306`; package v0.12.3 |
+| Local ancestry | VERIFIED | Fetched upstream commit equals `git merge-base FETCH_HEAD HEAD` |
+| Local baseline | RECORDED | HEAD `9954fca`; existing dirty source and two untracked test files preserved |
+| Feature comparison | SOURCE AUDITED | History, upstream types/files, local components/stores/services; feature inventory in README |
+| Current automated tests | PASS | `npm.cmd test`: 58 tests, 9 files; Node environment only |
+| Current production build | PASS | `npm.cmd run build`: TypeScript, Vite and PWA generation completed |
+| Current lint | FAIL | `npm.cmd run lint`: 28 errors, 2 warnings; includes hooks rules, unused values and explicit-any errors |
+| Existing release pipeline | GAP | Deploy workflow runs `npm ci --legacy-peer-deps` and `npm run build:pages`; no tests/lint/typecheck stage |
+| Fresh rendered app audit | PARTIAL | Earlier desktop-control failure recorded; G0 Session 01 now uses working Playwright/Chrome with isolated origins and mounted-store observations |
+| Fresh legacy import/drag | REPRODUCED | Both fixtures imported through chooser and dragged through real input; local Airer halts at one frame; WorkingScreen moves; session-01 |
+| Physical iPad Safari/Pencil | UNVERIFIED | No physical device run in this audit |
+| iPad installed/offline app | UNVERIFIED | Requires physical release qualification |
+| Cloud/auth recovery | SOURCE AUDITED ONLY | No live-account writes or login performed |
+| CAD target compatibility | UNVERIFIED | Export code present; no independent CAD import or macro run |
+| G8 complete files/recovery/CAD domain | PASS FOR DOMAIN CONTRACT | 663 tests/type/lint/build; codec negatives, transaction/quota/revision ownership, delayed file writes and independent four-unit DXF audit; evidence/g8/integration-notes.md |
+| G8 first full browser matrix | FAILED, RETAINED | Native dialog focus and actual held-edit test corrected; later Chrome 51/51 passed but WebKit caught stale recovery selection/focus. through-g8-QV0AxL and through-g8-E9txK7 retained, no acceptance |
+| G8 repaired WebKit matrix | PASS FOR BROWSER MATRIX | g8-ghGWm9, source 243ac083...; webkit-browser-t1wNrK all 51 desktop/coarse/Split View scenarios pass; full cumulative run still active |
+| G8 actual downloaded CAD geometry | PASS FOR INDEPENDENT READER | Twenty-four files per full browser run; ezdxf1.4.5 audits dimensions/units/radii/layers/open paths and separate macro-call geometry reader; no CAD GUI or SolidWorks execution claim |
+| G8 final versioned cumulative | PASS 18/18 | 0.16.0-rebuild.1, g8-pkwfMc, source 3ebb098f...; through-g8-Peh1SI; 54 G8 scenarios per engine plus all G1-G7 regressions |
+| G8 actual CAD GUI | PASS FOR MM DXF SMOKE | LibreCAD 2.2.1.6 renders byte-identical final download; native rod properties (30,-72)->(30,-120), length48, correct rod layer; cad-gui-check.md; no SolidWorks execution claim |
+| G8 portable domain tests | PASS WITH EXPLICIT PRIVATE LIMITS | Integrated checkout: 663/no skips with originals, 648/15 named skips without private fixtures; missing/tamper required controls fail; Python parser is never optional |
+| Synthetic solver/lifecycle audit | TARGETED REPRODUCTIONS | Delegated in-memory checks found topology-dependent gravity, locked slider graphs, incorrect support reactions, pause retries and old-project coordinate restoration; details in README |
+| Master preparation documents | COMPLETE | MASTER-PLAN, tracker, visual/usability ledger, templates and root AGENTS reference created; no application source change |
+| Baseline preservation | PASS | Ten artifact hashes verified; both mandatory fixture hashes match; live application patch equals archived patch |
+| Documentation/tooling checks | PASS | Eight Markdown files checked for relative links/trailing whitespace; no missing links; capture script passes `node --check`; Git diff check clean |
+| Selective multi-agent planning | COMPLETE | Lead plus up to two workers, stage/file ownership, integration rules and measurement fields added; execution pilot not yet run |
+| Multi-agent plan revision checks | PASS | Nine rebuild Markdown files checked: no missing relative links or trailing whitespace; Git diff check clean; tracked application patch still matches preserved baseline |
+| G0 runtime setup | COMPLETE | Isolated upstream/local/candidate worktrees at 5181/5182/5183; one explicit causal experiment at 5184 |
+| G0 motion harness | PASS FOR REPRODUCTION | 12 expected classifications match across brown-arm, rail-foot and WorkingScreen interactions; unchanged local Airer fails as expected; no release acceptance |
+| G0 causal validation experiment | OBSERVED | Single dev-server guard change resumes Airer stepping/motion; fixed drift/restoration zero in sampled drags; physical accuracy remains unaccepted |
+| G0 looks/usability | PARTIAL | Default/compact body-tree and offscreen error measured; fresh screenshots sealed; remaining screen/accessibility/device matrix open |
+| G0 evidence integrity | PASS | All 101 sealed artifact hashes verified; 12 Markdown documents have valid relative links; nine JS scripts pass syntax checks; original tracked application patch unchanged |
+| Airer intended handle/direction | USER CONFIRMED | Upper brown arm pulled upper-left; stable target `g6kFted7Nm` / `link_cwDY2fFAEZ_g6kFted7Nm`; full-opening pose/time tolerances remain unqualified |
+| G0 baseline acceptance | PASS | Codex accepted evidence/g0/acceptance.md; G1 unlocked, not a claim that the defective reference or rebuilt physics is fixed |
+| G0 acceptance recheck | PASS | 2026-11-15 19:43 UTC: check-motion.mjs reevaluated recorded browser captures, all 12 classifications match; all 101 sealed artifact sizes/hashes verified; not a new live browser run |
+| G1 document/local editing | PASS | Candidate 5aacb68; 62 tests; build/lint pass; four Chrome mouse/touch contexts, nine workflow groups each; evidence/g1/acceptance.md; physical iPad unverified |
+| G1 WebKit extension | PASS | All four G1 mouse/touch layouts pass in WebKit 27.2; browser-h44ORA; trusted touch taps, no physical-iPad claim |
+| G2 ordinary links/lifecycle | PASS | Candidate 9192bad; 96 tests/build/lint; Chrome trusted mouse/touch rod drags, WebKit mouse drag/touch tap-plus-gravity; full A/B/A exact-restore and known-bad frame stops; evidence/g2/acceptance.md |
+| G3 full legacy movement | PASS | Candidate 9639bdd, source hash 94c167da...; 139 tests/build/lint; 8 Chrome mouse/touch and 4 WebKit original/reopened real-file runs; complete brown-arm Airer opening; cumulative G1/G2 pass; evidence/g3/acceptance.md |
+| G4 tablet/input/selection | PASS (CODE/BROWSER) | 715fed1; 199 tests/build/lint; immutable g4-WOLqjR output hashes and rendered source identity; cumulative G1-G3 pass; trusted Chrome pen/touch/cancel/pinch and WebKit/five repeated selection runs; evidence/g4/acceptance.md |
+| G4 rapid synthetic flick follow-up tap | QUALIFICATION LIMIT | Plain native HTML also reproduces in Chrome157/bundled159; explicit 300ms endpoint hold passes eight independent controls; not claimed fixed in app; native-touch-probe-CuZ3il |
+| Original workspace preservation after G4 | VERIFIED | Full-index tracked patch SHA256 remains 184322a978b5017eb90a4b6fcf96ef94d510110fbf7c31162f9cdaa97fcbc95f; all rebuild source edits confined to candidate |
+
+G0 Session 01 evidence and limitations: [session report](evidence/g0/session-01.md).
+Its sealed bundle contains 101 hashed artifacts. Original application source and
+the pinned reference worktrees were not edited by the experiment.
+
+The eight-file documentation check above describes the earlier preparation run.
+New plan revisions require their own link/consistency check; they do not alter the
+recorded application test results or qualify any rebuild gate.
+
+Build warnings: main JS chunk exceeds 500 kB; Browserslist data reported stale.
+These warnings do not alone establish runtime defects.
+
+## Required Real-World Fixtures
+
+Keep originals unchanged. Copy to a local immutable regression corpus before G0
+execution; do not publish private designs without deciding their distribution.
+
+| File | Size | SHA-256 | Expected Reference |
+| --- | --- | --- | --- |
+| `C:/Users/jaket/Downloads/Flap - Winged Airer (1).slinker` | 30,332 bytes | `8E73FD936565D2C4DF4D549BCC584C438C894F717DA6E54AD328A8B3FFD5E0EB` | v0.11.15 save; user supplied open-versus-stuck screenshots; record exact intended pull point and motion |
+| `C:/Users/jaket/Downloads/WorkingScreenLow.slinker 1 (1).json` | 461,390 bytes | `4F1E389186A478E7E4CD7876914B072D20A964B1130718C1F62766C57DBA4C07` | v0.11.14 save; user previously reported motion working; recapture against upstream |
+
+Historical screenshots were supplied in the conversation. Temp clipboard paths are
+not durable test assets; archive reference images and fresh traces as part of G0.
+
+## Preserved Baseline Archive
+
+Capture completed 2026-11-15 using
+`node scripts/rebuild/capture-baseline.mjs`.
+
+Manifest: [local archive manifest](../../.rebuild.local/baselines/2026-11-15T18-45-10-493Z-CMbWTX/manifest.json).
+The `.rebuild.local/` directory is excluded by the existing `*.local` Git ignore
+rule. It contains private local evidence, not published repository assets.
+
+The archive contains pinned upstream/local-head ZIPs, the complete tracked diff
+from HEAD, staged-diff evidence, both untracked source test files, dependency lock,
+status and both supplied mechanism files. All ten artifacts have SHA-256 entries.
+Both mandatory fixture hashes match the recorded originals. No original was changed.
+
+The historical screenshot paths are now missing:
+
+- `C:/Users/jaket/AppData/Local/Temp/codex-clipboard-67361434-4776-4ea9-9d58-852b4de90201.png`
+- `C:/Users/jaket/AppData/Local/Temp/codex-clipboard-d3dec47e-f0cc-4dbc-87c7-fbc5ef890594.png`
+
+The manifest records them as MISSING. This archive passes source/input preservation
+only; it did not itself accept visual comparison, browser drag or physical iPad
+qualification. Subsequent G0 browser evidence and baseline acceptance are recorded
+above; physical iPad qualification remains unverified.
+
+To repeat preservation, run the same command from the workspace. Each run creates
+a fresh directory and never overwrites an older capture. Restore only into a
+separate directory using the manifest instructions. It is a source baseline archive,
+not a backup of browser sessions or credentials. Newly authored untracked planning
+documents are not part of its application-source snapshot.
+
+## Evidence Bundle Template
+
+## G5 Integrated Acceptance
+
+2026-11-15: candidate c9178b88c20c3068cfa89e2ca59346acc8dbab66, immutable
+g5-iTGyV8; source plus observer SHA256
+`9e0d31462d3f08088f1779e7bcf8cbe2f2f07d13cbe3a50ee0c60fb7f0e944ea`.
+326 tests/build/lint and all twelve Chrome/WebKit cumulative suite combinations pass.
+Manifest, raw logs and report: `.rebuild.local/evidence/cumulative/through-g5-tCHoDV/`.
+Gate details: [G5 acceptance](evidence/g5/acceptance.md); discovered observer,
+coarse-target and overlay coverage gaps are retained in qualification-notes.md.
+G4 expanded target coverage is reaccepted; original files and root patch hashes match.
+Physical hardware/VoiceOver remain unverified. G6 starts automatically.
+
+## G6 Integrated Acceptance
+
+2026-11-16: candidate 7a6dd398a5d8751b90aec80804879fe5abf8651d, immutable
+g6-gSRHyg; source `9f0021683d25dd88b7886aa04336068ab9ef31f701c3466f7c9c1d9a122f9821`.
+434 tests/type/build/lint pass; all fourteen cumulative browser suite/engine runs
+pass in `.rebuild.local/evidence/cumulative/through-g6-hztyQs/`. See
+[G6 acceptance](evidence/g6/acceptance.md). Earlier reattachment and stale-alert
+failures remain documented, not relabeled as passing runs. Root patch unchanged.
+Spring motion-model qualification is not SI calibration or physical iPad certification.
+
+```text
+Gate / feature:
+Commit + dirty patch hash + build ID:
+Fixture hashes:
+Device/model + OS build + browser + viewport + DPI + input type:
+Exact entry route and UI steps:
+Expected output and independent reference:
+Measured moving-joint/angle/travel result:
+Constraints/fixed-joint/finite-state checks:
+Before/after screenshots and event trace paths:
+Console/network errors:
+Cumulative suite outcome:
+Negative control (how this check detects the regression):
+Result: PASS / FAIL / BLOCKED / UNVERIFIED
+Remaining limitations:
+```
+
+## G7 Integrated Acceptance
+
+2026-11-16: candidate 5b5431fb5b58d0dac961c35c10924ad0cc333251; immutable
+g7-MwfdcW, source `e4c1daa5ae32a1d0c2920132aba4fc833db07ceb0aa46dbc239df1cbde8c4b4f`.
+519 tests/type/build/lint and all sixteen cumulative suite/engine runs pass in
+`.rebuild.local/evidence/cumulative/through-g7-11YTSS/`. See
+[G7 acceptance](evidence/g7/acceptance.md). Forces are qualified model values, not
+SI loads; RATTLE regime and contact/physical-device limits remain explicit. Earlier
+failed/performance runs are preserved in G7 integration notes. G8 starts automatically.
+
+## Open Decisions (Remaining)
+
+- G0 scope retains implemented F01-F21 capability families and simplifies
+  interactions where comparison evidence supports it. Record specific exceptions;
+  do not treat unimplemented backlog items as existing feature parity.
+- Airer handle and upper-left pull direction are confirmed. Establish the full
+  coordinated opening trajectory through that handle in the pinned upstream before
+  setting real-fixture numeric tolerances; the foot test remains secondary.
+- Record exact current iPad model/OS/Pencil at G4; the user requested latest
+  hardware and stable iPadOS, not an older compatibility floor.
+- Define compatibility direction: import old files into new app is mandatory;
+  new features in files cannot automatically work in old binaries. If backward export
+  is required, specify supported target versions and explicit loss diagnostics.
+- Decide dimensional/force accuracy expectations and CAD formats used in practice.
+- Review license/provenance and preserve Hugo Wilson / Huggabiz credit before any
+  redistributed rebuild; no top-level license was identified in this initial scan.

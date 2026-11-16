@@ -1,5 +1,6 @@
 import { validateSpring } from '../core/springs/spring-model';
 import type { Joint, Link, MechanismSpring } from '../types';
+import { MAX_DOCUMENT_CHARACTERS, MAX_DOCUMENT_DEPTH, MAX_DOCUMENT_VALUES, MAX_DOCUMENT_ISSUES, MAX_ENTITY_ID_LENGTH } from './limits';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
 export interface JsonObject { [key: string]: JsonValue }
@@ -29,22 +30,37 @@ const point = (value: unknown) => record(value) && finite(value.x) && finite(val
 /** Decode without changing the saved graph or discarding unrecognised features. */
 export function decodeDocument(text: string): DecodeResult {
   const issues: DocumentIssue[] = [];
-  const issue = (path: string, message: string, severity: DocumentIssue['severity'] = 'error') =>
-    issues.push({ path, message, severity });
+  let hasErrors = false;
+  const issue = (path: string, message: string, severity: DocumentIssue['severity'] = 'error') => {
+    if (severity === 'error') hasErrors = true;
+    const item = { path, message, severity };
+    if (issues.length < MAX_DOCUMENT_ISSUES) issues.push(item);
+    else if (severity === 'error' && !issues.some(i => i.severity === 'error')) issues[issues.length - 1] = item;
+  };
+  if (typeof text !== 'string') return { ok: false, issues: [{ severity: 'error', path: '$', message: 'Expected JSON project text.' }] };
+  if (text.length > MAX_DOCUMENT_CHARACTERS) return { ok: false,
+    issues: [{ severity: 'error', path: '$', message: 'Project exceeds the supported 32-million-character file limit.' }] };
   let data: unknown;
-  try { data = JSON.parse(text); }
+  try { data = JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text); }
   catch { return { ok: false, issues: [{ severity: 'error', path: '$', message: 'Invalid JSON. Choose an intact .slinker or JSON file.' }] }; }
   if (!record(data)) return { ok: false, issues: [{ severity: 'error', path: '$', message: 'Expected a mechanism object.' }] };
   const source = data;
-  const inspect = (value: JsonValue, path: string) => {
-    if (Array.isArray(value)) value.forEach((v, i) => inspect(v, `${path}[${i}]`));
-    else if (record(value)) for (const [key, child] of Object.entries(value)) {
-      if (['__proto__', 'constructor', 'prototype'].includes(key)) issue(`${path}.${key}`, 'Reserved property name.');
-      inspect(child, `${path}.${key}`);
+  const pending: { value: JsonValue; path: string; depth: number }[] = [{ value: source, path: '$', depth: 0 }];
+  let visited = 0;
+  while (pending.length) {
+    const { value, path, depth } = pending.pop()!; visited++;
+    if (depth > MAX_DOCUMENT_DEPTH) { issue(path, `Project nesting exceeds ${MAX_DOCUMENT_DEPTH} levels.`); return { ok: false, issues }; }
+    if (typeof value === 'number' && !finite(value)) issue(path, 'Number must be finite.');
+    if (!Array.isArray(value) && !record(value)) continue;
+    const keys = Object.keys(value);
+    if (visited + pending.length + keys.length > MAX_DOCUMENT_VALUES) { issue(path, 'Project contains too many nested values.'); return { ok: false, issues }; }
+    for (const key of keys) {
+      const childPath = `${path}.${key}`.slice(0, 1024);
+      if (key.length > 512) { issue(path, 'Property names must not exceed 512 characters.'); return { ok: false, issues }; }
+      if (['__proto__', 'constructor', 'prototype'].includes(key)) issue(childPath, 'Reserved property name.');
+      pending.push({ value: (value as JsonObject)[key], path: childPath, depth: depth + 1 });
     }
-    else if (typeof value === 'number' && !finite(value)) issue(path, 'Number must be finite.');
-  };
-  inspect(source, '$');
+  }
   if (source.documentFormat !== undefined && source.documentFormat !== 'linkage-studio') issue('documentFormat', 'Unsupported document format.');
   if (source.schemaVersion !== undefined && source.schemaVersion !== 1) issue('schemaVersion', `Unsupported schema version ${source.schemaVersion}. This file was not modified.`);
   if (source.simulationModel !== undefined && source.simulationModel !== 'saved-links-v1') issue('simulationModel', 'Unsupported simulation model.');
@@ -52,6 +68,7 @@ export function decodeDocument(text: string): DecodeResult {
   if (source.forceModel !== undefined && source.forceModel !== 'unit-particle-v1') issue('forceModel', 'Unsupported model-force convention.');
   if (source.version !== undefined && typeof source.version !== 'string') issue('version', 'Version must be text.');
   if (source.sourceVersion !== undefined && typeof source.sourceVersion !== 'string') issue('sourceVersion', 'Source version must be text.');
+  if (source.writerVersion !== undefined && typeof source.writerVersion !== 'string') issue('writerVersion', 'Writer version must be text.');
   const map = (name: string, required = false): JsonObject => {
     const value = source[name];
     if (value === undefined && !required) return {};
@@ -60,9 +77,17 @@ export function decodeDocument(text: string): DecodeResult {
   };
   const joints = map('joints', true), links = map('links'), bodies = map('bodies', true);
   if (typeof source.baseBodyId !== 'string' || !Object.hasOwn(bodies, source.baseBodyId)) issue('baseBodyId', 'Base must reference an existing body.');
+  const selectableIds = new Map<string, string>();
   const each = (name: string, values: JsonObject, check: (v: JsonObject, path: string) => void) => {
     for (const [id, value] of Object.entries(values)) {
       const path = `${name}.${id}`;
+      if (!id.trim() || id.length > MAX_ENTITY_ID_LENGTH) issue(path, 'Expected a nonempty stable entity ID of at most 256 characters.');
+      // Bodies use a separate owner namespace; selectable objects share one picker.
+      if (name !== 'bodies') {
+        const previous = selectableIds.get(id);
+        if (previous) issue(path, `Selectable ID also belongs to ${previous}.`);
+        else selectableIds.set(id, path);
+      }
       if (!record(value)) { issue(path, 'Expected an entity object.'); continue; }
       if (value.id !== id) issue(`${path}.id`, 'Entity ID must match its record key.');
       check(value, path);
@@ -100,6 +125,7 @@ export function decodeDocument(text: string): DecodeResult {
     if (typeof v.name !== 'string' || typeof v.color !== 'string') issue(path, 'Body name and color must be text.');
     if (v.jointIds !== undefined && !strings(v.jointIds)) issue(`${path}.jointIds`, 'Expected joint IDs.');
     else if (strings(v.jointIds)) for (const id of v.jointIds) if (!Object.hasOwn(joints, id)) issue(`${path}.jointIds`, `Missing joint ${id}.`);
+    if (strings(v.jointIds) && new Set(v.jointIds).size !== v.jointIds.length) issue(`${path}.jointIds`, 'A joint may appear only once in this body.');
     optionalBoolean(v, 'useOutlineCOM', path); optionalBoolean(v, 'showLinks', path);
     if (v.frame !== undefined) {
       if (!record(v.frame) || !strings(v.frame.jointIds) || v.frame.jointIds.length !== 2 || !finite(v.frame.angleOffset)) issue(`${path}.frame`, 'Expected a finite joint-pair body frame.');
@@ -161,10 +187,10 @@ export function decodeDocument(text: string): DecodeResult {
     if (!record(settings)) issue('simulationSettings', 'Expected simulation settings object.');
     else {
       optionalBoolean(settings, 'gravityEnabled', 'simulationSettings');
-      for (const key of ['gravityStrength', 'damping', 'dragMultiplier', 'dragDamping']) if (settings[key] !== undefined) number(settings, key, 'simulationSettings', 0);
+      for (const key of ['gravityStrength', 'damping', 'dragMultiplier', 'dragDamping']) if (settings[key] !== undefined) number(settings, key, 'simulationSettings', 0, key === 'damping' || key === 'dragDamping' ? 1 : Infinity);
     }
   }
-  if (issues.some(x => x.severity === 'error')) return { ok: false, issues };
+  if (hasErrors) return { ok: false, issues };
   return { ok: true, issues, context: {
     source, sourceVersion: typeof source.sourceVersion === 'string' ? source.sourceVersion : typeof source.version === 'string' ? source.version : 'unknown',
     simulationModel: 'saved-links-v1',

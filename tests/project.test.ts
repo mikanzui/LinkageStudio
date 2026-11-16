@@ -1,23 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { legacyFixtureOptions, readLegacyFixture as fixture, syntheticDocument } from './fixture-helper';
 
 Object.assign(globalThis, { __APP_VERSION__: 'rebuild-g1' });
 const { importProject, projectText, isProjectDirty, markProjectSaved } = await import('../src/document/project');
 const { useMechanismStore: store } = await import('../src/store/mechanism-store');
 const { useEditorStore: editor } = await import('../src/store/editor-store');
-const fixture = (name: string) => readFileSync(new URL(`../../../baselines/2026-11-15T18-45-10-493Z-CMbWTX/fixtures/${name}`, import.meta.url), 'utf8');
 
 test('failed import preserves document, history and editor state', () => {
-  assert(importProject(fixture('airer.slinker')).ok);
+  assert(importProject(JSON.stringify(syntheticDocument())).ok);
   const before = projectText();
   const history = store.getState().past;
   const e = editor.getState();
   assert.equal(importProject('{').ok, false);
   assert.equal(projectText(), before); assert.equal(store.getState().past, history); assert.equal(editor.getState(), e);
 });
-test('A/B/A import has no stale design-position or selection state', () => {
-  for (const name of ['airer.slinker', 'working-screen.json', 'airer.slinker']) {
+test('A/B/A import has no stale design-position or selection state', legacyFixtureOptions('airer.slinker', 'working-screen.json'), () => {
+  for (const name of ['airer.slinker', 'working-screen.json', 'airer.slinker'] as const) {
     editor.setState({ mode: 'simulate', savedPositions: { old: { x: 1, y: 2 } }, selectedIds: new Set(['old']) });
     assert(importProject(fixture(name)).ok);
     assert.equal(editor.getState().mode, 'create'); assert.equal(editor.getState().savedPositions, null);
@@ -54,7 +53,7 @@ test('coordinate edit is one undoable transaction and rejects non-finite edits',
   store.getState().updateJointType(id, 'fixed'); assert(store.getState().bodies.base.jointIds.includes(id));
   store.getState().updateJointType(id, 'revolute'); assert(!store.getState().bodies.base.jointIds.includes(id));
 });
-for (const name of ['airer.slinker', 'working-screen.json']) test(`${name}: editor save/reopen retains original entity data and semantics`, () => {
+for (const name of ['airer.slinker', 'working-screen.json'] as const) test(`${name}: editor save/reopen retains original entity data and semantics`, legacyFixtureOptions(name), () => {
   const original = JSON.parse(fixture(name)); assert(importProject(fixture(name)).ok);
   const saved = projectText(); const parsed = JSON.parse(saved);
   for (const kind of ['joints', 'links', 'bodies', 'outlines', 'images', 'sliders', 'colliders', 'tracers']) {
@@ -66,7 +65,7 @@ for (const name of ['airer.slinker', 'working-screen.json']) test(`${name}: edit
   assert(importProject(saved).ok); assert.equal(projectText(), saved); assert.equal(isProjectDirty(), false);
 });
 test('malformed persisted spring is refused atomically, never silently lost', () => {
-  const before = projectText(); const d = JSON.parse(fixture('airer.slinker')); d.springs = { x: { id: 'x' } };
+  const before = projectText(); const d = { ...syntheticDocument(), springs: { x: { id: 'x' } } };
   const outcome = importProject(JSON.stringify(d)); assert.equal(outcome.ok, false);
   assert(outcome.issues.some(issue => issue.severity === 'error' && issue.path === 'springs.x'));
   assert.equal(projectText(), before);

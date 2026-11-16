@@ -17,6 +17,8 @@
 }
 
 .top-bar-btn {
+  position: relative;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -120,7 +122,8 @@
 
 .project-feedback {
   flex-shrink: 0;
-  max-height: 92px;
+  height: 32px;
+  box-sizing: border-box;
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -131,6 +134,7 @@
   border-bottom: 1px solid #42614c;
 }
 .project-feedback.alert { color: #ffe0df; background: #492525; border-color: #864242; }
+.project-feedback.empty { background: #252525; border-color: #333; }
 @media (pointer: coarse) {
   .top-bar { min-height: 48px; height: auto; }
   .top-bar-btn { min-height: 44px; min-width: 44px; }

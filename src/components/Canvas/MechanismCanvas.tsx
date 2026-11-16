@@ -13,7 +13,7 @@ import { computeBodyTransform, localToWorld } from '../../core/body-transform';
 import type { Vec2 } from '../../types';
 import { createPointerRuntime } from '../../interaction/pointer-runtime';
 import { snapshotMechanism } from '../../core/compile-mechanism';
-import { registerInteractionCancellation } from '../../interaction/session';
+import { registerInteractionCancellation, setInteractionActive } from '../../interaction/session';
 import { projectImages } from '../../core/image-transform';
 import { drawGeometryPreview } from '../../renderer/draw-geometry-preview';
 import { resolveSpringAnchor } from '../../core/springs/spring-model';
@@ -37,12 +37,14 @@ export function MechanismCanvas() {
   const rafRef = useRef<number>(0);
   const gesture = useRef(createPointerRuntime());
   const checkpoint = useRef<ReturnType<typeof interactionCheckpoint> | null>(null);
+  const interactionOwner = useRef(Symbol('canvas-interaction'));
   const beginTool = useCallback((event: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) => {
-    if (useEditorStore.getState().mode === 'create') checkpoint.current = interactionCheckpoint();
+    if (useEditorStore.getState().mode === 'create') { checkpoint.current = interactionCheckpoint(); setInteractionActive(interactionOwner.current, true); }
     handleMouseDown(event, canvas);
   }, []);
   const endTool = useCallback((event: PointerEvent | MouseEvent, canvas: HTMLCanvasElement) => {
-    handleMouseUp(event, canvas); checkpoint.current = null;
+    try { handleMouseUp(event, canvas); }
+    finally { checkpoint.current = null; setInteractionActive(interactionOwner.current, false); }
   }, []);
   const cancelTool = useCallback(() => {
     const active = checkpoint.current !== null;
@@ -52,6 +54,7 @@ export function MechanismCanvas() {
       useEditorStore.setState(checkpoint.current.editor);
     }
     checkpoint.current = null;
+    setInteractionActive(interactionOwner.current, false);
     if (active) useEditorStore.setState({ springPlacement: null, springReattachId: null, placementCommitted: false });
   }, []);
 

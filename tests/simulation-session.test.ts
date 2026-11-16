@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { legacyFixtureOptions, readLegacyFixture } from './fixture-helper';
 import type { MechanismState, Joint, Body, Link } from '../src/types';
 import { compileMechanism, maximumLinkError } from '../src/core/compile-mechanism';
 import { SimulationSession } from '../src/core/simulation-session';
@@ -14,8 +14,8 @@ function graph(joints: Joint[], links: Link[], fixed: string[] = []): MechanismS
 }
 const link = (id: string, a: string, b: string, length: number): Link => ({ id, jointIds: [a, b], restLength: length, mass: 1 });
 const options: FrameOptions = { dt: 1 / 60, gravityEnabled: true, gravityStrength: 250, damping: 1, dragMultiplier: 25, dragDamping: .25, pull: null };
-for (const name of ['airer.slinker', 'working-screen.json']) test(`${name}: compilation is pure and preserves all saved rest lengths`, () => {
-  const raw = JSON.parse(readFileSync(new URL(`../../../baselines/2026-11-15T18-45-10-493Z-CMbWTX/fixtures/${name}`, import.meta.url), 'utf8'));
+for (const name of ['airer.slinker', 'working-screen.json'] as const) test(`${name}: compilation is pure and preserves all saved rest lengths`, legacyFixtureOptions(name), () => {
+  const raw = JSON.parse(readLegacyFixture(name));
   const input: MechanismState = { images: {}, tracers: {}, ...raw };
   const before = JSON.stringify(input); const a = compileMechanism(input), b = compileMechanism(input);
   assert.equal(JSON.stringify(input), before); assert.deepEqual(a, b);

@@ -6,8 +6,9 @@ import { useMechanismStore } from '../store/mechanism-store';
 import { useEditorStore } from '../store/editor-store';
 import { useSimulationStore, resetRuntimeForDocument } from '../store/simulation-store';
 import { resolveFrozenOutlines } from '../core/frozen-outlines';
+import { createId } from '../utils/id';
 
-export const useProjectStatus = create<{ savedText: string | null; message: string; severity: 'status' | 'alert' }>(() => ({ savedText: null, message: '', severity: 'status' }));
+export const useProjectStatus = create<{ sessionId: string; forceDirty: boolean; savedText: string | null; message: string; severity: 'status' | 'alert' }>(() => ({ sessionId: createId(), forceDirty: false, savedText: null, message: '', severity: 'status' }));
 
 export function projectText(name?: string): string {
   const live = useMechanismStore.getState(), e = useEditorStore.getState(), s = useSimulationStore.getState();
@@ -21,16 +22,17 @@ export function projectText(name?: string): string {
 }
 
 // Camera/view changes alone do not require a destructive-navigation confirmation.
-function designText(text: string): string {
+export function projectDesignSignature(text: string): string {
   const data = JSON.parse(text);
   delete data.viewPreferences;
   for (const joint of Object.values(data.joints) as { connectedLinkIds?: string[] }[]) delete joint.connectedLinkIds;
   return JSON.stringify(data);
 }
-export function markProjectSaved(text = projectText()): void { useProjectStatus.setState({ savedText: designText(text) }); }
-export function isProjectDirty(): boolean {
-  const saved = useProjectStatus.getState().savedText;
-  return saved !== null && designText(projectText()) !== saved;
+export function markProjectSaved(text = projectText()): void { useProjectStatus.setState({ savedText: projectDesignSignature(text), forceDirty: false }); }
+export function markProjectRecovered(): void { useProjectStatus.setState({ forceDirty: true }); }
+export function isProjectDirty(text = projectText()): boolean {
+  const { savedText, forceDirty } = useProjectStatus.getState();
+  return forceDirty || (savedText !== null && projectDesignSignature(text) !== savedText);
 }
 export function setProjectMessage(message: string, severity: 'status' | 'alert' = 'status'): void { useProjectStatus.setState({ message, severity }); }
 
@@ -55,6 +57,7 @@ export function importProject(text: string): { ok: boolean; issues: DocumentIssu
   resetRuntimeForDocument();
   useSimulationStore.setState({ driverJointId: null, driverLinkId: null, solverResult: null, trackedJointIds: new Set(), tracingEnabled: false,
     gravityEnabled: false, gravityStrength: 250, damping: 0.5, dragMultiplier: 25, dragDamping: 0.25, ...state.simulationSettings });
+  useProjectStatus.setState({ sessionId: createId(), forceDirty: false });
   markProjectSaved();
   return { ok: true, issues: decoded.issues };
 }

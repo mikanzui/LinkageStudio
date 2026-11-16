@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { legacyFixtureOptions, readLegacyFixture } from './fixture-helper';
 import type { MechanismState, Vec2 } from '../src/types';
 import { compileMechanism } from '../src/core/compile-mechanism';
 import { SimulationSession } from '../src/core/simulation-session';
@@ -48,9 +48,9 @@ test('a rejected conservative projection does not commit velocities', () => {
   assert.deepEqual(velocities, before);
 });
 
-for (const name of ['airer.slinker', 'working-screen.json']) for (const dt of [1 / 60, 1 / 30, 1 / 12]) {
-  test(`${name}: zero damping remains usable at dt=${dt} without the rejected gravity refinement`, () => {
-    const raw = JSON.parse(readFileSync(new URL(`../../../baselines/2026-11-15T18-45-10-493Z-CMbWTX/fixtures/${name}`, import.meta.url), 'utf8'));
+for (const name of ['airer.slinker', 'working-screen.json'] as const) for (const dt of [1 / 60, 1 / 30, 1 / 12]) {
+  test(`${name}: zero damping remains usable at dt=${dt} without the rejected gravity refinement`, legacyFixtureOptions(name), () => {
+    const raw = JSON.parse(readLegacyFixture(name));
     let graph = compileMechanism({ images: {}, tracers: {}, ...raw }); const before = structuredClone(graph), session = new SimulationSession(graph);
     for (let i = 0; i < 3; i++) {
       const frame = session.step(graph, { ...options, dt }); assert(frame.ok, frame.ok ? '' : frame.error);
