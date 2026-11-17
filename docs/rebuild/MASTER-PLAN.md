@@ -21,7 +21,10 @@ G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 
 Scoped reintegration ACCEPTED: simplified Draw entry, secondary canvas palette,
 historical glyphs and whole-circle trim. Cumulative24/24,990 domain /27 tooling
-tests PASS. User requests commit and default-master cleanup; publication pending.
+tests PASS. Committed cd5632c; consolidated remote master at8ca3594 without
+force or lost history. Hosted run43982921604 /deployment7839944324 PASS;
+actual live Chrome/WebKit drawing and offline/example checks PASS2026-11-17.
+Original dirty local workspace remains unchanged.
 See [drawing-toolbar-restoration.md](drawing-toolbar-restoration.md).
 
 ### Version 17.0.0 And Projects Examples

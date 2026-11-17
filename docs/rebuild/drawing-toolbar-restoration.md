@@ -154,4 +154,32 @@ historical parent. Master becomes the Pages workflow source. Do not reset,
 checkout or update the dirty original local master worktree; its files/index
 and experiments remain at the preserved baseline.
 
-Commit, remote update and hosted deployment evidence pending.
+Completed2026-11-17:
+
+- Implementation cd5632c; history consolidation8ca3594
+  (parents cd5632c and9954fca). Entire tree equals the implementation parent.
+- Atomic non-force push updated remote master and codex/rebuild-cloud-pwa to
+  8ca3594. Default branch remains master. Original local master stays9954fca
+  with its dirty experiment diff unchanged. Other legacy branches and the
+  original v17.0.0 tag are retained.
+- [Hosted run43982921604](https://github.com/mikanzui/LinkageStudio/actions/runs/43982921604)
+  PASS:990 domain and27 tooling tests, zero skips, production/audit/browser/
+  gallery checks, build and deploy. Deployment7839944324 succeeded at
+  2026-11-17T00:03:46Z from8ca3594.
+- [Published site](https://mikanzui.github.io/LinkageStudio/) independently
+  checked with no test observer. Actual live Draw/circle-trim/native-download/
+  undo/redo/reopen checks PASS: drawing-live/chromium-gxMXok and
+  drawing-live/webkit-MZnmu1. Retained before/after PNGs and five native save
+  downloads per engine. This checks deployed behavior, not merely hosted CI.
+- Actual live Pages/offline/examples/512x440 checks PASS:
+  pages/chromium-live-GmhDq1 and pages/webkit-live-sAluzg (five workflows each).
+- Added verify-drawing-live.mjs for repeatable real-site checks. Its initial
+  WebKit local probe hit the known mount-time auto-collapse race in the new
+  harness, before drawing began. Fixed the harness to await collapsed rails;
+  local WebKit3nwAcl and hosted MZnmu1 then PASS without any app-source change.
+- Auth/callback/package/Vite files have no diff from the previous v17.0.0
+  release ef70ed6. User's working-sign-in report is retained; no new Microsoft
+  account operation, tenant configuration or security-compliance claim.
+
+Docs/QA-only evidence follow-up may advance master beyond8ca3594 without
+redeploying; it does not change the verified application or move the release tag.

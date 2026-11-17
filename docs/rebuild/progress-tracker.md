@@ -6,8 +6,11 @@ Final combined source PASS: through-g10-IIAGMK24/24, frozen
 0acc34983bec4902e1bffc870ff215d3311f47093b8f4f4f53866178cd81fb28.
 990 domain /27 tooling tests, lint/typecheck/build and normal production checks
 PASS. All48 CAD downloads independently parsed. Physical iPad remains UNVERIFIED.
-User now requests commit and GitHub master consolidation; implementation is
-accepted, Git publication/deployment is pending. Preserve dirty original root.
+User requested commit and GitHub master consolidation: DONE. Implementation
+cd5632c and non-code history merge8ca3594 pushed without force. Hosted run
+43982921604 and deployment7839944324 PASS2026-11-17; real live Chrome/WebKit
+Draw/whole-circle/save-reopen and offline/examples checks PASS. Dirty original
+root remains9954fca with the same tracked diff; old histories/tags retained.
 User also confirms Microsoft sign-in on the last build; no auth source changed.
 
 Scope addition: user requests Trim to remove whole circles rather than arc

@@ -2,6 +2,10 @@
 
 ## V16 Draw Palette Restoration
 
+Published2026-11-17 from master8ca3594 after990 domain /27 tooling and24
+cumulative runs. Actual hosted Chrome/WebKit circle drawing, complete trim,
+one undo/redo, native save/reopen and palette navigation PASS; no test observer.
+
 C09 follow-up: Trim now treats circle outlines as whole objects, not surviving
 arc runs. Native scoped deletion, cancellation, one undo/redo and saved/reopened
 legacy circles are checked. Rectangle/N-gon/open-path segment trimming remains.

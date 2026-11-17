@@ -6,7 +6,8 @@ Starting code: pinned Huggabiz v0.12.3; see [README.md](README.md).
 Accepted scoped reintegration: [V16 Draw toolbar](drawing-toolbar-restoration.md),
 covering G4/G5/G6/G7 presentation plus G5 whole-circle trim and persisted primitive
 provenance. Native toolbar/circle checks and final frozen cumulative24/24 PASS.
-GitHub publication is now requested and pending. Existing accepted gate requirements remain in
+Master consolidation and hosted run43982921604/deployment7839944324 PASS,
+with actual live Chrome/WebKit feature checks. Existing accepted gate requirements remain in
 force. No physical iPad or hosted Microsoft-auth qualification is implied.
 
 Execution order and scope are in [MASTER-PLAN.md](MASTER-PLAN.md); update
