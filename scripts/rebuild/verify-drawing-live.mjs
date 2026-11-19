@@ -13,7 +13,7 @@ assert(target.href === 'https://mikanzui.github.io/LinkageStudio/' ||
 const parent = join(paths.local, 'evidence/drawing-live');
 await mkdir(parent, { recursive: true });
 const output = await mkdtemp(join(parent, engine + '-'));
-const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch({ channel: 'chrome' });
+const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch(process.argv.includes('--bundled-chromium') ? {} : { channel: 'chrome' });
 const context = await browser.newContext({ viewport: { width: engine === 'webkit' ? 1024 : 1440, height: 1100 },
   hasTouch: engine === 'webkit', isMobile: engine === 'webkit', acceptDownloads: true, serviceWorkers: 'allow' });
 await context.addInitScript(() => Object.defineProperty(window, 'showSaveFilePicker', { value: undefined, configurable: true }));
@@ -89,6 +89,38 @@ try {
   await activate(button('Select')); assert.equal(await palette.count(), 0);
   await activate(button('Draw')); assert.equal(await palette.getByRole('button').count(), 5);
   checks.push('Actual downloaded file reopens without resurrecting circle; Select hides and Draw restores palette');
+  const circlePoints=Array.from({length:48},(_,i)=>({x:300+60*Math.cos(i*Math.PI/24),y:300+60*Math.sin(i*Math.PI/24)}));
+  const fixture={version:'0.12.3',projectName:'Live arc QA',joints:{},links:{},bodies:{base:{id:'base',name:'Base',color:'#e53935',jointIds:[]}},baseBodyId:'base',
+    outlines:{ring:{id:'ring',bodyId:'base',name:'Circle',points:circlePoints,closed:true,primitive:'circle'},
+      boundary:{id:'boundary',bodyId:'base',name:'Boundary',points:[{x:300,y:200},{x:300,y:400}],closed:false}},
+    viewPreferences:{camera:{zoom:1,pan:{x:0,y:0}},gridLevel:'off'}};
+  for(const method of ['power','closest']) {
+    const name='live-'+method+'-intersection.slinker',choosing=page.waitForEvent('filechooser');
+    await activate(button('Open'));
+    const dirty=page.getByRole('dialog',{name:'Unsaved Changes',exact:true});
+    if(await dirty.isVisible())await activate(dirty.getByRole('button',{name:'Discard and open',exact:true}));
+    await (await choosing).setFiles({name,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))});
+    await page.getByText('Opened '+name+'.',{exact:true}).waitFor();
+    await activate(button('Select'));
+    let area=await surface.boundingBox();await page.mouse.click(area.x+360,area.y+300);
+    await activate(button('Draw'));await activate(button('Trim'));
+    await page.getByLabel('Trim method',{exact:true}).selectOption(method);
+    area=await surface.boundingBox();
+    if(method==='power')await drag({x:area.x+350,y:area.y+300},{x:area.x+370,y:area.y+300});
+    else await page.mouse.click(area.x+360,area.y+300);
+    const arc=await save('live-'+method+'-arc');
+    assert.equal(arc.outlines.ring.closed,false);assert.equal(arc.outlines.ring.primitive,'circle');
+    assert(arc.outlines.ring.points.every(p=>p.x<=300+1e-5));
+    assert.deepEqual(arc.outlines.boundary.points,fixture.outlines.boundary.points);
+    assert.equal(Object.keys(arc.joints).length,0);assert.equal(Object.keys(arc.links).length,0);
+    await page.screenshot({path:join(output,'live-'+method+'-arc.png')});
+    await activate(button('Undo'));assert.equal((await save('live-'+method+'-undo')).outlines.ring.closed,true);
+    await activate(button('Redo'));assert.deepEqual(graphOnly(await save('live-'+method+'-redo')),graphOnly(arc));
+  }
+  for(const name of ['Pan','Select','Box select','Lasso select']) {
+    await activate(button(name));assert.equal(await button(name).getAttribute('aria-pressed'),'true');
+  }
+  checks.push('17.1 actual production Power/closest intersection arcs, boundary preservation, native saved undo/redo and directly visible selection controls');
   assert.deepEqual(errors, []);
   passed = true;
 } finally {

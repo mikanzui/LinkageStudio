@@ -15,7 +15,7 @@ assert(target.href === 'https://mikanzui.github.io/LinkageStudio/' ||
   (target.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(target.hostname) && target.pathname === '/LinkageStudio/'), 'Only the release site or an isolated loopback preview is supported');
 const parent = join(paths.local, 'evidence/pages'); await mkdir(parent, { recursive: true });
 const output = await mkdtemp(join(parent, engine + '-live-'));
-const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch({ channel: 'chrome' });
+const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch(process.argv.includes('--bundled-chromium') ? {} : { channel: 'chrome' });
 const context = await browser.newContext({ viewport: engine === 'webkit' ? { width: 1024, height: 1100 } : { width: 1440, height: 1000 },
   hasTouch: engine === 'webkit', isMobile: engine === 'webkit', serviceWorkers: 'allow', acceptDownloads: true });
 await context.addInitScript(() => Object.defineProperty(window, 'showSaveFilePicker', { value: undefined, configurable: true }));
@@ -48,6 +48,8 @@ try {
   const response = await page.goto(url); assert.equal(response.status(), 200);
   await page.locator('canvas').waitFor();
   assert((await page.locator('.top-bar-brand').innerText()).includes(pkg.version));
+  assert.equal(await page.title(),'Slinker v'+pkg.version);
+  assert.equal(await page.locator('meta[name="application-version"]').getAttribute('content'),pkg.version);
   assert.equal(await page.evaluate(() => typeof globalThis.__LINKAGE_G0_READ__), 'undefined');
   await page.evaluate(() => navigator.serviceWorker.ready); await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
@@ -63,6 +65,7 @@ try {
   if (engine === 'webkit') await activate(button('Collapse toolbar'));
   const bridge = await context.request.get(url + 'redirect.html'); assert.equal(bridge.status(), 200);
   assert(!/src\/main|assets\/main-/.test(await bridge.text()));
+  const notice=await context.request.get(url+'flatten-js-notice.txt');assert.equal(notice.status(),200);assert((await notice.text()).includes('Copyright (c) 2017 alexbol99'));
   for (const item of catalog) {
     const response = await context.request.get(url + 'examples/' + item.filename); assert.equal(response.status(), 200);
     assert.deepEqual(await response.body(), await readFile(join(paths.candidate, 'examples', item.filename)), 'Exact live model bytes ' + item.filename);
@@ -110,6 +113,7 @@ try {
   await page.getByRole('dialog', { name: 'Projects', exact: true }).waitFor({ state: 'hidden' }); await page.setViewportSize(originalViewport);
   checks.push('Examples search and Open/download remain reachable in a 512x440 keyboard-height viewport; row minimum76px');
   await context.setOffline(true); await page.reload(); await page.locator('canvas').waitFor();
+  assert((await page.evaluate(()=>fetch('./flatten-js-notice.txt').then(r=>r.text()))).includes('MIT License'),'Geometry license notice retained offline');
   for (const item of catalog) { await openExample(item); assert.equal(await button('Retry').count(), 0); }
   await openExample(catalog[0]); const liftPalette = { platform: [24, 142, 154] };
   const liftBefore = await pixels(liftPalette), liftSamples = []; await mode('Simulate');

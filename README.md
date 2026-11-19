@@ -1,6 +1,6 @@
 # Slinker / Linkage Studio
 
-Version **17.0.0**, an isolated rebuild based on
+Version **17.1.0**, an isolated rebuild based on
 [Huggabiz / Hugo Wilson's Linkage Studio](https://github.com/Huggabiz/linkage-studio)
 v0.12.3 (`3dfe10512e105f863a582ce5cc4b3bb8a2006306`).
 
@@ -14,11 +14,19 @@ See [changes](CHANGELOG.md) and [rebuild tracker](docs/rebuild/progress-tracker.
 
 The simplified **Draw** sidebar entry opens the restored five-tool canvas
 palette. Historical mechanical icons are retained. Trimming a circle removes the
-entire circle; one Undo restores it. Other polygons retain segment trimming.
-See [comparison and validation](docs/rebuild/drawing-toolbar-restoration.md).
+entire isolated circle. Intersected circles trim to real sketch boundaries.
+Power trim, click-to-closest and endpoint extension share an undoable preview.
+Pan, Select, Box and freehand Lasso are directly available in the viewport bar.
+See [current comparison and validation](docs/rebuild/v17.1-plan.md) and the
+[historical drawing palette comparison](docs/rebuild/drawing-toolbar-restoration.md).
 
 `master` is the canonical release source and GitHub Pages deployment branch.
 The rebuild and historical fork histories are retained; no force-push is needed.
+Legacy generated HTML/exporter files are clearly marked in docs/archive/ and are
+not the current release. Imported source versions and example-origin versions
+remain historical; writerVersion identifies the application that saves a file.
+The new analytic sketch kernel uses pinned FlattenJS; its retained
+[MIT notice](public/flatten-js-notice.txt) is included in the deployed app.
 
 Open **Projects > Examples** for seven searchable, downloadable models, including
 the supplied Winged Airer and Working Screen, the new spring-assisted two-stage

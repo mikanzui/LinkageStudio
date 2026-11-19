@@ -4,12 +4,18 @@ import { rectanglePoints, circlePoints, ngonPoints } from '../core/shape-geometr
 export function drawGeometryPreview(ctx: CanvasRenderingContext2D, state: {
   camera: CameraState; createTool: CreateTool; activeTool: string; mode: string;
   shapeGesture: {start: Vec2; end: Vec2; square: boolean} | null; ngonSides: number;
-  trimStroke: Vec2[]; mirrorAxis: string; mirrorValue: number;
+  trimStroke: Vec2[]; trimPreview: Vec2[][]; mirrorAxis: string; mirrorValue: number;
 }, width: number, height: number, pixelRatio: number) {
   if(state.mode!=='create'||state.activeTool!=='joint')return;
   ctx.save();
   const {zoom,pan}=state.camera;
   ctx.setTransform(pixelRatio*zoom,0,0,pixelRatio*zoom,pixelRatio*pan.x,pixelRatio*pan.y);
+  if (state.createTool === 'trim') {
+    ctx.strokeStyle = '#cf313e'; ctx.lineWidth = 4 / zoom; ctx.setLineDash([]);
+    for (const path of state.trimPreview) {
+      ctx.beginPath(); path.forEach((point, index) => { if (index) ctx.lineTo(point.x, point.y); else ctx.moveTo(point.x, point.y); }); ctx.stroke();
+    }
+  }
   let points: Vec2[];
   if(state.shapeGesture){const {start,end,square}=state.shapeGesture;points=state.createTool==='rectangle'?rectanglePoints(start,end,square):state.createTool==='circle'?circlePoints(start,end):ngonPoints(start,end,state.ngonSides);}
   else points=state.trimStroke;

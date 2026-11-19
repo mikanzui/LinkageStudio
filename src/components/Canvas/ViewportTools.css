@@ -1,0 +1,26 @@
+.app-layout .viewport-tools {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  z-index: 16;
+}
+.viewport-tool-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+}
+.viewport-navigation {
+  border-left: 1px solid #555;
+  padding-left: 4px;
+}
+.app-layout .viewport-tools button:disabled { opacity: .35; cursor: default; }
+.app-layout .selection-options { max-height: min(60vh, var(--viewport-menu-max-height, 60vh)); }
+@media (pointer: coarse) and (max-width: 650px) {
+  .viewport-navigation { border-left: 0; padding-left: 0; }
+}

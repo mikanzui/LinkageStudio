@@ -3,9 +3,8 @@ import react from '@vitejs/plugin-react'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
 /**
- * Build config for standalone HTML export.
- * Usage: npx vite build --config vite.export.config.ts
- * Output: dist/index.html (single self-contained file)
+ * Historical standalone export configuration, retained for provenance only.
+ * This is not a current release entry point; use the root vite.config.ts.
  */
 export default defineConfig({
   plugins: [react(), viteSingleFile()],

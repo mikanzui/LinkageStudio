@@ -30,6 +30,7 @@ export interface RenderState {
   selectedIds: Set<string>;
   hoveredId: string | null;
   camera: CameraState;
+  hudBottomInset?: number;
   gridEnabled: boolean;
   gridSize: number;
   dof: number;
@@ -175,7 +176,7 @@ export function render(
     drawRulers(ctx, state.camera, w, h, pixelRatio);
   }
 
-  drawHUD(ctx, w, h - 70, state.dof, state.cursorWorld);
+  drawHUD(ctx, w, h - Math.max(70, state.hudBottomInset ?? 70), state.dof, state.cursorWorld);
   drawModeBadge(ctx, w, state.mode);
 
 }

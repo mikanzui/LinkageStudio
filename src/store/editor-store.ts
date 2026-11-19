@@ -30,6 +30,7 @@ interface EditorStore {
   mode: AppMode;
   activeTool: ToolType;
   selectMode: SelectMode;
+  viewportToolbarHeight: number;
   selectionGesture: SelectionGesture | null;
   excludedBodies: Set<string>;
   setSelectMode(mode: SelectMode): void;
@@ -58,6 +59,8 @@ interface EditorStore {
   ngonSides: number;
   square: boolean;
   trimStroke: Vec2[];
+  trimPreview: Vec2[][];
+  trimMode: 'power' | 'closest' | 'extend';
   trimScope: 'selected' | 'active';
   mirrorAxis: 'vertical' | 'horizontal';
   mirrorValue: number;
@@ -143,6 +146,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   mode: 'create',
   activeTool: 'joint',
   selectMode: 'single',
+  viewportToolbarHeight: 44,
   selectionGesture: null,
   excludedBodies: new Set(),
   setSelectMode(selectMode) { get().setTool('select'); set({ selectMode, selectionGesture: null }); },
@@ -175,6 +179,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   ngonSides: 6,
   square: false,
   trimStroke: [],
+  trimPreview: [],
+  trimMode: 'power',
   trimScope: 'selected',
   mirrorAxis: 'vertical',
   mirrorValue: 0,
@@ -200,7 +206,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   arcSelector: null,
 
   setMode(mode) {
-    set({ shapeGesture: null, trimStroke: [] });
+    set({ shapeGesture: null, selectionGesture: null, trimStroke: [], trimPreview: [], trimMode: 'power' });
     set({ selectMode: 'single', selectionGesture: null, excludedBodies: new Set() });
     resetHitTesting();
     set({ activeTool: mode === 'create' ? 'joint' : 'select' });
@@ -325,7 +331,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   },
 
   setCreateTool(tool) {
-    set({ shapeGesture: null, trimStroke: [], springPlacement: null, springReattachId: null, placementCommitted: false });
+    set({ shapeGesture: null, selectionGesture: null, trimStroke: [], trimPreview: [], springPlacement: null, springReattachId: null, placementCommitted: false });
     const previous = get();
     if (previous.editingOutlineId) {
       const m = useMechanismStore.getState(), outline = m.outlines[previous.editingOutlineId];
@@ -417,6 +423,6 @@ useMechanismStore.subscribe((state, previous) => {
   const e = useEditorStore.getState();
   const exists = (id: string) => state.joints[id] || state.links[id] || state.outlines[id] || state.images[id] || state.sliders[id] || state.colliders[id] || state.tracers[id] || state.springs[id] || state.forceSensors[id];
   const editing = e.editingOutlineId && state.outlines[e.editingOutlineId] ? e.editingOutlineId : null;
-  useEditorStore.setState({ frozenOutlineWorldPoints: new Map(), springPlacement: null, springReattachId: null, placementCommitted: false, selectedIds: new Set([...e.selectedIds].filter(exists)),
+  useEditorStore.setState({ frozenOutlineWorldPoints: new Map(), trimPreview: [], trimStroke: [], springPlacement: null, springReattachId: null, placementCommitted: false, selectedIds: new Set([...e.selectedIds].filter(exists)),
     editingOutlineId: editing, editingVertexIndex: editing && e.editingVertexIndex !== null && e.editingVertexIndex < state.outlines[editing].points.length ? e.editingVertexIndex : null });
 });

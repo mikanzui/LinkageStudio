@@ -90,9 +90,14 @@ try{
  const regionMode=async name=>{await activate(p.getByRole('button',{name:'Selection options',exact:true}));await activate(p.getByRole('radio',{name,exact:true}));};
  const selectionCDP=cdp;
  const draw=async points=>{if(selectionCDP){await selectionCDP.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...points[0],id:21}]});for(let segment=1;segment<points.length;segment++){const from=points[segment-1],to=points[segment];for(let step=1;step<=6;step++){await selectionCDP.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:from.x+(to.x-from.x)*step/6,y:from.y+(to.y-from.y)*step/6,id:21}]});await p.waitForTimeout(20);}}await p.waitForTimeout(300);await selectionCDP.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}else{await p.mouse.move(points[0].x,points[0].y);await p.mouse.down();for(const point of points.slice(1))await p.mouse.move(point.x,point.y,{steps:4});await p.mouse.up();}};
- await regionMode('Box');await draw([outline[0],outline[2]]);assert.deepEqual((await read()).editor.selectedIds,[id]);
+ await activate(p.getByRole('button',{name:'Box select',exact:true}));await draw([outline[0],outline[2]]);assert.deepEqual((await read()).editor.selectedIds,[id]);
  assert.deepEqual((await read()).graph,selectionBefore.graph);
- await regionMode('Lasso');await draw([...outline,outline[0]]);assert.deepEqual((await read()).editor.selectedIds,[id]);
+ await activate(p.getByRole('button',{name:'Lasso select',exact:true}));assert.equal(await p.getByRole('button',{name:'Lasso select',exact:true}).getAttribute('aria-pressed'),'true');
+ await draw([...outline,outline[0]]);assert.deepEqual((await read()).editor.selectedIds,[id]);
+ assert.deepEqual((await read()).graph,selectionBefore.graph);
+ await p.mouse.move(outline[0].x,outline[0].y);await p.mouse.down();await p.mouse.move(outline[1].x,outline[1].y,{steps:4});
+ await p.getByRole('button',{name:'Select',exact:true}).press('Enter');await p.mouse.up();
+ assert.equal((await read()).editor.selectionGesture,null,'Switching tools clears a held lasso');
  assert.deepEqual((await read()).graph,selectionBefore.graph);
  await activate(p.getByTitle('Expand panel',{exact:true}));
  await activate(p.getByRole('checkbox',{name:'Selected joint belongs to Body 1',exact:true}));
@@ -107,6 +112,8 @@ try{
  await p.setViewportSize({width:512,height:1000});await p.waitForTimeout(100);const split=await canvas.boundingBox();assert(split.width>=400,'Split View retains usable canvas');
  await activate(p.getByRole('button',{name:'Fit mechanism',exact:true}));await p.screenshot({path:join(output,'split-fit.png')});
  const controls=await p.getByRole('toolbar',{name:'Viewport'}).boundingBox();assert(controls.x>=split.x&&controls.x+controls.width<=split.x+split.width+1);
+ const targets=await p.getByRole('toolbar',{name:'Viewport'}).getByRole('button').evaluateAll(buttons=>buttons.map(el=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {name:el.getAttribute('aria-label'),width:r.width,height:r.height,reachable:hit===el||el.contains(hit)};}));
+ assert(targets.every(t=>t.width>=44&&t.height>=44&&t.reachable),JSON.stringify(targets));
  assert.equal(await p.getByRole('toolbar',{name:'Viewport'}).evaluate(el=>getComputedStyle(el).position),'absolute','production styles must be loaded');
  results.push({check:'Split View canvas/toolbars remain reachable',passed:true,split});
  const current=await read();

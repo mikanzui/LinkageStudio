@@ -1,11 +1,16 @@
 # Feature And Patch Backlog
 
 Owner: Codex (implementation and verification), Jake (product direction).
-Updated 2026-11-16 for 17.0.0. This consolidates the rebuild audit, remaining
+Updated 2026-11-19 for 17.1.0. This consolidates the rebuild audit, remaining
 qualifications and user requests. It is not a promise that every proposed idea
 will ship. Historical gate results remain in their original reports.
 
 ## Status And Priority
+
+Active17.1.0 delivery: directly visible selection tools, standard lasso,
+intersection-based Power/closest trim and open-line extension; see
+[v17.1-plan.md](v17.1-plan.md). Full CAD trim mode parity and tutorial lessons
+remain future scope, not claims of implemented features.
 
 - PATCH: an identified gap, not necessarily an observed user-visible failure.
 - QUALIFY: implemented behavior needing additional target/service evidence.

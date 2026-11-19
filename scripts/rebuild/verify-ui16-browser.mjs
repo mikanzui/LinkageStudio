@@ -117,7 +117,17 @@ try{for(const profile of profiles){
   assert(surface.height>=(profile.touch?44:24));assert.equal(surface.appearance,'none');await snap('controls');
   const download=page.waitForEvent('download');await page.getByRole('button',{name:'Save',exact:true}).click();const saved=JSON.parse(await readFile(await(await download).path(),'utf8'));assert.equal(saved.simulationSettings.gravityEnabled,true);assert(Math.abs(saved.simulationSettings.damping-(1-(before+1)/100))<1e-9);
   checks.push('custom native checkbox/range paint, focus/Space/arrows, coarse hit rows and saved physics values');
-  await page.getByRole('button',{name:'Selection options',exact:true}).click();const single=page.getByRole('radio',{name:'Single',exact:true});const radio=await single.evaluate(el=>({radius:getComputedStyle(el).borderRadius,appearance:getComputedStyle(el).appearance}));assert.equal(radio.radius,'50%');assert.equal(radio.appearance,'none');await page.keyboard.press('Escape');
+  const toolbarTargets=await page.getByRole('toolbar',{name:'Viewport'}).getByRole('button').evaluateAll(buttons=>buttons.map(el=>{
+   const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+   return {label:el.getAttribute('aria-label'),width:r.width,height:r.height,reachable:hit===el||el.contains(hit)};
+  }));
+  assert(toolbarTargets.every(t=>t.reachable&&(!profile.touch||t.width>=44&&t.height>=44)),JSON.stringify(toolbarTargets));
+  if(profile.id==='split')await page.setViewportSize({width:512,height:440});
+  await page.getByRole('button',{name:'Selection options',exact:true}).click();
+  const popup=await page.locator('.selection-options').boundingBox(),visibleCanvas=await page.locator('canvas').boundingBox();
+  assert(popup.y>=visibleCanvas.y&&popup.y+popup.height<=visibleCanvas.y+visibleCanvas.height,'Selection popup fits above wrapped toolbar');
+  const single=page.getByRole('radio',{name:'Single',exact:true});await single.scrollIntoViewIfNeeded();const radio=await single.evaluate(el=>({radius:getComputedStyle(el).borderRadius,appearance:getComputedStyle(el).appearance}));assert.equal(radio.radius,'50%');assert.equal(radio.appearance,'none');await page.keyboard.press('Escape');
+  if(profile.id==='split')await page.setViewportSize({width:profile.width,height:profile.height});
   if(engine==='chromium'){await page.emulateMedia({forcedColors:'active'});const forced=await gravity.evaluate(el=>getComputedStyle(el).appearance);assert.equal(forced,'auto');await snap('forced-colors');await page.emulateMedia({forcedColors:'none'});checks.push('forced-colors uses native state indicators');}
   if(await page.getByTitle('Collapse panel',{exact:true}).count())await page.getByTitle('Collapse panel',{exact:true}).click();
   await importSeed(8,true);point=await position('a');await page.mouse.click(point.x,point.y,{button:'right'});await menu.waitFor();assert(await menu.evaluate(el=>el.classList.contains('radial-orbit')));assert.equal(await menu.locator('.radial-body').count(),12);await page.keyboard.press('Escape');checks.push('twelve-body legacy-sized projects retain a fan instead of the old six-body list cutoff');

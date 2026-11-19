@@ -1,5 +1,24 @@
 # Visual And Usability Reference
 
+## 17.1.0 Selection Bar And CAD Trim
+
+Active comparison: [v17.1-plan.md](v17.1-plan.md). C03/C05: pictured compact bottom
+bar restored with directly visible Pan/Select/Box/Lasso and standard Lucide lasso;
+filters remain in Selection options. C08/C09: Power/closest trim now use real
+intersections; user explicitly confirmed partial circle arcs. The historical
+whole-circle rule below still applies to isolated circles, not intersected ones.
+C10/C12: grouped wrapping, measured toolbar/HUD separation, coarse targets,
+release-coordinate selection and cancellation. C13: package17.1.0 is canonical;
+old standalone app/config are explicitly archived, not alternate current apps.
+Native Chrome/WebKit desktop/coarse/narrow evidence PASS; final cumulative
+acceptance PASS24/24 (through-g10-MjlX6R). Hosted/live checks remain pending.
+Retained final-source visuals:
+[desktop arc](evidence/v17.1/screenshots/desktop-trimmed-arc.png),
+[tablet candidate preview](evidence/v17.1/screenshots/tablet-trim-preview.png),
+[split Properties and reachable toolbar](evidence/v17.1/screenshots/split-properties-toolbar.png).
+Every button is hit-tested; the popup is bounded at512x440 with Properties open.
+Physical iPad/Pencil/VoiceOver remain unverified.
+
 ## V16 Draw Palette Restoration
 
 Published2026-11-17 from master8ca3594 after990 domain /27 tooling and24

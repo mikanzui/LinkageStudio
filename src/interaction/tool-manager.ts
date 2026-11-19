@@ -178,7 +178,8 @@ function isFixed(jointId: string): boolean {
 let isDragging = false;
 let dragJointId: string | null = null;
 let isPanning = false;
-let marquee: { region: SelectionGesture; initial: Set<string>; additive: boolean } | null = null;
+let marquee: { region: SelectionGesture; initial: Set<string>; additive: boolean; overflow: boolean } | null = null;
+const MAX_LASSO_POINTS = 2048;
 let lastMouse: Vec2 = { x: 0, y: 0 };
 
 // Slider line drag state
@@ -340,7 +341,7 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
   if (editor.activeTool === 'select') {
     if (editor.selectMode !== 'single') {
       const region: SelectionGesture = editor.selectMode === 'box' ? { kind: 'box', start: worldPos, end: worldPos } : { kind: 'lasso', points: [worldPos] };
-      marquee = { region, initial: new Set(editor.selectedIds), additive: e.shiftKey };
+      marquee = { region, initial: new Set(editor.selectedIds), additive: e.shiftKey, overflow: false };
       useEditorStore.setState({ selectionGesture: region });
       return;
     }
@@ -674,7 +675,6 @@ export function handleMouseDown(e: PointerEvent | MouseEvent, canvas: HTMLCanvas
       // Clicked empty space — deselect any selected outline
       if (editor.selectedIds.size > 0) {
         editor.clearSelection();
-        return;
       }
     }
 
@@ -804,8 +804,14 @@ export function handleMouseMove(e: PointerEvent, canvas: HTMLCanvasElement) {
   if (moveGeometry(worldPos)) return;
   if (marquee) {
     const region = marquee.region;
+    if (editor.mode !== 'create' || editor.activeTool !== 'select' || editor.selectMode !== region.kind || editor.selectionGesture !== region) {
+      marquee = null; useEditorStore.setState({ selectionGesture: null }); return;
+    }
     if (region.kind === 'box') marquee.region = { ...region, end: worldPos };
-    else if (distance(worldPos, region.points[region.points.length - 1]) * editor.camera.zoom >= 2) marquee.region = { kind: 'lasso', points: [...region.points, worldPos] };
+    else if (distance(worldPos, region.points[region.points.length - 1]) * editor.camera.zoom >= 2) {
+      if (region.points.length >= MAX_LASSO_POINTS) marquee.overflow = true;
+      else marquee.region = { kind: 'lasso', points: [...region.points, worldPos] };
+    }
     useEditorStore.setState({ selectionGesture: marquee.region });
     return;
   }
@@ -999,9 +1005,22 @@ export function handleMouseUp(_e?: PointerEvent | MouseEvent, _canvas?: HTMLCanv
   const rect = _canvas?.getBoundingClientRect();
   finishGeometry(!!_e, _e && rect ? screenToWorld({x:_e.clientX-rect.left,y:_e.clientY-rect.top},editor.camera) : undefined);
   if (marquee) {
-    if (_e && editor.mode === 'create' && editor.activeTool === 'select') {
-      const selected = selectInRegion(useMechanismStore.getState(), marquee.region, editor.excludedBodies);
-      useEditorStore.setState({ selectedIds: marquee.additive ? new Set([...marquee.initial, ...selected]) : selected });
+    if (_e && editor.mode === 'create' && editor.activeTool === 'select' && editor.selectMode === marquee.region.kind && editor.selectionGesture === marquee.region) {
+      if (rect) {
+        const end = screenToWorld({ x: _e.clientX - rect.left, y: _e.clientY - rect.top }, editor.camera);
+        if (marquee.region.kind === 'box') marquee.region = { ...marquee.region, end };
+        else if (distance(end, marquee.region.points[marquee.region.points.length - 1]) > 0) {
+          if (marquee.region.points.length >= MAX_LASSO_POINTS) marquee.overflow = true;
+          else marquee.region = { kind: 'lasso', points: [...marquee.region.points, end] };
+        }
+      }
+      if (marquee.overflow) {
+        useEditorStore.setState({ selectedIds: new Set(marquee.initial) });
+        setProjectMessage('Selection stroke is too long. Selection unchanged.', 'alert');
+      } else {
+        const selected = selectInRegion(useMechanismStore.getState(), marquee.region, editor.excludedBodies);
+        useEditorStore.setState({ selectedIds: marquee.additive ? new Set([...marquee.initial, ...selected]) : selected });
+      }
     }
     marquee = null;
     useEditorStore.setState({ selectionGesture: null });

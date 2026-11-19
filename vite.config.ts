@@ -13,11 +13,12 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   plugins: [
+    { name: 'release-identity', transformIndexHtml: html => html.replaceAll('%APP_VERSION%', pkg.version) },
     react(),
     VitePWA({
       registerType: 'prompt',
       injectRegister: null,
-      includeAssets: ['icon-192.svg', 'icon-512.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
+      includeAssets: ['icon-192.svg', 'icon-512.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'flatten-js-notice.txt'],
       manifest: {
         name: 'Slinker',
         short_name: 'Slinker',

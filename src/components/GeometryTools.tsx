@@ -43,10 +43,15 @@ export function GeometryOptions() {
   const e=useEditorStore(),m=useMechanismStore();
   if(e.mode!=='create'||e.activeTool!=='joint'||!['rectangle','ngon','trim','mirror','outline','circle'].includes(e.createTool))return null;
   return <div className="geometry-options" role="group" aria-label="Geometry options">
-    {e.createTool==='outline'&&!e.editingOutlineId&&<><button type="button" className="tool-btn" aria-label="Finish outline" title="Finish outline" disabled={e.outlinePoints.length<3} onClick={commitOutline}><Check size={18}/></button><button type="button" className="tool-btn" aria-label="Cancel outline" title="Cancel outline" onClick={()=>e.setCreateTool('joints')}><X size={18}/></button></>}
+    {e.createTool==='outline'&&!e.editingOutlineId&&<><button type="button" className="tool-btn" aria-label="Finish outline" title="Finish outline" disabled={e.outlinePoints.length<2} onClick={commitOutline}><Check size={18}/></button><button type="button" className="tool-btn" aria-label="Cancel outline" title="Cancel outline" onClick={()=>e.setCreateTool('joints')}><X size={18}/></button></>}
     {e.createTool==='rectangle'&&<label><input type="checkbox" checked={e.square} onChange={event=>useEditorStore.setState({square:event.target.checked})}/>Square</label>}
     {e.createTool==='ngon'&&<label>Sides<CommitInput key={e.ngonSides} label="Polygon sides" numeric min={3} max={128} value={e.ngonSides} commit={value=>{const n=Number(value);if(Number.isInteger(n))useEditorStore.setState({ngonSides:n});}}/></label>}
-    {e.createTool==='trim'&&<fieldset><legend>Trim Scope</legend><label><input type="radio" name="trim-scope" checked={e.trimScope==='selected'} onChange={()=>useEditorStore.setState({trimScope:'selected'})}/>Selected Shapes</label><label><input type="radio" name="trim-scope" checked={e.trimScope==='active'} onChange={()=>useEditorStore.setState({trimScope:'active'})}/>Active Bodies</label></fieldset>}
+    {e.createTool==='trim'&&<>
+      <label>Method<select aria-label="Trim method" value={e.trimMode} onChange={event => { e.setCreateTool('trim'); useEditorStore.setState({ trimMode: event.target.value as typeof e.trimMode }); }}>
+        <option value="power">Power trim</option><option value="closest">Trim to closest</option><option value="extend">Extend to boundary</option>
+      </select></label>
+      <fieldset><legend>Trim Scope</legend><label><input type="radio" name="trim-scope" checked={e.trimScope==='selected'} onChange={()=>{e.setCreateTool('trim');useEditorStore.setState({trimScope:'selected'});}}/>Selected Shapes</label><label><input type="radio" name="trim-scope" checked={e.trimScope==='active'} onChange={()=>{e.setCreateTool('trim');useEditorStore.setState({trimScope:'active'});}}/>Active Bodies</label></fieldset>
+    </>}
     {e.createTool==='mirror'?<>
       <fieldset><legend>Axis</legend>{(['vertical','horizontal'] as const).map(axis=><label key={axis}><input type="radio" name="mirror-axis" checked={e.mirrorAxis===axis} onChange={()=>useEditorStore.setState({mirrorAxis:axis})}/>{axis==='vertical'?'Vertical':'Horizontal'}</label>)}</fieldset>
       <label>Coordinate<CommitInput key={e.mirrorValue} label="Mirror axis coordinate" value={e.mirrorValue} numeric commit={value=>useEditorStore.setState({mirrorValue:Number(value)})}/></label>

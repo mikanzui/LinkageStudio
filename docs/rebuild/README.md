@@ -2,6 +2,9 @@
 
 Start with the [master plan](MASTER-PLAN.md) and [progress tracker](progress-tracker.md).
 For every UI change, use the [visual and usability comparison](visual-usability-comparison.md).
+Current17.1.0 selection/trim scope and verification are tracked in
+[v17.1-plan.md](v17.1-plan.md). The dated groundwork/checkpoint text below is
+historical and does not override current release status.
 
 Audit date: 2026-11-15. Scope: source/history comparison and local baseline checks.
 This is groundwork, not approval to replace the app or evidence that the current
@@ -127,7 +130,7 @@ U = inherited from selected upstream; F = fork addition; E = fork extension.
 | Project library | Direct editor with project naming | F: projects route, cloud list/new/open/rename/delete, guest entry | `src/pages/ProjectsPage.tsx` |
 | Authentication | Absent | F: Microsoft redirect sign-in, silent token/popup fallback | `src/main.tsx`, `src/auth/msal-config.ts` |
 | Cloud storage | Absent | F: OneDrive folder storage, autosave, retries/status and local backup | `src/services/onedrive.ts`, `src/services/autosave.ts` |
-| PWA/offline | Installable cached shell and standalone HTML export path | E: renamed app, splash, deployment base path and update handling | `vite.config.ts`, `vite.export.config.ts`, `src/components/SplashScreen.tsx` |
+| PWA/offline | Installable cached shell; historical standalone exporter archived, not a current release | E: renamed app, splash, deployment base path and update handling | `vite.config.ts`, `docs/archive/vite.export.config.ts`, `src/components/SplashScreen.tsx` |
 | Touch/Pencil | Explicit pen path, finger pan/component drag, pinch and iOS picker fixes | E: marquee, new tools, context menus and responsive layout | `src/components/Canvas/MechanismCanvas.tsx` |
 | Quality tooling | Manual solver scenarios/scripts | F: Vitest, diagnostics and physics review docs; deployment workflow | `vitest.config.ts`, `.github/workflows/deploy-pages.yml` |
 

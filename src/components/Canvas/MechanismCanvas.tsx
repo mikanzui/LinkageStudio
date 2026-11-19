@@ -28,7 +28,7 @@ function interactionCheckpoint() {
   return {
     mechanism: { ...snapshotMechanism(m), angleConstraints: structuredClone(m.angleConstraints), past: m.past, future: m.future },
     editor: structuredClone({ selectedIds: e.selectedIds, outlinePoints: e.outlinePoints, frozenOutlineWorldPoints: e.frozenOutlineWorldPoints, arcSelector: e.arcSelector,
-      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture, shapeGesture: e.shapeGesture, trimStroke: e.trimStroke, springPlacement: e.springPlacement, springReattachId: e.springReattachId, placementCommitted: e.placementCommitted }),
+      sliderPointA: e.sliderPointA, colliderPointA: e.colliderPointA, editingOutlineId: e.editingOutlineId, editingVertexIndex: e.editingVertexIndex, selectionGesture: e.selectionGesture, shapeGesture: e.shapeGesture, trimStroke: e.trimStroke, trimPreview: e.trimPreview, springPlacement: e.springPlacement, springReattachId: e.springReattachId, placementCommitted: e.placementCommitted }),
   };
 }
 
@@ -112,6 +112,7 @@ export function MechanismCanvas() {
         selectedIds: editor.selectedIds,
         hoveredId: editor.hoveredId,
         camera: editor.camera,
+        hudBottomInset: editor.viewportToolbarHeight + 24,
         gridEnabled: editor.gridEnabled,
         gridSize: editor.gridSize,
         dof: sim.dof,
@@ -564,6 +565,7 @@ export function MechanismCanvas() {
         }
       }}
       onPointerLeave={(e) => {
+        if (!gesture.current.activePointers.size && useEditorStore.getState().trimPreview.length) useEditorStore.setState({ trimPreview: [] });
         // Only clear cursor for mouse (pen/touch use capture)
         if (e.pointerType === 'mouse') {
           cursorWorldRef.current = null;

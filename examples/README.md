@@ -1,6 +1,6 @@
 # Example Projects
 
-In Slinker17.0.0, open **Projects > Examples**, select a model and choose
+In Slinker17.1.0, open **Projects > Examples**, select a model and choose
 **Open example**. The adjacent download icon provides its source file. Search
 matches names, mechanisms and tags. No Microsoft account is required. Examples
 are bundled for offline use after the app finishes its first online installation.

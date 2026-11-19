@@ -45,6 +45,8 @@ jobs:
         run: node scripts/rebuild/verify-g10-production.mjs chromium --bundled-chromium
       - name: WebKit production, offline, update and credit checks
         run: node scripts/rebuild/verify-g10-production.mjs webkit
+      - name: Native production selection, CAD trim and offline examples
+        run: node scripts/rebuild/run-drawing-gate.mjs --production --bundled-chromium
       - name: Chromium Projects examples, legacy handle motion and save-reopen
         run: node scripts/rebuild/verify-examples-browser.mjs chromium --bundled-chromium
       - name: WebKit Projects examples, tablet layout and save-reopen

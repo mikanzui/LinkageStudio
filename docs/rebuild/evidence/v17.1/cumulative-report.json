@@ -1,0 +1,537 @@
+{
+  "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\cumulative\\through-g10-MjlX6R",
+  "sourceStart": {
+    "commit": "0d10f6ecb7ef25fa38e2cf0559449d088bdfce19",
+    "sourceSha256": "f2b336908ec07fbdd969d0d7c3b22912de75eefe5fdaeced955c2a4b16054ee8",
+    "sourceFiles": 148,
+    "cloudBoundary": "mock",
+    "base": "/LinkageStudio/"
+  },
+  "sourceEnd": {
+    "commit": "0d10f6ecb7ef25fa38e2cf0559449d088bdfce19",
+    "sourceSha256": "f2b336908ec07fbdd969d0d7c3b22912de75eefe5fdaeced955c2a4b16054ee8",
+    "sourceFiles": 148,
+    "cloudBoundary": "mock",
+    "base": "/LinkageStudio/"
+  },
+  "results": [
+    {
+      "gate": 10,
+      "script": "verify-g10-production.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T16:58:04.749Z",
+      "finishedAt": "2026-11-19T16:58:22.365Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g10\\webkit-production-wJdRZM",
+        "passed": true
+      }
+    },
+    {
+      "gate": 10,
+      "script": "verify-g10-production.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T16:58:22.366Z",
+      "finishedAt": "2026-11-19T16:58:36.271Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g10\\chromium-production-YFpXPb",
+        "passed": true
+      }
+    },
+    {
+      "gate": 1,
+      "script": "verify-g1-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T16:58:36.272Z",
+      "finishedAt": "2026-11-19T16:58:54.302Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g1\\browser-yr40JS",
+        "reportSha256": "30308ccd62a13930c367f20bd8193ad3c0c990dcee92ebb9529d09c81235ce77",
+        "passed": true
+      }
+    },
+    {
+      "gate": 1,
+      "script": "verify-g1-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T16:58:54.303Z",
+      "finishedAt": "2026-11-19T16:59:05.580Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g1\\browser-BzTVXN",
+        "reportSha256": "f06fd84c5c5860b380b35f894931a5e68ac011219c9748e4a8e2c5e1c83d87a9",
+        "passed": true
+      }
+    },
+    {
+      "gate": 2,
+      "script": "verify-g2-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T16:59:05.581Z",
+      "finishedAt": "2026-11-19T16:59:17.920Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g2\\webkit-00D9wg",
+        "passed": true
+      }
+    },
+    {
+      "gate": 2,
+      "script": "verify-g2-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T16:59:17.920Z",
+      "finishedAt": "2026-11-19T16:59:29.075Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g2\\chromium-8ECqqY",
+        "passed": true
+      }
+    },
+    {
+      "gate": 3,
+      "script": "verify-g3-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T16:59:29.076Z",
+      "finishedAt": "2026-11-19T17:00:02.376Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g3\\webkit-workflow-y52Bhh",
+        "passed": true
+      }
+    },
+    {
+      "gate": 3,
+      "script": "verify-g3-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:00:02.377Z",
+      "finishedAt": "2026-11-19T17:01:07.008Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g3\\chromium-workflow-tbkNqe",
+        "passed": true
+      }
+    },
+    {
+      "gate": 4,
+      "script": "verify-g4-input.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:01:07.008Z",
+      "finishedAt": "2026-11-19T17:01:10.606Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g4\\webkit-input-U5I9A4",
+        "results": [
+          {
+            "check": "trusted touch tap creates one joint",
+            "passed": true
+          },
+          {
+            "check": "DPR2 backing pixels match CSS-space input",
+            "passed": true,
+            "pixel": {
+              "width": 1832,
+              "height": 2562,
+              "cssWidth": 916,
+              "cssHeight": 1281,
+              "dpr": 2
+            }
+          },
+          {
+            "check": "Select on empty canvas never creates geometry",
+            "passed": true
+          },
+          {
+            "check": "trusted WebKit multi-pointer/pen dispatch unavailable; pure ownership tests cover code",
+            "passed": true,
+            "qualification": "limited"
+          },
+          {
+            "check": "box/lasso selection, body exclusion, keyboard panel resize and reset",
+            "passed": true
+          },
+          {
+            "check": "project-name Escape discards draft without blur commit",
+            "passed": true
+          },
+          {
+            "check": "Split View canvas/toolbars remain reachable",
+            "passed": true,
+            "split": {
+              "x": 54,
+              "y": 85,
+              "width": 404,
+              "height": 915
+            }
+          },
+          {
+            "check": "actual overlap click cycles; intervening hover never consumes click",
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    },
+    {
+      "gate": 4,
+      "script": "verify-g4-input.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:01:10.606Z",
+      "finishedAt": "2026-11-19T17:01:19.103Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g4\\chromium-input-3iDbnc",
+        "results": [
+          {
+            "check": "trusted touch tap creates one joint",
+            "passed": true
+          },
+          {
+            "check": "DPR2 backing pixels match CSS-space input",
+            "passed": true,
+            "pixel": {
+              "width": 1832,
+              "height": 2562,
+              "cssWidth": 916,
+              "cssHeight": 1281,
+              "dpr": 2
+            }
+          },
+          {
+            "check": "Select on empty canvas never creates geometry",
+            "passed": true
+          },
+          {
+            "check": "trusted touch cancel restores graph and history boundary; keyboard redo",
+            "passed": true
+          },
+          {
+            "check": "second finger rolls back document drag before pinch",
+            "passed": true
+          },
+          {
+            "check": "finger pan does not create geometry",
+            "passed": true
+          },
+          {
+            "check": "two-finger pinch keeps midpoint/world anchor stable",
+            "passed": true
+          },
+          {
+            "check": "trusted pen path ignores concurrent finger/palm without ending pen",
+            "passed": true
+          },
+          {
+            "check": "finger input resumes after pen release",
+            "passed": true
+          },
+          {
+            "check": "Escape cancels active captured mouse drag",
+            "passed": true
+          },
+          {
+            "check": "undo/redo during capture cancels first; no stale drag restoration",
+            "passed": true
+          },
+          {
+            "check": "native lost capture rolls back active drag",
+            "passed": true
+          },
+          {
+            "check": "orientation/container resize cancels active document drag",
+            "passed": true
+          },
+          {
+            "check": "box/lasso selection, body exclusion, keyboard panel resize and reset",
+            "passed": true
+          },
+          {
+            "check": "project-name Escape discards draft without blur commit",
+            "passed": true
+          },
+          {
+            "check": "Split View canvas/toolbars remain reachable",
+            "passed": true,
+            "split": {
+              "x": 54,
+              "y": 85,
+              "width": 404,
+              "height": 915
+            }
+          },
+          {
+            "check": "actual overlap click cycles; intervening hover never consumes click",
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    },
+    {
+      "gate": 4,
+      "script": "verify-g4-bodies.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:01:19.103Z",
+      "finishedAt": "2026-11-19T17:01:28.223Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g4\\bodies-W1R5AH",
+        "stableSource": true,
+        "passed": true
+      }
+    },
+    {
+      "gate": 4,
+      "script": "verify-g4-bodies.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:01:28.224Z",
+      "finishedAt": "2026-11-19T17:01:34.483Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g4\\bodies-2vI9d4",
+        "stableSource": true,
+        "passed": true
+      }
+    },
+    {
+      "gate": 4,
+      "script": "verify-ui16-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:01:34.483Z",
+      "finishedAt": "2026-11-19T17:02:09.054Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\ui16\\webkit-YLLy4j",
+        "passed": true
+      }
+    },
+    {
+      "gate": 4,
+      "script": "verify-ui16-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:02:09.055Z",
+      "finishedAt": "2026-11-19T17:02:43.272Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\ui16\\chromium-f6RoNk",
+        "passed": true
+      }
+    },
+    {
+      "gate": 5,
+      "script": "verify-g5-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:02:43.273Z",
+      "finishedAt": "2026-11-19T17:04:43.784Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g5\\webkit-browser-9ow17p",
+        "stableSource": true,
+        "passed": true,
+        "gateAcceptance": false,
+        "results": [
+          {
+            "profile": "desktop",
+            "passed": true,
+            "failures": []
+          },
+          {
+            "profile": "tablet",
+            "passed": true,
+            "failures": []
+          }
+        ]
+      }
+    },
+    {
+      "gate": 5,
+      "script": "verify-g5-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:04:43.785Z",
+      "finishedAt": "2026-11-19T17:05:46.717Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g5\\chromium-browser-xZEHVa",
+        "stableSource": true,
+        "passed": true,
+        "gateAcceptance": false,
+        "results": [
+          {
+            "profile": "desktop",
+            "passed": true,
+            "failures": []
+          },
+          {
+            "profile": "tablet",
+            "passed": true,
+            "failures": []
+          }
+        ]
+      }
+    },
+    {
+      "gate": 6,
+      "script": "verify-g6-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:05:46.718Z",
+      "finishedAt": "2026-11-19T17:07:16.610Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g6\\webkit-browser-wySpwk",
+        "stableSource": true,
+        "passed": true,
+        "gateAcceptance": false,
+        "results": [
+          {
+            "profile": "desktop",
+            "passed": true,
+            "failures": []
+          },
+          {
+            "profile": "tablet",
+            "passed": true,
+            "failures": []
+          }
+        ]
+      }
+    },
+    {
+      "gate": 6,
+      "script": "verify-g6-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:07:16.614Z",
+      "finishedAt": "2026-11-19T17:08:05.095Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g6\\chromium-browser-Urz0S6",
+        "stableSource": true,
+        "passed": true,
+        "gateAcceptance": false,
+        "results": [
+          {
+            "profile": "desktop",
+            "passed": true,
+            "failures": []
+          },
+          {
+            "profile": "tablet",
+            "passed": true,
+            "failures": []
+          }
+        ]
+      }
+    },
+    {
+      "gate": 7,
+      "script": "verify-g7-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:08:05.096Z",
+      "finishedAt": "2026-11-19T17:09:21.960Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g7\\webkit-browser-0sVQWI",
+        "passed": true,
+        "stableSource": true,
+        "gateAcceptance": false,
+        "failures": []
+      }
+    },
+    {
+      "gate": 7,
+      "script": "verify-g7-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:09:21.962Z",
+      "finishedAt": "2026-11-19T17:10:09.285Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g7\\chromium-browser-04bujE",
+        "passed": true,
+        "stableSource": true,
+        "gateAcceptance": false,
+        "failures": []
+      }
+    },
+    {
+      "gate": 8,
+      "script": "verify-g8-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:10:09.286Z",
+      "finishedAt": "2026-11-19T17:12:07.419Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe",
+        "passed": true,
+        "selectedChecksPassed": true,
+        "partial": false,
+        "gateAcceptance": false
+      }
+    },
+    {
+      "gate": 8,
+      "script": "verify-g8-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:12:07.419Z",
+      "finishedAt": "2026-11-19T17:13:30.581Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\chromium-browser-nn8STw",
+        "passed": true,
+        "selectedChecksPassed": true,
+        "partial": false,
+        "gateAcceptance": false
+      }
+    },
+    {
+      "gate": 9,
+      "script": "verify-g9-browser.mjs",
+      "engine": "webkit",
+      "startedAt": "2026-11-19T17:13:30.582Z",
+      "finishedAt": "2026-11-19T17:15:30.677Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g9\\webkit-browser-b6RnUQ",
+        "passed": true
+      }
+    },
+    {
+      "gate": 9,
+      "script": "verify-g9-browser.mjs",
+      "engine": "chromium",
+      "startedAt": "2026-11-19T17:15:30.677Z",
+      "finishedAt": "2026-11-19T17:17:01.385Z",
+      "exitCode": 0,
+      "passed": true,
+      "evidence": {
+        "output": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g9\\chromium-browser-Rgq6tZ",
+        "passed": true
+      }
+    }
+  ],
+  "plannedRuns": 24,
+  "abortedAfterFailure": false,
+  "passed": true
+}

@@ -1,7 +1,7 @@
 {
   "name": "linkage-studio",
   "private": true,
-  "version": "17.0.0",
+  "version": "17.1.0",
   "type": "module",
   "engines": {
     "node": ">=24.13.1 <25"
@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@azure/msal-browser": "5.29.1",
+    "@flatten-js/core": "1.6.15",
     "lucide-react": "1.73.0",
     "nanoid": "5.1.16",
     "react": "^19.2.4",

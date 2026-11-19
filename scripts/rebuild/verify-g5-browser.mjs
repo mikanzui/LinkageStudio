@@ -177,6 +177,7 @@ try {
       const chooser = page.waitForEvent('filechooser');
       await activate(button('Open')); await acceptDirtyOpen();
       await (await chooser).setFiles({ name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(data)) });
+      await page.getByText('Opened '+name+'.',{exact:true}).waitFor();
       await page.waitForFunction(name => globalThis.__LINKAGE_G0_READ__.editor().projectName === name
         && document.querySelector('.top-bar')?.getAttribute('aria-busy') === 'false', data.projectName);
       await collapsePanels();
@@ -203,18 +204,18 @@ try {
       } else if (profile.touch) await page.touchscreen.tap(p.x, p.y);
       else await page.mouse.click(p.x, p.y);
     }
-    async function dragWorld(points, cancel) {
+    async function dragWorld(points, cancel, beforeRelease, modifiers = 0) {
       const positions = [];
       for (const p of points) positions.push(await screen(p));
       const first = positions[0];
-      if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...first, id: 31 }] });
+      if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...first, id: 31 }], modifiers });
       else { await page.mouse.move(first.x, first.y); await page.mouse.down(); }
       try {
         for (let i = 1; i < positions.length; i++) {
           const from = positions[i - 1], to = positions[i];
           for (let n = 1; n <= 12; n++) {
             const p = { x: from.x + (to.x - from.x) * n / 12, y: from.y + (to.y - from.y) * n / 12 };
-            if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...p, id: 31 }] });
+            if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...p, id: 31 }], modifiers });
             else await page.mouse.move(p.x, p.y);
             await page.waitForTimeout(16);
           }
@@ -222,9 +223,10 @@ try {
         // Chrome 157/159 rapid flick release can suppress the NEXT native button click.
         // This hold must precede release; sleeping after release is not equivalent.
         await page.waitForTimeout(300);
+        if (beforeRelease) await beforeRelease();
         if (cancel === 'Escape') await page.keyboard.press('Escape');
       } finally {
-        if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: cancel === 'touchCancel' ? 'touchCancel' : 'touchEnd', touchPoints: [] });
+        if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: cancel === 'touchCancel' ? 'touchCancel' : 'touchEnd', touchPoints: [], modifiers });
         else await page.mouse.up();
       }
     }
@@ -350,7 +352,7 @@ try {
         assert.equal((await editor()).createTool, 'rectangle');
         assert.equal(await button('Rectangle').getAttribute('aria-pressed'), 'true');
         await selectGeometry('Outline');
-        await tapWorld({ x: 280, y: 300 }); await tapWorld({ x: 380, y: 300 });
+        await tapWorld({ x: 280, y: 300 });
         assert(await button('Finish outline').isDisabled());
         await selectGeometry('Circle');
         await selectGeometry('Outline');
@@ -373,6 +375,11 @@ try {
               reachable: hit === el || el.contains(hit) };
           }));
           assert(boxes.every(b => b.contained && b.reachable), JSON.stringify(boxes));
+          const viewportButtons=await page.getByRole('toolbar',{name:'Viewport'}).getByRole('button').evaluateAll(buttons=>buttons.map(el=>{
+            const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+            return {label:el.getAttribute('aria-label'),width:r.width,height:r.height,reachable:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight&&(hit===el||el.contains(hit))};
+          }));
+          assert(viewportButtons.every(b=>b.reachable&&(!profile.touch||b.width>=44&&b.height>=44)),JSON.stringify(viewportButtons));
           if (profile.touch) assert(boxes.every(b => b.width >= 44 && b.height >= 44), 'Palette coarse targets');
           await capture('v16-palette-' + viewport.width + 'x' + viewport.height);
         }
@@ -522,9 +529,16 @@ try {
         const points = [{x:260,y:650},{x:400,y:650},{x:350,y:780}];
         await selectGeometry('Outline');
         await activate(page.getByTitle('Body 1',{exact:true}));
-        await tapWorld(points[0]);await tapWorld(points[1]);
+        await tapWorld(points[0]);
         assert(await button('Finish outline').isDisabled());
         await activate(button('Cancel outline'));assert.equal(Object.keys((await graph()).outlines).length,0);
+        await selectGeometry('Outline');
+        await tapWorld(points[0]);await tapWorld(points[1]);
+        assert(await button('Finish outline').isEnabled());await activate(button('Finish outline'));
+        let lineGraph=await graph(),lineId=Object.keys(lineGraph.outlines)[0];
+        assert.equal(lineGraph.outlines[lineId].closed,false);
+        pointsNear(worldPoints(lineGraph,lineGraph.outlines[lineId]),points.slice(0,2),'open two-point sketch line');
+        await undo();assert.equal(Object.keys((await graph()).outlines).length,0);
         await selectGeometry('Outline');
         for(const point of points)await tapWorld(point);
         await activate(button('Finish outline'));
@@ -535,6 +549,69 @@ try {
         mark('touch/mouse manual outline: partial cancel, explicit finish, close-at-first-point and undo');
         await capture('manual-outline-closed');
         await openFixture({...fixture,...graphOnly(savedGeometry)},'g5-geometry-after-manual-outline.slinker');
+      });
+
+      await run('v17-1-cad-intersection-trim', async () => {
+        const savedGeometry=await graph();
+        const ring=Array.from({length:48},(_,i)=>({x:400+60*Math.cos(i*Math.PI/24),y:400+60*Math.sin(i*Math.PI/24)}));
+        const outlines={
+          ring:{id:'ring',bodyId:'base',name:'Circle',points:ring,closed:true,primitive:'circle'},
+          boundary:{id:'boundary',bodyId:'base',name:'Boundary',points:[{x:400,y:300},{x:400,y:500}],closed:false},
+        };
+        for(const method of ['power','closest']) {
+          await openFixture({...fixture,outlines},'intersection-'+method+'.slinker');
+          await activate(button('Select'));await tapWorld({x:460,y:400});
+          assert.deepEqual((await editor()).selectedIds,['ring']);
+          await selectGeometry('Trim');
+          await activate(page.getByRole('radio',{name:'Selected Shapes',exact:true}));
+          await field('Trim method').selectOption(method);
+          const before=graphOnly(await graph());
+          if(method==='power') {
+            await dragWorld([{x:450,y:400},{x:470,y:400}],'Escape');
+            assert.deepEqual(graphOnly(await graph()),before,'Escape cancels intersection trim');
+            if(cdp) {await dragWorld([{x:450,y:400},{x:470,y:400}],'touchCancel');assert.deepEqual(graphOnly(await graph()),before);}
+            await dragWorld([{x:450,y:400},{x:470,y:400}],undefined,async()=>{
+              assert.deepEqual(graphOnly(await graph()),before,'Candidate preview cannot mutate the design');
+              await capture('v17-1-power-preview-before-release');
+              const red=await canvas.evaluate((c,camera)=>{
+                const r=c.getBoundingClientRect(),ctx=c.getContext('2d');
+                const x=(camera.pan.x+(400+60/Math.sqrt(2))*camera.zoom)*c.width/r.width;
+                const y=(camera.pan.y+(400-60/Math.sqrt(2))*camera.zoom)*c.height/r.height;
+                const data=ctx.getImageData(Math.round(x)-3,Math.round(y)-3,7,7).data;
+                let count=0;for(let i=0;i<data.length;i+=4)if(data[i]>170&&data[i+1]<130&&data[i+2]<130)count++;
+                return count;
+              },(await editor()).camera);
+              assert(red>0,'Rendered red candidate arc must be visible before release');
+            });
+          } else await tapWorld({x:460,y:400});
+          const after=graphOnly(await graph());
+          assert.equal(after.outlines.ring.closed,false);assert.equal(after.outlines.ring.primitive,'circle');
+          const arc=worldPoints(after,after.outlines.ring);
+          assert(arc.every(p=>p.x<=400+1e-5));
+          pointNear(arc[0],{x:400,y:460},'arc start');pointNear(arc.at(-1),{x:400,y:340},'arc end');
+          for(const key of Object.keys(before).filter(k=>k!=='outlines'))assert.deepEqual(after[key],before[key]);
+          assert.deepEqual(after.outlines.boundary,before.outlines.boundary);
+          await capture('v17-1-'+method+'-semicircle');
+          const downloaded=await save('v17-1-'+method+'-arc');assert.equal(downloaded.writerVersion,'17.1.0');
+          await undo();assert.deepEqual(graphOnly(await graph()),before,'One undo restores full circle');
+          await redo();assert.deepEqual(graphOnly(await graph()),after);
+          await openFixture({...fixture,...graphOnly(downloaded)},'saved-'+method+'-arc.slinker');
+          assert.deepEqual((await graph()).outlines.ring,after.outlines.ring);
+        }
+        await openFixture({...fixture,outlines:{
+          line:{id:'line',bodyId:'base',name:'Open line',points:[{x:300,y:400},{x:400,y:400}],closed:false},
+          boundary:{id:'boundary',bodyId:'base',name:'Boundary',points:[{x:450,y:300},{x:450,y:500}],closed:false},
+        }},'extend-line.slinker');
+        await activate(button('Select'));await tapWorld({x:390,y:400});await selectGeometry('Trim');
+        await field('Trim method').selectOption('extend');
+        const before=graphOnly(await graph());await tapWorld({x:390,y:400});
+        const extended=graphOnly(await graph());pointNear(extended.outlines.line.points.at(-1),{x:450,y:400},'extended endpoint');
+        await undo();assert.deepEqual(graphOnly(await graph()),before);await redo();assert.deepEqual(graphOnly(await graph()),extended);
+        await undo();await field('Trim method').selectOption('power');await page.keyboard.down('Shift');
+        try{await dragWorld([{x:390,y:390},{x:390,y:410}],undefined,undefined,8);}finally{await page.keyboard.up('Shift');}
+        assert.deepEqual(graphOnly(await graph()),extended,'Shift-Power uses the same extension boundary');
+        mark('17.1 native selected-circle arcs between intersections, both methods, Escape/touch cancellation, one undo/redo, download/reopen and line extension');
+        await openFixture({...fixture,...graphOnly(savedGeometry)},'g5-restored-after-cad-trim.slinker');
       });
 
       await run('shape-properties', async () => {

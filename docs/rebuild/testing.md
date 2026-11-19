@@ -1,10 +1,17 @@
-# Testing Slinker17.0.0
+# Testing Slinker17.1.0
 
-Version17.0.0 adds Projects > Examples and public compatibility model assets.
+Version17.1.0 adds the visible selection bar and intersection-based CAD trim;
+17.0.0 introduced Projects > Examples and public compatibility model assets.
 Gate evidence and external qualification limits are tracked separately; a source
 commit is not a production release. The earlier rebuild.1 checkpoint is retained.
 
 ## Domain Tests
+
+Focused regressions include sketch-trim.test.ts, sketch-trim-workflows.test.ts
+and selection-gesture-release.test.ts. The G5 native suite covers circle arcs,
+both trim methods, extension, open lines, cancellation and downloaded reopen;
+G4 input checks the direct Box/Lasso controls and coarse/narrow hit reachability.
+After build-gate.mjs g5, run-drawing-gate.mjs runs these in Chrome and WebKit.
 
 Use Node 24 and Python 3.13. From a standalone checkout:
 

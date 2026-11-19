@@ -1,5 +1,25 @@
 # Changelog
 
+## 17.1.0 - 2026-11-19
+
+- Restored always-visible Pan, Select, Box and standard freehand Lasso controls;
+  retained selection filters and responsive coarse-pointer targets. Wrapped bars
+  move canvas status text clear of controls.
+- Fixed selection release coordinates and stale gestures after tool changes;
+  oversized lasso strokes leave the previous selection unchanged.
+- Added intersection-based Power Trim, Trim to Closest and Extend to Boundary,
+  including Shift-Power line extension and red candidate previews. Intersected
+  circles trim to open arcs; isolated circles still disappear whole.
+- Added two-point open sketch lines, persistent/retrimmable arcs, atomic undo,
+  cancellation and guarded complexity/precision refusal using pinned FlattenJS.
+- Unified current release identity at17.1.0, including HTML metadata. Archived the
+  historical upstream standalone app snapshot and obsolete standalone config so
+  neither is mistaken for the current rebuilt application.
+- Historical versions, example provenance, original files and v17.0.0 tag remain
+  unchanged. Authentication code and production callback are unchanged.
+- Validation is tracked in docs/rebuild/v17.1-plan.md; physical iPad/Pencil is not
+  certified by browser emulation. Full SolidWorks trim-mode parity is not claimed.
+
 ## 17.0.0 Follow-Up - 2026-11-16
 
 - Restored the compact Draw sidebar entry and floating Outline/Rectangle/Circle/

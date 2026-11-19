@@ -1,5 +1,21 @@
 # Rebuild Progress Tracker
 
+## 17.1.0 Selection Bar And CAD Trim (Active)
+
+2026-11-19. Candidate/master0d10f6e verified clean/current at start; original dirty
+master remains preserved. New scope and disjoint worker ownership are in
+[v17.1-plan.md](v17.1-plan.md). C03/C05/C08/C09/C10/C12/C13 and G4/G5/G10 reopen
+for visible selection controls, standard freehand lasso, intersection-based trim
+and canonical version naming. Lead owns acceptance; no routine user QA unlock.
+Implementation ACCEPTED: through-g10-MjlX6R24/24,1023 domain /27 tooling,
+native Chrome/WebKit and normal production smoke PASS;48 CAD downloads parsed
+independently. Hosted deployment/live checks PENDING. See
+[17.1 acceptance](evidence/v17.1/acceptance.md). Original checkout is retained
+on codex/preserved-pre-rebuild-9954fca with the exact same tracked diff; local
+master now tracks the rebuilt release line, ready for validated17.1 promotion.
+Confirmed arc-between-intersections behavior replaces the prior whole-object
+rule only for intersected circles. Isolated circles still delete whole.
+
 ## Drawing Toolbar And Circle Trim (Accepted)
 
 Final combined source PASS: through-g10-IIAGMK24/24, frozen
@@ -20,14 +36,43 @@ legacy48-point inference and selection/cache cleanup. Ten added regressions;
 whole-circle checks PASS; final combined cumulative verification PASS. Toolbar-only cumulative
 through-g10-HNEVBW was stopped at18/24 PASS for this new scope, not accepted.
 
-2026-11-16: restored Draw in both sidebar sizes, contextual five-tool canvas
-palette and historical mechanical glyphs from 9954fca. Lead owns this coupled
-change; no workers used. Candidate base29dd006. C03/C05/C08/C10/C12/C13:
-Chrome/WebKit desktop/touch feature checks PASS, including real geometry,
-undo, image pixels, save/reopen, draft cancellation and 44px coarse targets.
-Final990 domain /27 tooling tests, typecheck and lint PASS. Frozen cumulative
-24/24 accepted; physical iPad remains UNVERIFIED. Original experiments untouched.
-See [drawing-toolbar-restoration.md](drawing-toolbar-restoration.md).
+2026-11-16: restore the simplified Draw sidebar entry and five-tool canvas
+palette from pre-rebuild fork 9954fca, plus the historical mechanical glyphs.
+Lead owns implementation and verification; no worker is needed for these coupled
+layout changes. Candidate starts at 29dd006 on codex/rebuild-cloud-pwa. Preserve
+Mirror, geometry options, image import, spring placement and existing input
+cancellation. Compare C03/C05/C08/C10/C12/C13 against the historical layout.
+Status: implemented; native Chrome/WebKit desktop/touch geometry, image, undo,
+save/reopen and palette tests PASS. Final990 domain /27 tooling tests, typecheck
+and lint PASS. Frozen cumulative24/24 accepted. Physical iPad remains
+UNVERIFIED. See
+[drawing-toolbar-restoration.md](drawing-toolbar-restoration.md).
+
+## Hosted Microsoft Sign-In Follow-Up (User-Confirmed)
+
+Latest user evidence2026-11-16: Microsoft sign-in worked on the last build.
+This supersedes the historical registration-block status below. Do not modify
+the working authentication/callback configuration for the toolbar/trim update.
+No fresh agent login was performed; sanitized error reporting remains OPEN.
+
+2026-11-16 user reports "Operation did not complete. Current local design is
+unchanged" on GitHub Pages in Chrome, with no Microsoft popup. Reopen scoped
+G9/C01/C02/C12 auth usability, not physics or the accepted example data. Candidate
+starts29dd006; original root experiments and user cloud files remain untouched.
+The app currently discards the provider error in auth.ts and again in CloudControl.
+User subsequently supplied AADSTS50011: Microsoft rejects the exact hosted callback
+https://mikanzui.github.io/LinkageStudio/redirect.html for client
+a69f1ac8-5335-430c-a55f-808c85ced4fa. Confirmed registration mismatch; owner must
+add/save that exact URI under Single-page application on this registration.
+Keep existing callback entries. Earlier confirmation that it was registered does
+not supersede this observed server rejection. Hosted sign-in remains UNVERIFIED
+until the registration change and a successful real sign-in. Safe error reporting
+is still an OPEN code follow-up; do not identify popup blocking as the proven cause.
+A separate in-app hosted
+attempt opens Microsoft's login page; native Chrome input fails in the control
+helper, so do not call that a Chrome sign-in pass. Lead owns diagnosis, safe error
+classification, actual mounted failure/retry checks and release evidence. No raw
+OAuth URLs/tokens/provider bodies or private filenames are to be logged/published.
 
 ## Version 17.0.0 (Published)
 

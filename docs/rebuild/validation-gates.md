@@ -1,5 +1,14 @@
 # Rebuild Verification Gates
 
+17.1.0 follow-up reopens G4/G5/G10 for the visible selection bar, normal freehand
+lasso, intersection/arc trim, open sketch lines, extension and current release
+identity. Analytical/controller tests and focused browser/normal-production
+checks are recorded in [v17.1-plan.md](v17.1-plan.md); full frozen cumulative
+qualification PASS24/24 (through-g10-MjlX6R); see
+[17.1 acceptance](evidence/v17.1/acceptance.md). Hosted/live checks remain pending.
+Old gate acceptance does not certify new changes.
+Codex owns acceptance; physical iPad/Pencil remains a disclosed unverified limit.
+
 Status: G0 baseline accepted; feature gates qualify the rebuild incrementally.
 Starting code: pinned Huggabiz v0.12.3; see [README.md](README.md).
 

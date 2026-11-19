@@ -1,0 +1,236 @@
+{
+  "passed": true,
+  "files": [
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-mm.dxf",
+      "unit": "mm",
+      "sha256": "bf988fc70368a5d33525cbcc28e24a3bc9ac13e614b4c2c98c97c72e02198117",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 48.0,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-mm.swb",
+      "unit": "mm",
+      "sha256": "02f78ed875291c39d3f8e121e08cecd74660eb7200c1eb6a46f929601b9a42c7",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-cm.dxf",
+      "unit": "cm",
+      "sha256": "f33723969818aea59c0b545962dfa863093a2c516a67f929d8d2d4f3b3f43593",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 4.8,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-cm.swb",
+      "unit": "cm",
+      "sha256": "ff04a75c39e450c8d1a61a18979c7344572c1b58534d1a1a93a544d2ec6c2501",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-m.dxf",
+      "unit": "m",
+      "sha256": "938b105d8173d889f2d2f14b36453ab697f8fab04774b91c56626a286554bd85",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 0.048,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-m.swb",
+      "unit": "m",
+      "sha256": "6f444ed644d59e2a5a5722fc3811053c1ccffa47557bd088e277bd5393ec2442",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-in.dxf",
+      "unit": "in",
+      "sha256": "49a2ee1a61296e18da2773d6557a28fc79307099bf76e3d30573e143a291844b",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 1.8897637795275595,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\desktop-CAD-dialog-download-units-and-modal-isolation\\cad-in.swb",
+      "unit": "in",
+      "sha256": "1f82dd48df87c88a4f1a6020da7a3859315777da9eeb2f30403952a24edc5d65",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-mm.dxf",
+      "unit": "mm",
+      "sha256": "bf988fc70368a5d33525cbcc28e24a3bc9ac13e614b4c2c98c97c72e02198117",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 48.0,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-mm.swb",
+      "unit": "mm",
+      "sha256": "02f78ed875291c39d3f8e121e08cecd74660eb7200c1eb6a46f929601b9a42c7",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-cm.dxf",
+      "unit": "cm",
+      "sha256": "f33723969818aea59c0b545962dfa863093a2c516a67f929d8d2d4f3b3f43593",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 4.8,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-cm.swb",
+      "unit": "cm",
+      "sha256": "ff04a75c39e450c8d1a61a18979c7344572c1b58534d1a1a93a544d2ec6c2501",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-m.dxf",
+      "unit": "m",
+      "sha256": "938b105d8173d889f2d2f14b36453ab697f8fab04774b91c56626a286554bd85",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 0.048,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-m.swb",
+      "unit": "m",
+      "sha256": "6f444ed644d59e2a5a5722fc3811053c1ccffa47557bd088e277bd5393ec2442",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-in.dxf",
+      "unit": "in",
+      "sha256": "49a2ee1a61296e18da2773d6557a28fc79307099bf76e3d30573e143a291844b",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 1.8897637795275595,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\split-CAD-dialog-download-units-and-modal-isolation\\cad-in.swb",
+      "unit": "in",
+      "sha256": "1f82dd48df87c88a4f1a6020da7a3859315777da9eeb2f30403952a24edc5d65",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-mm.dxf",
+      "unit": "mm",
+      "sha256": "bf988fc70368a5d33525cbcc28e24a3bc9ac13e614b4c2c98c97c72e02198117",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 48.0,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-mm.swb",
+      "unit": "mm",
+      "sha256": "02f78ed875291c39d3f8e121e08cecd74660eb7200c1eb6a46f929601b9a42c7",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-cm.dxf",
+      "unit": "cm",
+      "sha256": "f33723969818aea59c0b545962dfa863093a2c516a67f929d8d2d4f3b3f43593",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 4.8,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-cm.swb",
+      "unit": "cm",
+      "sha256": "ff04a75c39e450c8d1a61a18979c7344572c1b58534d1a1a93a544d2ec6c2501",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-m.dxf",
+      "unit": "m",
+      "sha256": "938b105d8173d889f2d2f14b36453ab697f8fab04774b91c56626a286554bd85",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 0.048,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-m.swb",
+      "unit": "m",
+      "sha256": "6f444ed644d59e2a5a5722fc3811053c1ccffa47557bd088e277bd5393ec2442",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-in.dxf",
+      "unit": "in",
+      "sha256": "49a2ee1a61296e18da2773d6557a28fc79307099bf76e3d30573e143a291844b",
+      "entities": 14,
+      "auditErrors": 0,
+      "auditFixes": 0,
+      "rodLengthInSelectedUnits": 1.8897637795275595,
+      "openPathRetained": true
+    },
+    {
+      "file": "C:\\Users\\jaket\\Downloads\\Slinker160626update\\.rebuild.local\\evidence\\g8\\webkit-browser-XULzDe\\tablet-CAD-dialog-download-units-and-modal-isolation\\cad-in.swb",
+      "unit": "in",
+      "sha256": "1f82dd48df87c88a4f1a6020da7a3859315777da9eeb2f30403952a24edc5d65",
+      "circles": 8,
+      "lineCalls": 9,
+      "rodLengthMeters": 0.048,
+      "targetAppExecuted": false
+    }
+  ],
+  "parser": "ezdxf 1.4.5",
+  "cadGuiQualified": false,
+  "solidWorksExecuted": false
+}

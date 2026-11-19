@@ -1,7 +1,10 @@
 # Linkage Studio Rebuild Master Plan
 
-Updated: 2026-11-16. Owner: Codex; product scope follows user direction.
-Current stage: G0-G7 accepted; G8 code/browser/DXF checkpoint verified. User resumed
+Updated: 2026-11-19. Owner: Codex; product scope follows user direction.
+Current release work: **17.1.0**, visible selection toolbar and intersection-based
+CAD trim. See [v17.1-plan.md](v17.1-plan.md) and the active progress entry. Earlier
+dated release scopes below are historical, not the current release identity.
+Historical stage summary: G0-G7 accepted; G8 code/browser/DXF checkpoint verified. User resumed
 remaining updates after 0.16.0-rebuild.1; G9 code/browser checkpoint verified,
 Microsoft target OPEN; G10 code/browser checkpoint verified, external qualifications
 OPEN. Original feature backlog is implemented; supplied Azure-skill audit adds
@@ -16,6 +19,15 @@ G7: [tracing and model-load acceptance](evidence/g7/acceptance.md).
 G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 
 ## Start Here Every Session
+
+### 17.1.0 Selection Bar And CAD Trim
+
+Code/browser scope ACCEPTED: final frozen cumulative24/24,1023 domain /27 tooling,
+normal production smoke and48 independent CAD parses PASS. Publication/live
+verification pending. Current references:
+[plan](v17.1-plan.md), [acceptance](evidence/v17.1/acceptance.md).
+The old dirty checkout is preserved under codex/preserved-pre-rebuild-9954fca;
+local master tracks the rebuilt release line without changing its old files.
 
 ### V16 Drawing Toolbar
 
@@ -37,7 +49,7 @@ PASS. Earlier hosted coarse-row failure was repaired before deployment; follow
 Next work is the prioritized feature/patch/tutorial backlog, not automatic scope
 expansion or a claim of physical-device/engineering certification.
 
-Active user scope: release17.0.0, put examples inside Projects, publish prior and
+Historical17.0.0 user scope: put examples inside Projects, publish prior and
 user-supplied models plus one new interesting mechanism, and consolidate future
 features/patches including a tutorial. Work remains in the isolated candidate;
 the original workspace and master/main are preserved. The two supplied originals
