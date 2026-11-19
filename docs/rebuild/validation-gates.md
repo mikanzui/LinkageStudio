@@ -5,7 +5,8 @@ lasso, intersection/arc trim, open sketch lines, extension and current release
 identity. Analytical/controller tests and focused browser/normal-production
 checks are recorded in [v17.1-plan.md](v17.1-plan.md); full frozen cumulative
 qualification PASS24/24 (through-g10-MjlX6R); see
-[17.1 acceptance](evidence/v17.1/acceptance.md). Hosted/live checks remain pending.
+[17.1 acceptance](evidence/v17.1/acceptance.md). Hosted run44575839949 and actual
+live Chrome/WebKit checks PASS; deployment7920734549 is published.
 Old gate acceptance does not certify new changes.
 Codex owns acceptance; physical iPad/Pencil remains a disclosed unverified limit.
 

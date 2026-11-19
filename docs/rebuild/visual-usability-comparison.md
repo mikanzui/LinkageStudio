@@ -11,7 +11,8 @@ C10/C12: grouped wrapping, measured toolbar/HUD separation, coarse targets,
 release-coordinate selection and cancellation. C13: package17.1.0 is canonical;
 old standalone app/config are explicitly archived, not alternate current apps.
 Native Chrome/WebKit desktop/coarse/narrow evidence PASS; final cumulative
-acceptance PASS24/24 (through-g10-MjlX6R). Hosted/live checks remain pending.
+acceptance PASS24/24 (through-g10-MjlX6R). Hosted run44575839949, deployment7920734549
+and actual public Chrome/WebKit feature checks PASS2026-11-19.
 Retained final-source visuals:
 [desktop arc](evidence/v17.1/screenshots/desktop-trimmed-arc.png),
 [tablet candidate preview](evidence/v17.1/screenshots/tablet-trim-preview.png),

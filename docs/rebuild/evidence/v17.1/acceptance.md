@@ -1,7 +1,7 @@
 # 17.1.0 Selection And Trim Qualification
 
 2026-11-19. Lead-owned acceptance; no routine user gate unlock. Status: local
-code/browser gate ACCEPTED; hosted publication and live checks pending. Candidate branch:
+code/browser gate ACCEPTED; hosted publication and live checks PASS. Candidate branch:
 codex/rebuild-cloud-pwa; initial remote master/candidate0d10f6e. Protected original
 master9954fca and experiments remain untouched.
 
@@ -106,7 +106,33 @@ The raw airer/working-screen files, historical ancestry and v17.0.0 tag are reta
 No forced updates or dirty-root checkout/reset are permitted.
 The dirty original now uses local codex/preserved-pre-rebuild-9954fca, with its
 upstream removed to prevent accidental pulls/pushes to canonical master. Local
-master tracks the rebuilt origin/master; it will fast-forward to17.1.0 with the
-candidate after qualification. No original tracked file was changed by ref cleanup.
+master tracks the rebuilt origin/master and now points to17.1.0 with the
+candidate. No original tracked file was changed by ref cleanup.
 The examples ZIP contains9 byte-verified files (seven models plus README/catalog):
 SHA256 `d8d87fd9bdd95075b0a53d27f651761a0be25443e675abe0897cdebb17d60a87`.
+
+## Publication
+
+Release implementation commit: `f35fc2a39a4a209062b0323af376699045cec5dd`.
+After commit, the real-boundary source fingerprint still exactly matched the
+qualified final source above. Local/remote master and the rebuild branch were
+advanced normally without force. The protected legacy branch has no upstream.
+
+[Hosted run44575839949](https://github.com/mikanzui/LinkageStudio/actions/runs/44575839949)
+PASS, including the new native trim gate and full Chromium/WebKit examples matrix.
+Deployment7920734549 for f35fc2a succeeded2026-11-19T17:29:37Z at
+https://mikanzui.github.io/LinkageStudio/. Hosted elapsed10m38s; local cumulative
+browser elapsed18m56.6s. Billing usage and agent cost savings are UNKNOWN.
+
+Actual public-site checks, no observer, PASS in both engines:
+[Chrome pages](live-pages-chromium.json), [Chrome drawing](live-drawing-chromium.json),
+[WebKit pages](live-pages-webkit.json), [WebKit drawing](live-drawing-webkit.json).
+They verify current HTML/app version, credits/callback, exact seven example
+assets, offline notice/examples, moving mechanisms, isolated-circle removal,
+Power/closest partial arcs, boundary preservation, saved undo/redo and selection
+buttons. They are fresh hosted checks, distinct from earlier loopback evidence.
+
+The final evidence-only commit and new v17.1.0 tag retain the same app source;
+historical v17.0.0 remains ef70ed6. No second deploy is needed for evidence-only
+changes. Existing open clients may need the app's update prompt to activate17.1.0;
+unsaved designs are not forcibly reloaded.

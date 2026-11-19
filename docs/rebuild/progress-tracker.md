@@ -1,6 +1,6 @@
 # Rebuild Progress Tracker
 
-## 17.1.0 Selection Bar And CAD Trim (Active)
+## 17.1.0 Selection Bar And CAD Trim (Published)
 
 2026-11-19. Candidate/master0d10f6e verified clean/current at start; original dirty
 master remains preserved. New scope and disjoint worker ownership are in
@@ -9,10 +9,12 @@ for visible selection controls, standard freehand lasso, intersection-based trim
 and canonical version naming. Lead owns acceptance; no routine user QA unlock.
 Implementation ACCEPTED: through-g10-MjlX6R24/24,1023 domain /27 tooling,
 native Chrome/WebKit and normal production smoke PASS;48 CAD downloads parsed
-independently. Hosted deployment/live checks PENDING. See
+independently. Hosted run44575839949 /deployment7920734549 PASS; actual public
+Chrome/WebKit version, trim, undo, download/reopen and offline examples PASS. See
 [17.1 acceptance](evidence/v17.1/acceptance.md). Original checkout is retained
 on codex/preserved-pre-rebuild-9954fca with the exact same tracked diff; local
-master now tracks the rebuilt release line, ready for validated17.1 promotion.
+master now tracks the rebuilt17.1.0 release line. Implementation f35fc2a was
+pushed atomically without force; historical v17.0.0 remains unchanged.
 Confirmed arc-between-intersections behavior replaces the prior whole-object
 rule only for intersected circles. Isolated circles still delete whole.
 

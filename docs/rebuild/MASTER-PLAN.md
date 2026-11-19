@@ -23,8 +23,9 @@ G8: [versioned checkpoint and open target limits](evidence/g8/acceptance.md).
 ### 17.1.0 Selection Bar And CAD Trim
 
 Code/browser scope ACCEPTED: final frozen cumulative24/24,1023 domain /27 tooling,
-normal production smoke and48 independent CAD parses PASS. Publication/live
-verification pending. Current references:
+normal production smoke and48 independent CAD parses PASS. PUBLISHED: f35fc2a,
+hosted run44575839949 /deployment7920734549; actual live Chrome/WebKit PASS.
+Current references:
 [plan](v17.1-plan.md), [acceptance](evidence/v17.1/acceptance.md).
 The old dirty checkout is preserved under codex/preserved-pre-rebuild-9954fca;
 local master tracks the rebuilt release line without changing its old files.

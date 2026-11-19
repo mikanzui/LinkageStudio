@@ -1,0 +1,14 @@
+{
+  "url": "https://mikanzui.github.io/LinkageStudio/",
+  "engine": "chromium",
+  "browser": "157.0.8103.79",
+  "passed": true,
+  "checks": [
+    "Real live Draw palette, circle drag, complete circle trim and one undo/redo, verified through native saved downloads",
+    "Actual downloaded file reopens without resurrecting circle; Select hides and Draw restores palette",
+    "17.1 actual production Power/closest intersection arcs, boundary preservation, native saved undo/redo and directly visible selection controls"
+  ],
+  "errors": [],
+  "input": "Native mouse/keyboard",
+  "physicalIPadVerified": false
+}

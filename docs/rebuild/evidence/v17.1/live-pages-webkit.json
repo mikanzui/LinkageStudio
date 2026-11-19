@@ -1,0 +1,15 @@
+{
+  "url": "https://mikanzui.github.io/LinkageStudio/",
+  "engine": "webkit",
+  "passed": true,
+  "checks": [
+    "Cold/warm worker, actual version, credit text/links, no old tag or test observer",
+    "All seven hosted sources byte-match; Projects > Examples opens playground with three actual moving colored mechanisms",
+    "Live Create restoration and native saved file retains springs, rails, stop, traces and sensors",
+    "Examples search and Open/download remain reachable in a 512x440 keyboard-height viewport; row minimum76px",
+    "Native source download exact; all seven Projects examples open offline after reload; real offline scissor-lift pixels move"
+  ],
+  "errors": [],
+  "physicalIPadVerified": false,
+  "hostedLiveSignInVerified": false
+}
